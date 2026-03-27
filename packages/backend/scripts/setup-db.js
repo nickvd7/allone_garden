@@ -107,6 +107,17 @@ async function setupDatabase() {
       )
     `);
 
+    // ── Password reset tokens ────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+        token      VARCHAR(64) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     // ── P2P known peers ─────────────────────────────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS known_peers (
