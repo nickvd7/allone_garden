@@ -32,7 +32,7 @@ error()   { echo -e "${RED}[ERR]${RESET}  $*" >&2; exit 1; }
 # ── Config ────────────────────────────────────────────────────────────────────
 INSTALL_DIR="${GARDEN_DIR:-/opt/allone-garden}"
 SERVICE_USER="${GARDEN_USER:-garden}"
-REPO_URL="https://github.com/allone-garden/allone-garden.git"
+REPO_URL="https://github.com/nickvd7/allone_garden.git"
 NODE_MAJOR=20
 POSTGRES_DB="allone_garden"
 DOMAIN="${GARDEN_DOMAIN:-}"

@@ -6,8 +6,8 @@ No database needed — the backend runs in in-memory mode.
 
 ```bash
 # Clone
-git clone https://github.com/allone-garden/allone-garden.git
-cd allone-garden
+git clone https://github.com/nickvd7/allone_garden.git
+cd allone_garden
 
 # Start everything
 bash start.sh
@@ -27,8 +27,8 @@ You can play as a Guest (offline) or register an account (stored in memory until
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/allone-garden/allone-garden.git
-cd allone-garden
+git clone https://github.com/nickvd7/allone_garden.git
+cd allone_garden
 
 # 2. Configure the backend
 cd packages/backend
@@ -175,8 +175,8 @@ sudo systemctl restart allone-garden
 ## Docker (easiest for cloud / VPS)
 
 ```bash
-git clone https://github.com/allone-garden/allone-garden.git
-cd allone-garden
+git clone https://github.com/nickvd7/allone_garden.git
+cd allone_garden
 docker-compose up
 ```
 
@@ -296,5 +296,5 @@ npm run build
 ```
 
 **Need help?**
-- Issues: https://github.com/allone-garden/allone-garden/issues
-- Discussions: https://github.com/allone-garden/allone-garden/discussions
+- Issues: https://github.com/nickvd7/allone_garden/issues
+- Discussions: https://github.com/nickvd7/allone_garden/discussions
