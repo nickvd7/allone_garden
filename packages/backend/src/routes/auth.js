@@ -14,6 +14,7 @@ const { authLimiter, auditLog }                    = require('../middleware/secu
 const { validateRegister, validateLogin,
         handleValidationErrors }                   = require('../middleware/validate');
 const { updateMemEntry }                           = require('./leaderboard');
+const { sendPasswordReset }                        = require('../services/email');
 
 // In-memory reset token store (used when DATABASE_URL is not set)
 // Map: token (hex) -> { userId, expires }
@@ -167,20 +168,18 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
 
     if (db.isConnected()) {
       const result = await db.query(
-        'SELECT id FROM users WHERE email = $1',
+        'SELECT id, username FROM users WHERE email = $1',
         [email.toLowerCase()]
       );
       if (result.rows.length > 0) {
+        const { id: userId, username } = result.rows[0];
         await db.query(
           `INSERT INTO password_reset_tokens (user_id, token, expires_at)
            VALUES ($1, $2, $3)
            ON CONFLICT (user_id) DO UPDATE SET token = $2, expires_at = $3`,
-          [result.rows[0].id, token, expires]
+          [userId, token, expires]
         );
-        // TODO: send email via nodemailer when SMTP_HOST is configured
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[password-reset] token for ${email}: ${token}`);
-        }
+        await sendPasswordReset(email, username, token);
       }
       return res.json({ success: true });
     }
@@ -189,9 +188,11 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
     const user = memUsers.find((u) => u.email === email);
     if (user) {
       memResetTokens.set(token, { userId: user.id, expires });
+      await sendPasswordReset(email, user.username, token);
     }
 
-    // Expose token when not connected to DB (dev / test mode)
+    // Expose token when not connected to DB (dev / test mode) so tests/devs
+    // can use it without needing a real mailbox
     res.json({ success: true, ...(user ? { resetToken: token } : {}) });
   } catch (err) {
     console.error('[auth/forgot-password]', err.message);
