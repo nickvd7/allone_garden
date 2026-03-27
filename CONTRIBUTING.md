@@ -1,22 +1,23 @@
-# Contributing to Garden Paradise
+# Contributing to AllOne Garden
 
 ## Welcome! 🌱
 
-Thank you for considering contributing to Garden Paradise! We're excited to have you join our community.
+Thank you for considering contributing to AllOne Garden! We're excited to have you join our community.
 
 ## Code of Conduct
 
-This project adheres to a Code of Conduct. By participating, you agree to uphold this code. Please report unacceptable behavior to hello@garden-paradise.org.
+This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+By participating you agree to uphold this code. Please report unacceptable behaviour via a [GitHub issue](https://github.com/nickvd7/allone_garden/issues).
 
 ## How Can I Contribute?
 
 ### Reporting Bugs
 
-Before creating bug reports, please check existing issues. When creating a bug report, include:
+Before opening a bug report, please search [existing issues](https://github.com/nickvd7/allone_garden/issues). When creating a report, include:
 
 - Clear and descriptive title
 - Steps to reproduce
-- Expected vs actual behavior
+- Expected vs. actual behaviour
 - Screenshots if applicable
 - Your environment (OS, browser, Node version)
 
@@ -26,178 +27,132 @@ Before creating bug reports, please check existing issues. When creating a bug r
 A clear description of the bug.
 
 **To Reproduce**
-Steps to reproduce:
 1. Go to '...'
 2. Click on '....'
 3. See error
 
-**Expected behavior**
+**Expected behaviour**
 What you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots.
-
-**Environment:**
- - OS: [e.g. Ubuntu 22.04]
- - Browser: [e.g. Chrome 120]
- - Node Version: [e.g. 18.17.0]
+**Environment**
+- OS: [e.g. Ubuntu 24.04]
+- Browser: [e.g. Chrome 124]
+- Node version: [e.g. 20.12.0]
 ```
 
 ### Suggesting Enhancements
 
-Enhancement suggestions are tracked as GitHub issues. When creating an enhancement suggestion, include:
+Enhancement suggestions are tracked as GitHub issues. Include:
 
 - Clear and descriptive title
-- Detailed description of proposed functionality
-- Why this enhancement would be useful
+- Detailed description of the proposed functionality
+- Why this would be useful
 - Possible implementation approaches
 
 ### Pull Requests
 
 1. Fork the repo
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create your feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes following [Conventional Commits](https://www.conventionalcommits.org/)
+4. Push the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request against `main`
 
-**Pull Request Guidelines:**
+**PR Guidelines:**
 
 - Follow the existing code style
 - Write meaningful commit messages
 - Update documentation as needed
-- Add tests for new features
-- Ensure all tests pass
-- Update CHANGELOG.md
+- Add tests for new features (run offline with `cd packages/backend && npm test`)
+- Ensure all tests pass before opening the PR
+- Update `CHANGELOG.md` under `[Unreleased]`
 
-## Development Process
+## Development Setup
 
-### Setting Up Development Environment
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/garden-paradise.git
-cd garden-paradise
+git clone https://github.com/YOUR_USERNAME/allone_garden.git
+cd allone_garden
 
 # Add upstream remote
-git remote add upstream https://github.com/original/garden-paradise.git
+git remote add upstream https://github.com/nickvd7/allone_garden.git
 
-# Install dependencies
+# Install all dependencies
 npm install
+cd packages/backend  && npm install && cd ../..
+cd packages/frontend && npm install && cd ../..
 
-# Create .env file
-cp .env.example .env
+# Copy env file
+cp packages/backend/.env.example packages/backend/.env
 
-# Start development server
-npm run dev
+# Start backend (port 5000)
+cd packages/backend && npm run dev
+
+# Start frontend (port 3000 — separate terminal)
+cd packages/frontend && npm start
 ```
 
-### Code Style
+No PostgreSQL or Redis required for local development — the backend runs in in-memory mode when `DATABASE_URL` is empty.
 
-We use ESLint and Prettier for code formatting.
+## Testing
+
 ```bash
-# Run linter
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Format code
-npm run format
-```
-
-### Testing
-```bash
-# Run all tests
-npm test
+# Run all backend tests (in-memory mode, no DB needed)
+cd packages/backend && npm test
 
 # Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
+cd packages/backend && npm run test:watch
 ```
 
-### Commit Message Format
+## Commit Message Format
 
-We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+We follow [Conventional Commits](https://www.conventionalcommits.org/):
+
 ```
 <type>(<scope>): <subject>
-
-<body>
-
-<footer>
 ```
 
-**Types:**
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Build process or auxiliary tool changes
+**Types:** `feat` · `fix` · `docs` · `style` · `refactor` · `test` · `chore`
 
 **Examples:**
 ```
-feat(plants): add sunflower plant type
-fix(trading): resolve duplication bug in trade confirmation
+feat(garden): add sunflower plant type
+fix(trade): resolve duplication bug in trade confirmation
 docs(readme): update installation instructions
+test(auth): add password-reset integration tests
 ```
 
-### Branch Naming
+## Branch Naming
 
-- `feature/` - New features
-- `fix/` - Bug fixes
-- `docs/` - Documentation updates
-- `refactor/` - Code refactoring
-- `test/` - Test updates
-
-Examples:
-- `feature/add-sunflowers`
-- `fix/trading-bug`
-- `docs/update-api-guide`
+- `feature/` — new features
+- `fix/` — bug fixes
+- `docs/` — documentation updates
+- `refactor/` — code refactoring
+- `test/` — test additions or updates
 
 ## Plugin Development
 
-See [PLUGINS.md](docs/PLUGINS.md) for detailed guide on creating plugins.
+Plugins live in `plugins/community/`. Each plugin is a directory with an `index.js` and a `manifest.json`.
 
-### Plugin Checklist
+**Plugin Checklist:**
 
-- [ ] Plugin follows naming convention
-- [ ] Includes README.md
+- [ ] Follows naming convention (`kebab-case`)
+- [ ] Includes `README.md` and `manifest.json`
 - [ ] Has proper error handling
 - [ ] Includes tests
-- [ ] Documentation is complete
-- [ ] No security vulnerabilities
+- [ ] No security vulnerabilities (plugins run in a VM sandbox)
 
-## Translation Contributions
+## Translations
 
-Help translate Garden Paradise to your language!
+Help translate AllOne Garden!
 
-1. Copy `frontend/src/i18n/locales/en.json`
-2. Rename to your language code (e.g., `fr.json` for French)
+1. Copy `packages/frontend/src/i18n/en.json`
+2. Rename to your language code (e.g. `fr.json`)
 3. Translate all strings
-4. Register in `frontend/src/i18n/config.js`
-5. Test thoroughly
-6. Submit PR
-
-## Community
-
-- Join our [Discord](https://discord.gg/placeholder)
-- Follow us on [Twitter](https://twitter.com/placeholder)
-- Read our [Blog](https://blog.garden-paradise.org)
-
-## Recognition
-
-Contributors are recognized in:
-- README.md Contributors section
-- CHANGELOG.md for each release
-- Annual Contributors Award
+4. Register in `packages/frontend/src/i18n/index.js`
+5. Submit a PR
 
 ## Questions?
 
-Feel free to ask questions in:
-- GitHub Discussions
-- Discord #dev-chat channel
-- Email: dev@garden-paradise.org
+Open a [GitHub Discussion](https://github.com/nickvd7/allone_garden/discussions) or a [GitHub Issue](https://github.com/nickvd7/allone_garden/issues).
 
-Thank you for contributing! 🌱
+Thank you for contributing! 🌍
