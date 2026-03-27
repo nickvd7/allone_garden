@@ -1,0 +1,66 @@
+{
+  "app_title": "AllOne Garden",
+
+  "day": "Day",
+  "level": "Level",
+  "xp": "XP",
+  "coins": "Coins",
+  "plants_grown": "Plants Grown",
+
+  "tools": "Tools",
+  "tool_till": "Till Ground",
+  "tool_plant": "Plant",
+  "tool_water": "Water",
+  "tool_fertilize": "Fertilize",
+  "tool_harvest": "Harvest",
+
+  "seeds": "Seeds",
+  "plant_tomato": "Tomato",
+  "plant_carrot": "Carrot",
+  "plant_lettuce": "Lettuce",
+  "plant_radish": "Radish",
+  "plant_corn": "Corn",
+  "plant_potato": "Potato",
+
+  "weather_sunny": "Sunny",
+  "weather_cloudy": "Cloudy",
+  "weather_rainy": "Rainy",
+  "weather_windy": "Windy",
+
+  "chat": "Chat",
+  "online_players": "Online Players",
+  "inventory": "Inventory",
+
+  "visit": "Visit",
+  "help": "Help",
+  "trade": "Trade",
+  "send": "Send",
+
+  "marketplace": "Marketplace",
+  "browse_listings": "Browse",
+  "sell_crops": "Sell",
+  "crop": "Crop",
+  "seller": "Seller",
+  "available": "Available",
+  "price": "Price",
+  "buy": "Buy",
+  "list_for_sale": "List for sale",
+  "quantity": "Quantity",
+  "price_per_unit": "Price per unit",
+  "no_listings": "No listings yet. Be the first to sell!",
+  "no_crops_to_sell": "You have no crops to sell. Harvest some first!",
+
+  "plugins": "Plugins",
+  "installed_plugins": "Installed",
+  "community_plugins": "Community",
+  "no_plugins": "No plugins installed on this server yet.",
+  "install_instructions": "Place plugin folder in plugins/community/ on your server, then restart.",
+
+  "logout": "Logout",
+  "login": "Login",
+  "register": "Register",
+  "play_as_guest": "Play as Guest (offline)",
+  "email": "Email",
+  "username": "Username",
+  "password": "Password"
+}

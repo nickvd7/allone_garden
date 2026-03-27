@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.npm
+
+# Build output
+packages/frontend/build/
+packages/backend/dist/
+
+# Environment files — NEVER commit real secrets
+.env
+packages/backend/.env
+packages/frontend/.env
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
+
+# Docker volumes
+pgdata/
+
+# Temporary
+*.tmp
+*.swp

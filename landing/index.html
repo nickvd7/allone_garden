@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AllOne Garden — Grow Together, Own Your World</title>
+  <meta name="description" content="An open-source, decentralized multiplayer gardening game. Run your own server on a Raspberry Pi, Mac, PC, or even an Android phone and join a community of growers across the internet." />
+  <meta property="og:title"       content="AllOne Garden" />
+  <meta property="og:description" content="Grow your garden. Own your server. Connect with friends." />
+  <meta property="og:type"        content="website" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green-dark:   #1b5e20;
+      --green-mid:    #2e7d32;
+      --green-light:  #4caf50;
+      --green-pale:   #e8f5e9;
+      --green-mint:   #f1f8e9;
+      --earth:        #795548;
+      --amber:        #f59e0b;
+      --sky:          #0ea5e9;
+      --text:         #1a1a1a;
+      --muted:        #6b7280;
+      --white:        #ffffff;
+      --radius:       14px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.08);
+      --shadow-lg:    0 12px 48px rgba(0,0,0,0.14);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--white);
+      line-height: 1.6;
+    }
+
+    /* ── Nav ──────────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #e5e7eb;
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.15rem; font-weight: 700; color: var(--green-mid); text-decoration: none; }
+    .nav-links { display: flex; gap: 1.75rem; list-style: none; }
+    .nav-links a { text-decoration: none; color: var(--muted); font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--green-mid); }
+    .nav-cta {
+      background: var(--green-mid); color: #fff;
+      padding: 0.45rem 1.1rem; border-radius: 8px;
+      text-decoration: none; font-weight: 600; font-size: 0.88rem;
+      transition: background 0.2s;
+    }
+    .nav-cta:hover { background: var(--green-dark); }
+
+    /* ── Hero ─────────────────────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(155deg, var(--green-dark) 0%, var(--green-mid) 45%, #81c784 100%);
+      color: #fff;
+      padding: 7rem 2rem 5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      padding: 0.3rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1.25rem;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .hero h1 span { color: #a5d6a7; }
+    .hero p {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      max-width: 620px;
+      margin: 0 auto 2.5rem;
+      opacity: 0.92;
+    }
+    .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-hero-primary {
+      background: #fff; color: var(--green-dark);
+      padding: 0.8rem 2rem; border-radius: 10px;
+      text-decoration: none; font-weight: 700; font-size: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,0.2); }
+    .btn-hero-secondary {
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.5);
+      color: #fff;
+      padding: 0.8rem 2rem; border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .btn-hero-secondary:hover { background: rgba(255,255,255,0.25); }
+
+    /* Garden preview strip */
+    .garden-preview {
+      display: flex; justify-content: center; gap: 0.5rem;
+      margin-top: 3.5rem; flex-wrap: wrap;
+    }
+    .plot {
+      width: 56px; height: 56px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .plot-soil   { background: #5d4037; }
+    .plot-tilled { background: #4e342e; }
+    .plot-grown  { background: #388e3c; }
+    .plot-water  { background: #1565c0; }
+
+    /* ── Sections shared ─────────────────────────────────────────────────── */
+    section { padding: 5rem 2rem; }
+    .container { max-width: 1080px; margin: 0 auto; }
+    .section-label {
+      text-transform: uppercase; letter-spacing: 0.1em;
+      font-size: 0.78rem; font-weight: 700;
+      color: var(--green-mid); margin-bottom: 0.75rem;
+    }
+    h2.section-title {
+      font-size: clamp(1.7rem, 4vw, 2.4rem);
+      font-weight: 800; line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    .section-subtitle {
+      font-size: 1.05rem; color: var(--muted);
+      max-width: 600px; line-height: 1.7; margin-bottom: 3rem;
+    }
+
+    /* ── Features ─────────────────────────────────────────────────────────── */
+    #features { background: var(--green-mint); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: #fff; border-radius: var(--radius);
+      padding: 1.75rem; box-shadow: var(--shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+    .feature-icon {
+      font-size: 2.2rem; margin-bottom: 1rem;
+      width: 56px; height: 56px;
+      background: var(--green-pale); border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card p  { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── How it works ────────────────────────────────────────────────────── */
+    #how-it-works { background: #fff; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem; }
+    .step { display: flex; gap: 1rem; align-items: flex-start; }
+    .step-num {
+      flex-shrink: 0;
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--green-mid); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.1rem;
+    }
+    .step-body h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.35rem; }
+    .step-body p  { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── Screenshot / mockup ─────────────────────────────────────────────── */
+    #game-preview { background: var(--green-mint); }
+    .mockup-frame {
+      background: #1a1a2e;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .mockup-titlebar {
+      background: #252540; padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .dot-red   { width:12px; height:12px; border-radius:50%; background:#ff5f57; }
+    .dot-amber { width:12px; height:12px; border-radius:50%; background:#ffbd2e; }
+    .dot-green { width:12px; height:12px; border-radius:50%; background:#28c841; }
+    .mockup-titlebar span { flex:1; text-align:center; font-size:0.8rem; color:#aaa; }
+    .mockup-body { padding: 1.5rem; }
+    .mock-header {
+      background: linear-gradient(90deg, var(--green-dark), var(--green-mid));
+      border-radius: 10px; padding: 0.75rem 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+      color: #fff; font-size: 0.85rem; margin-bottom: 1rem;
+    }
+    .mock-header strong { font-size: 1.05rem; }
+    .mock-stats { display: flex; gap: 1rem; font-size: 0.8rem; opacity: 0.9; }
+    .mock-layout { display: grid; grid-template-columns: 1fr 220px; gap: 1rem; }
+    .mock-garden { background: #2d5a27; border-radius: 10px; padding: 1rem; }
+    .mock-plots {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px;
+    }
+    .mock-plot {
+      aspect-ratio: 1; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .mock-sidebar { display: flex; flex-direction: column; gap: 0.75rem; }
+    .mock-card {
+      background: #fff; border-radius: 8px; padding: 0.75rem;
+      font-size: 0.78rem;
+    }
+    .mock-card h4 { font-weight: 700; margin-bottom: 0.4rem; color: var(--green-mid); font-size: 0.82rem; }
+    .chat-msg { display: flex; gap: 0.4rem; margin-bottom: 0.3rem; font-size: 0.75rem; }
+    .chat-user { font-weight: 700; color: var(--green-mid); }
+    .mock-tools { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .mock-tool-btn {
+      background: var(--green-pale); border: none; border-radius: 6px;
+      padding: 0.3rem 0.5rem; font-size: 0.72rem; cursor: default;
+    }
+
+    /* ── Federation ──────────────────────────────────────────────────────── */
+    #federation { background: #fff; }
+    .federation-visual {
+      display: flex; align-items: center; justify-content: center;
+      gap: 1rem; flex-wrap: wrap; margin: 2.5rem 0;
+    }
+    .server-node {
+      background: var(--green-pale); border: 2px solid var(--green-light);
+      border-radius: 14px; padding: 1.1rem 1.4rem; text-align: center;
+      font-size: 0.85rem; font-weight: 600; color: var(--green-dark);
+      box-shadow: var(--shadow);
+    }
+    .server-node .node-icon { font-size: 1.6rem; display: block; margin-bottom: 0.3rem; }
+    .connector {
+      color: var(--green-light); font-size: 1.4rem; font-weight: 700;
+    }
+
+    /* ── Install ─────────────────────────────────────────────────────────── */
+    #install { background: var(--green-dark); color: #fff; }
+    #install .section-label { color: #a5d6a7; }
+    #install h2.section-title { color: #fff; }
+    #install .section-subtitle { color: rgba(255,255,255,0.75); }
+    .install-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; }
+    .install-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius); padding: 1.5rem;
+    }
+    .install-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.75rem; color: #c8e6c9; }
+    .install-card code {
+      display: block; background: rgba(0,0,0,0.35);
+      border-radius: 8px; padding: 0.7rem 0.9rem;
+      font-family: 'Courier New', monospace; font-size: 0.82rem;
+      color: #a5d6a7; line-height: 1.7; margin-bottom: 0.5rem;
+      word-break: break-all;
+    }
+    .install-card p { font-size: 0.85rem; color: rgba(255,255,255,0.65); line-height: 1.6; }
+
+    /* ── Open source ──────────────────────────────────────────────────────── */
+    #open-source { background: var(--green-mint); }
+    .oss-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; }
+    .oss-card {
+      background: #fff; border-radius: var(--radius);
+      padding: 1.5rem; text-align: center; box-shadow: var(--shadow);
+    }
+    .oss-card .oss-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .oss-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .oss-card p  { font-size: 0.83rem; color: var(--muted); }
+
+    /* ── CTA ─────────────────────────────────────────────────────────────── */
+    #cta {
+      background: linear-gradient(135deg, var(--green-mid), #1565c0);
+      color: #fff; text-align: center; padding: 5rem 2rem;
+    }
+    #cta h2 { font-size: clamp(1.8rem, 4vw, 2.6rem); font-weight: 800; margin-bottom: 1rem; }
+    #cta p  { font-size: 1.05rem; opacity: 0.9; max-width: 520px; margin: 0 auto 2.5rem; }
+    .cta-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-cta-white {
+      background: #fff; color: var(--green-dark);
+      padding: 0.85rem 2.2rem; border-radius: 10px;
+      text-decoration: none; font-weight: 700; font-size: 1rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      transition: transform 0.2s;
+    }
+    .btn-cta-white:hover { transform: translateY(-2px); }
+    .btn-cta-outline {
+      border: 2px solid rgba(255,255,255,0.6); color: #fff;
+      padding: 0.85rem 2.2rem; border-radius: 10px;
+      text-decoration: none; font-weight: 600; font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .btn-cta-outline:hover { background: rgba(255,255,255,0.12); }
+
+    /* ── Footer ──────────────────────────────────────────────────────────── */
+    footer {
+      background: #111; color: #aaa;
+      padding: 2.5rem 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1rem;
+      font-size: 0.85rem;
+    }
+    footer a { color: #aaa; text-decoration: none; }
+    footer a:hover { color: #fff; }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-license {
+      background: rgba(255,255,255,0.06);
+      padding: 0.25rem 0.6rem; border-radius: 6px;
+      font-size: 0.75rem;
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .mock-layout { grid-template-columns: 1fr; }
+      .mock-sidebar { display: none; }
+      footer { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ──────────────────────────────────────────────────────────────────── -->
+<nav>
+  <a class="nav-logo" href="#">🌱 AllOne Garden</a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#game-preview">Preview</a></li>
+    <li><a href="#federation">Federation</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#mobile">Mobile</a></li>
+    <li><a href="#open-source">Open Source</a></li>
+  </ul>
+  <a class="nav-cta" href="#install">Get Started</a>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-badge">🌍 Open Source · Decentralized · Community Owned</div>
+  <h1>Grow Together,<br /><span>Own Your World</span></h1>
+  <p>
+    AllOne Garden is a multiplayer gardening game you can self-host on any device —
+    Raspberry Pi, Mac, Windows PC, Linux server, or Android phone.
+    No central server. No subscriptions. Just community, plants, and good soil.
+  </p>
+  <div class="hero-actions">
+    <a class="btn-hero-primary" href="#install">Plant your server</a>
+    <a class="btn-hero-secondary" href="https://github.com/allone-garden/allone-garden" target="_blank" rel="noopener">View on GitHub ↗</a>
+  </div>
+
+  <div class="garden-preview" aria-hidden="true">
+    <div class="plot plot-tilled">🌱</div>
+    <div class="plot plot-grown">🍅</div>
+    <div class="plot plot-grown">🥕</div>
+    <div class="plot plot-water">💧</div>
+    <div class="plot plot-grown">🥬</div>
+    <div class="plot plot-tilled">🌾</div>
+    <div class="plot plot-soil">🟫</div>
+    <div class="plot plot-grown">🌽</div>
+    <div class="plot plot-grown">🥔</div>
+    <div class="plot plot-tilled">🌻</div>
+    <div class="plot plot-grown">🍓</div>
+    <div class="plot plot-soil">🟫</div>
+  </div>
+</section>
+
+<!-- ── Features ─────────────────────────────────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <p class="section-label">Why AllOne Garden</p>
+    <h2 class="section-title">Everything you need,<br />nothing you don't</h2>
+    <p class="section-subtitle">
+      Designed from the ground up for community servers — private, fast, and fully under your control.
+    </p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <h3>Decentralized by design</h3>
+        <p>Every server is independent. Connect with other gardens through P2P federation — like Mastodon, but for gardening.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Privacy first</h3>
+        <p>Your data lives on your own hardware — Pi, Mac, PC, or phone. No tracking, no analytics sold to third parties, no cloud lock-in.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔌</div>
+        <h3>Plugin system</h3>
+        <p>Extend the game with community plugins — achievements, custom plants, voice chat, analytics. All sandboxed and safe.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Mobile ready</h3>
+        <p>Play on iOS and Android via Capacitor. The same code, wrapped natively — works offline too.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌦️</div>
+        <h3>Real seasons</h3>
+        <p>Weather changes daily, crops grow at different speeds depending on conditions. Strategy matters.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤝</div>
+        <h3>True multiplayer</h3>
+        <p>Visit your neighbours' gardens, trade crops on the marketplace, help them water their plots for XP bonuses.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Game preview ──────────────────────────────────────────────────────────── -->
+<section id="game-preview">
+  <div class="container">
+    <p class="section-label">Game Preview</p>
+    <h2 class="section-title">Simple to play,<br />deep to explore</h2>
+    <p class="section-subtitle">
+      A clean web UI that feels at home in the browser, on mobile, or on a community kiosk screen.
+    </p>
+
+    <div class="mockup-frame" aria-label="Game screenshot mockup">
+      <div class="mockup-titlebar">
+        <div class="dot-red"></div><div class="dot-amber"></div><div class="dot-green"></div>
+        <span>AllOne Garden — Alice's Server · 12 players online</span>
+      </div>
+      <div class="mockup-body">
+        <div class="mock-header">
+          <strong>🌱 AllOne Garden</strong>
+          <div class="mock-stats">
+            <span>⭐ 420 XP</span>
+            <span>🪙 350</span>
+            <span>Lv 5</span>
+            <span>☁️ Day 14 — Cloudy</span>
+          </div>
+        </div>
+        <div class="mock-layout">
+          <div class="mock-garden">
+            <div style="color:#a5d6a7; font-size:0.78rem; margin-bottom:0.5rem; font-weight:600;">🌱 My Garden — Plot 4×6</div>
+            <div class="mock-plots">
+              <div class="mock-plot" style="background:#4e342e">🟫</div>
+              <div class="mock-plot" style="background:#388e3c">🍅</div>
+              <div class="mock-plot" style="background:#388e3c">🥕</div>
+              <div class="mock-plot" style="background:#1565c0">💧</div>
+              <div class="mock-plot" style="background:#388e3c">🥬</div>
+              <div class="mock-plot" style="background:#4e342e">🟫</div>
+              <div class="mock-plot" style="background:#388e3c">🌽</div>
+              <div class="mock-plot" style="background:#388e3c">🥔</div>
+              <div class="mock-plot" style="background:#4e342e">🟫</div>
+              <div class="mock-plot" style="background:#388e3c">🍓</div>
+              <div class="mock-plot" style="background:#388e3c">🍅</div>
+              <div class="mock-plot" style="background:#1565c0">💧</div>
+              <div class="mock-plot" style="background:#388e3c">🥕</div>
+              <div class="mock-plot" style="background:#4e342e">🟫</div>
+              <div class="mock-plot" style="background:#388e3c">🌽</div>
+              <div class="mock-plot" style="background:#388e3c">🥬</div>
+              <div class="mock-plot" style="background:#388e3c">🍓</div>
+              <div class="mock-plot" style="background:#4e342e">🟫</div>
+              <div class="mock-plot" style="background:#4e342e">🟫</div>
+              <div class="mock-plot" style="background:#388e3c">🍅</div>
+              <div class="mock-plot" style="background:#388e3c">🥕</div>
+              <div class="mock-plot" style="background:#4e342e">🟫</div>
+              <div class="mock-plot" style="background:#388e3c">🌾</div>
+              <div class="mock-plot" style="background:#388e3c">🥔</div>
+            </div>
+            <div style="margin-top:0.75rem;">
+              <div class="mock-tools">
+                <button class="mock-tool-btn">🪣 Water</button>
+                <button class="mock-tool-btn">⛏️ Till</button>
+                <button class="mock-tool-btn">🌱 Plant</button>
+                <button class="mock-tool-btn">🌾 Harvest</button>
+                <button class="mock-tool-btn">💊 Fertilize</button>
+                <button class="mock-tool-btn">⏭ Next Day</button>
+              </div>
+            </div>
+          </div>
+          <div class="mock-sidebar">
+            <div class="mock-card">
+              <h4>💬 Chat</h4>
+              <div class="chat-msg"><span class="chat-user">Alice:</span><span>Tomatoes ready!</span></div>
+              <div class="chat-msg"><span class="chat-user">Bob:</span><span>Trading 10 carrots</span></div>
+              <div class="chat-msg"><span class="chat-user">Eve:</span><span>Rain coming tomorrow 🌧</span></div>
+              <div style="margin-top:0.5rem; display:flex; gap:0.3rem;">
+                <input style="flex:1; border:1px solid #ddd; border-radius:5px; padding:0.25rem 0.4rem; font-size:0.7rem;" placeholder="Type..." />
+                <button style="background:#388e3c; color:#fff; border:none; border-radius:5px; padding:0.25rem 0.4rem; font-size:0.7rem; cursor:default;">➤</button>
+              </div>
+            </div>
+            <div class="mock-card">
+              <h4>🏆 Leaderboard</h4>
+              <div style="font-size:0.75rem; line-height:1.8;">
+                <div>🥇 Alice — 2 840 XP</div>
+                <div>🥈 Bob — 1 620 XP</div>
+                <div>🥉 You — 420 XP</div>
+              </div>
+            </div>
+            <div class="mock-card">
+              <h4>🎒 Inventory</h4>
+              <div style="font-size:0.75rem; line-height:1.8;">
+                <div>🍅 Tomatoes × 8</div>
+                <div>🥕 Carrots × 12</div>
+                <div>🥬 Lettuce × 5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Federation ─────────────────────────────────────────────────────────────── -->
+<section id="federation">
+  <div class="container">
+    <p class="section-label">P2P Federation</p>
+    <h2 class="section-title">Your server,<br />connected to the world</h2>
+    <p class="section-subtitle">
+      AllOne Garden servers discover each other over the Hyperswarm DHT network — no central registry,
+      no single point of failure. Enable it with one environment variable.
+    </p>
+
+    <div class="federation-visual">
+      <div class="server-node">
+        <span class="node-icon">🏠</span>
+        Your Pi<br />
+        <small style="font-weight:400; color:#555;">192.168.x.x</small>
+      </div>
+      <div class="connector">⇄</div>
+      <div class="server-node">
+        <span class="node-icon">🏫</span>
+        School Server<br />
+        <small style="font-weight:400; color:#555;">42 players</small>
+      </div>
+      <div class="connector">⇄</div>
+      <div class="server-node">
+        <span class="node-icon">🏢</span>
+        Community Hub<br />
+        <small style="font-weight:400; color:#555;">128 players</small>
+      </div>
+      <div class="connector">⇄</div>
+      <div class="server-node">
+        <span class="node-icon">🌍</span>
+        Any other<br />AllOne server
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1.5rem; margin-top:1rem;">
+      <div style="padding:1.25rem; background:var(--green-pale); border-radius:var(--radius);">
+        <strong>🌐 Cross-server chat</strong>
+        <p style="font-size:0.88rem; color:var(--muted); margin-top:0.4rem; line-height:1.6;">Chat messages from federated servers appear with a 🌍 badge so you always know where they're from.</p>
+      </div>
+      <div style="padding:1.25rem; background:var(--green-pale); border-radius:var(--radius);">
+        <strong>🚜 Garden visits</strong>
+        <p style="font-size:0.88rem; color:var(--muted); margin-top:0.4rem; line-height:1.6;">Visit gardens on other servers. Water their crops and earn XP — cooperation has no borders.</p>
+      </div>
+      <div style="padding:1.25rem; background:var(--green-pale); border-radius:var(--radius);">
+        <strong>🔒 Opt-in only</strong>
+        <p style="font-size:0.88rem; color:var(--muted); margin-top:0.4rem; line-height:1.6;">P2P federation is disabled by default. Set <code style="font-size:0.8rem;">P2P_ENABLED=true</code> when you're ready to connect.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it works ───────────────────────────────────────────────────────────── -->
+<section id="how-it-works" style="background:var(--green-mint);">
+  <div class="container">
+    <p class="section-label">Get Started</p>
+    <h2 class="section-title">Up and growing<br />in minutes</h2>
+    <p class="section-subtitle">
+      One script, one command. Runs on any device you already own.
+    </p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Pick your server device</h3>
+          <p>Raspberry Pi, a spare laptop, your Mac, a Windows PC, or even an Android phone — anything running Linux, macOS, or Android works.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Run the installer</h3>
+          <p>A single script detects your platform and sets up Node, PostgreSQL, and a process manager. Pi/Linux also gets Nginx and HTTPS via Let's Encrypt.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Invite your friends</h3>
+          <p>Share your server URL. Players register with a username and start planting immediately — no app store needed.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Extend with plugins</h3>
+          <p>Browse the community marketplace and drop plugin folders into <code style="font-size:0.82rem; background:#ddd; padding:0.1rem 0.3rem; border-radius:4px;">plugins/community/</code>. Restart to activate.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Install ────────────────────────────────────────────────────────────────── -->
+<section id="install">
+  <div class="container">
+    <p class="section-label">Installation</p>
+    <h2 class="section-title">Any device, one command</h2>
+    <p class="section-subtitle">
+      Choose what fits your setup — from a quick local test to a production server with HTTPS.
+    </p>
+    <div class="install-cards">
+      <div class="install-card">
+        <h3>🫐 Raspberry Pi / Linux</h3>
+        <code>curl -fsSL https://get.allonegarden.org/install.sh | sudo bash</code>
+        <p>Installs Node 20, PostgreSQL, Nginx, and a Let's Encrypt certificate. Set <code>GARDEN_DOMAIN</code> for automatic HTTPS.</p>
+      </div>
+      <div class="install-card">
+        <h3>🍎 macOS</h3>
+        <code>git clone https://github.com/allone-garden/allone-garden<br />bash install-mac.sh</code>
+        <p>Uses Homebrew to install Node 20, PostgreSQL, and Redis. Managed by pm2 with auto-start on login.</p>
+      </div>
+      <div class="install-card">
+        <h3>🪟 Windows</h3>
+        <code>git clone https://github.com/allone-garden/allone-garden<br />.\start.ps1</code>
+        <p>PowerShell starter for local dev. For a persistent server use Docker Desktop or WSL2.</p>
+      </div>
+      <div class="install-card">
+        <h3>🤖 Android (Termux)</h3>
+        <code>git clone https://github.com/allone-garden/allone-garden<br />bash install-termux.sh</code>
+        <p>Runs a full Node + PostgreSQL server from F-Droid Termux. Other devices on the same Wi-Fi can connect to it.</p>
+      </div>
+      <div class="install-card">
+        <h3>🐳 Docker</h3>
+        <code>cp .env.example .env<br /># set JWT_SECRET in .env<br />docker compose up -d</code>
+        <p>Includes PostgreSQL and Redis. Works on any machine that runs Docker — no other dependencies needed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Mobile / PWA ──────────────────────────────────────────────────────────── -->
+<section id="mobile" style="background:#fff;">
+  <div class="container">
+    <p class="section-label">Play Anywhere</p>
+    <h2 class="section-title">Install on your phone<br />in seconds</h2>
+    <p class="section-subtitle">
+      No app store. No download wait. AllOne Garden is a Progressive Web App —
+      open the server URL in your browser and add it to your home screen.
+    </p>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem; margin-top:2rem;">
+
+      <div style="background:var(--green-pale); border-radius:var(--radius); padding:2rem;">
+        <div style="font-size:2.5rem; margin-bottom:1rem;">🍎</div>
+        <h3 style="font-weight:700; margin-bottom:0.75rem;">iOS — Safari</h3>
+        <ol style="padding-left:1.2rem; color:var(--muted); font-size:0.9rem; line-height:2;">
+          <li>Open the game URL in <strong>Safari</strong></li>
+          <li>Tap the <strong>Share</strong> button <span style="font-size:0.8rem;">(□↑ at the bottom)</span></li>
+          <li>Tap <strong>"Add to Home Screen"</strong></li>
+          <li>Tap <strong>Add</strong> — done!</li>
+        </ol>
+        <p style="margin-top:1rem; font-size:0.8rem; color:var(--muted);">
+          ⚠️ Must use Safari — Chrome/Firefox on iOS cannot install PWAs.
+        </p>
+      </div>
+
+      <div style="background:var(--green-pale); border-radius:var(--radius); padding:2rem;">
+        <div style="font-size:2.5rem; margin-bottom:1rem;">🤖</div>
+        <h3 style="font-weight:700; margin-bottom:0.75rem;">Android — Chrome</h3>
+        <ol style="padding-left:1.2rem; color:var(--muted); font-size:0.9rem; line-height:2;">
+          <li>Open the game URL in <strong>Chrome</strong></li>
+          <li>Tap the <strong>⋮ menu</strong> (top right)</li>
+          <li>Tap <strong>"Add to Home screen"</strong> or <strong>"Install app"</strong></li>
+          <li>Tap <strong>Install</strong> — done!</li>
+        </ol>
+        <p style="margin-top:1rem; font-size:0.8rem; color:var(--muted);">
+          Chrome may also show an install banner automatically at the bottom of the screen.
+        </p>
+      </div>
+
+      <div style="background:var(--green-pale); border-radius:var(--radius); padding:2rem;">
+        <div style="font-size:2.5rem; margin-bottom:1rem;">⚡</div>
+        <h3 style="font-weight:700; margin-bottom:0.75rem;">What you get</h3>
+        <ul style="padding-left:1.2rem; color:var(--muted); font-size:0.9rem; line-height:2; list-style:none; padding:0;">
+          <li>✅ Full-screen, no browser toolbar</li>
+          <li>✅ Instant launch from home screen</li>
+          <li>✅ Loads from cache even offline</li>
+          <li>✅ Works on any phone with a browser</li>
+          <li>✅ No app store approval needed</li>
+          <li>✅ Updates automatically</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── Open source ────────────────────────────────────────────────────────────── -->
+<section id="open-source">
+  <div class="container">
+    <p class="section-label">Open Source</p>
+    <h2 class="section-title">Built in the open,<br />for everyone</h2>
+    <p class="section-subtitle">
+      AllOne Garden is free software. Fork it, self-host it, contribute to it. The community owns the game.
+    </p>
+    <div class="oss-grid">
+      <div class="oss-card">
+        <div class="oss-icon">⚛️</div>
+        <h3>React 18 Frontend</h3>
+        <p>MIT licensed · Socket.IO · i18next (EN + NL)</p>
+      </div>
+      <div class="oss-card">
+        <div class="oss-icon">🟩</div>
+        <h3>Node.js Backend</h3>
+        <p>GPL-3.0 · Express 4 · Socket.IO · PostgreSQL</p>
+      </div>
+      <div class="oss-card">
+        <div class="oss-icon">🔌</div>
+        <h3>Plugin API</h3>
+        <p>MIT · VM-sandboxed · event-driven · hot-reload</p>
+      </div>
+      <div class="oss-card">
+        <div class="oss-icon">📱</div>
+        <h3>Mobile (Capacitor)</h3>
+        <p>MIT · iOS &amp; Android · offline-first</p>
+      </div>
+      <div class="oss-card">
+        <div class="oss-icon">🌐</div>
+        <h3>P2P Federation</h3>
+        <p>Hyperswarm DHT · opt-in · privacy-respecting</p>
+      </div>
+      <div class="oss-card">
+        <div class="oss-icon">🛡️</div>
+        <h3>Security hardened</h3>
+        <p>Helmet · rate limiting · VM sandbox · GDPR endpoints</p>
+      </div>
+    </div>
+    <div style="margin-top:2.5rem; text-align:center;">
+      <a href="https://github.com/allone-garden/allone-garden" target="_blank" rel="noopener"
+         style="display:inline-flex; align-items:center; gap:0.5rem; background:#24292f; color:#fff; padding:0.8rem 1.8rem; border-radius:10px; text-decoration:none; font-weight:600; font-size:0.95rem;">
+        ⭐ Star on GitHub
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ────────────────────────────────────────────────────────────────────── -->
+<section id="cta">
+  <div class="container">
+    <h2>Ready to start growing?</h2>
+    <p>Your server, your rules, your community. No subscriptions, no central authority, just good garden vibes.</p>
+    <div class="cta-buttons">
+      <a class="btn-cta-white" href="#install">Plant your server</a>
+      <a class="btn-cta-outline" href="https://github.com/allone-garden/allone-garden" target="_blank" rel="noopener">Read the docs</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────────── -->
+<footer>
+  <div>
+    <a href="#" style="font-weight:700; color:#fff;">🌱 AllOne Garden</a>
+    <span style="margin-left:0.75rem;">© 2024 — Community project</span>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/allone-garden/allone-garden" target="_blank" rel="noopener">GitHub</a>
+    <a href="INSTALL.md">Docs</a>
+    <a href="CODE_OF_CONDUCT.md">Code of Conduct</a>
+    <a href="CONTRIBUTING.md">Contributing</a>
+  </div>
+  <div>
+    <span class="footer-license">Frontend: MIT</span>
+    <span class="footer-license" style="margin-left:0.4rem;">Backend: GPL-3.0</span>
+  </div>
+</footer>
+
+</body>
+</html>

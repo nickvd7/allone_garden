@@ -1,0 +1,32 @@
+{
+    "name": "allone_garden",
+    "version": "1.0.0",
+    "description": "Open-source multiplayer gardening game",
+    "author": "Garden Paradise Community",
+    "license": "MIT",
+    "private": true,
+    "workspaces": [
+      "packages/*"
+    ],
+    "scripts": {
+      "dev": "npm run dev:frontend",
+      "dev:frontend": "cd packages/frontend && npm start",
+      "dev:backend": "cd packages/backend && npm run dev",
+      "dev:all": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+      "build": "npm run build:frontend && npm run build:backend",
+      "build:frontend": "cd packages/frontend && npm run build",
+      "build:backend": "cd packages/backend && npm run build",
+      "test": "npm run test:frontend && npm run test:backend",
+      "test:frontend": "cd packages/frontend && npm test",
+      "test:backend": "cd packages/backend && npm test",
+      "install:all": "npm install && cd packages/frontend && npm install && cd ../backend && npm install",
+      "start": "npm run start:backend",
+      "start:backend": "cd packages/backend && npm start",
+      "db:setup": "cd packages/backend && npm run db:setup",
+      "db:migrate": "cd packages/backend && npm run db:migrate",
+      "db:seed": "cd packages/backend && npm run db:seed"
+    },
+    "devDependencies": {
+      "concurrently": "^8.2.2"
+    }
+  }

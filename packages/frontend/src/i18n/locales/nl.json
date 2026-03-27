@@ -1,0 +1,66 @@
+{
+  "app_title": "AllOne Garden",
+
+  "day": "Dag",
+  "level": "Niveau",
+  "xp": "XP",
+  "coins": "Munten",
+  "plants_grown": "Planten Gegroeid",
+
+  "tools": "Gereedschap",
+  "tool_till": "Omspitten",
+  "tool_plant": "Planten",
+  "tool_water": "Water Geven",
+  "tool_fertilize": "Bemesten",
+  "tool_harvest": "Oogsten",
+
+  "seeds": "Zaden",
+  "plant_tomato": "Tomaat",
+  "plant_carrot": "Wortel",
+  "plant_lettuce": "Sla",
+  "plant_radish": "Radijs",
+  "plant_corn": "Maïs",
+  "plant_potato": "Aardappel",
+
+  "weather_sunny": "Zonnig",
+  "weather_cloudy": "Bewolkt",
+  "weather_rainy": "Regenachtig",
+  "weather_windy": "Winderig",
+
+  "chat": "Chat",
+  "online_players": "Online Spelers",
+  "inventory": "Inventaris",
+
+  "visit": "Bezoek",
+  "help": "Help",
+  "trade": "Ruil",
+  "send": "Verstuur",
+
+  "marketplace": "Marktplaats",
+  "browse_listings": "Bladeren",
+  "sell_crops": "Verkopen",
+  "crop": "Gewas",
+  "seller": "Verkoper",
+  "available": "Beschikbaar",
+  "price": "Prijs",
+  "buy": "Kopen",
+  "list_for_sale": "Te koop aanbieden",
+  "quantity": "Hoeveelheid",
+  "price_per_unit": "Prijs per stuk",
+  "no_listings": "Nog geen aanbiedingen. Wees de eerste om te verkopen!",
+  "no_crops_to_sell": "Je hebt geen gewassen om te verkopen. Oogst eerst wat!",
+
+  "plugins": "Plugins",
+  "installed_plugins": "Geïnstalleerd",
+  "community_plugins": "Community",
+  "no_plugins": "Nog geen plugins geïnstalleerd op deze server.",
+  "install_instructions": "Plaats de plugin-map in plugins/community/ op je server en herstart.",
+
+  "logout": "Uitloggen",
+  "login": "Inloggen",
+  "register": "Registreren",
+  "play_as_guest": "Speel als Gast (offline)",
+  "email": "E-mail",
+  "username": "Gebruikersnaam",
+  "password": "Wachtwoord"
+}
