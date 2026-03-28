@@ -30,6 +30,33 @@ const CATALOGUE_FALLBACK = [
     installed:   true,
     downloadUrl: null,
   },
+  {
+    name:        'daily-bonus',
+    version:     '1.0.0',
+    author:      'AllOne Garden',
+    description: 'Awards coins and XP on first login each in-game day. Streak multiplier up to 3×.',
+    tags:        ['gameplay', 'progression'],
+    installed:   true,
+    downloadUrl: null,
+  },
+  {
+    name:        'crop-prices',
+    version:     '1.0.0',
+    author:      'AllOne Garden',
+    description: 'Dynamic market prices for every crop type — fluctuate daily with mean reversion.',
+    tags:        ['economy', 'trade'],
+    installed:   true,
+    downloadUrl: null,
+  },
+  {
+    name:        'server-motd',
+    version:     '1.0.0',
+    author:      'AllOne Garden',
+    description: 'Message of the Day shown to players on connect. Admins can update it in-game.',
+    tags:        ['admin', 'social'],
+    installed:   true,
+    downloadUrl: null,
+  },
 ];
 
 // ── Tag badge ─────────────────────────────────────────────────────────────────
