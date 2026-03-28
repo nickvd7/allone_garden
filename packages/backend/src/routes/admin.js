@@ -5,26 +5,10 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
-const { requireAuth } = require('../middleware/auth');
-const pluginLoader    = require('../plugins/loader');
+const { requireAuth }  = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/admin');
+const pluginLoader     = require('../plugins/loader');
 const os = require('os');
-
-// ── Admin check middleware ─────────────────────────────────────────────────────
-const ADMIN_USERS = (process.env.ADMIN_USERS || '').split(',').map((s) => s.trim()).filter(Boolean);
-
-async function requireAdmin(req, res, next) {
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-
-  // Allow by username list (env) or by level >= 99 in DB
-  if (ADMIN_USERS.includes(req.user.username)) return next();
-
-  if (db.isConnected()) {
-    const result = await db.query('SELECT level FROM users WHERE id = $1', [req.user.userId]);
-    if (result.rows[0]?.level >= 99) return next();
-  }
-
-  res.status(403).json({ error: 'Admin access required' });
-}
 
 // ── GET /api/admin/stats — server overview ────────────────────────────────────
 router.get('/stats', requireAuth, requireAdmin, async (req, res) => {

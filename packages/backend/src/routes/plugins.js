@@ -13,26 +13,14 @@ const fs      = require('fs');
 const https   = require('https');
 const crypto  = require('crypto');
 
-const pluginLoader = require('../plugins/loader');
-const db           = require('../db');
+const pluginLoader     = require('../plugins/loader');
+const db               = require('../db');
 const { requireAuth }  = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/admin');
 const { auditLog }     = require('../middleware/security');
 
-const PLUGINS_ROOT     = path.resolve(__dirname, '../../../../../plugins/community');
-const REGISTRY_URL     = process.env.PLUGIN_REGISTRY_URL || '';
-
-// ── Admin check (re-used from admin.js pattern) ───────────────────────────────
-const ADMIN_USERS = (process.env.ADMIN_USERS || '').split(',').map((s) => s.trim()).filter(Boolean);
-
-async function requireAdmin(req, res, next) {
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-  if (ADMIN_USERS.includes(req.user.username)) return next();
-  if (db.isConnected()) {
-    const result = await db.query('SELECT level FROM users WHERE id = $1', [req.user.userId]);
-    if (result.rows[0]?.level >= 99) return next();
-  }
-  res.status(403).json({ error: 'Admin access required' });
-}
+const PLUGINS_ROOT = path.resolve(__dirname, '../../../../../plugins/community');
+const REGISTRY_URL = process.env.PLUGIN_REGISTRY_URL || '';
 
 // ── GET /api/plugins ──────────────────────────────────────────────────────────
 

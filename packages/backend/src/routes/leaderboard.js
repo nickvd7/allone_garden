@@ -11,6 +11,7 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const { leaderboardLimiter } = require('../middleware/security');
 
 // In-memory fallback store (populated by auth routes on register/login)
 const memLeaderboard = {};
@@ -33,7 +34,7 @@ function updateMemEntry(user) {
 
 const VALID_SORT = new Set(['xp', 'coins', 'plants']);
 
-router.get('/', async (req, res) => {
+router.get('/', leaderboardLimiter, async (req, res) => {
   const by = VALID_SORT.has(req.query.by) ? req.query.by : 'xp';
 
   if (db.isConnected()) {

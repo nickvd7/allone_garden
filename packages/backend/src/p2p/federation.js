@@ -18,7 +18,15 @@
 
 const Hyperswarm = require('hyperswarm');
 const crypto     = require('crypto');
+const xss        = require('xss');
 const db         = require('../db');
+
+// Strip all HTML from federated text fields — remote servers are untrusted
+const XSS_OPTS = {
+  whiteList: {},
+  stripIgnoreTag: true,
+  stripIgnoreTagBody: ['script', 'style'],
+};
 
 // The shared topic all AllOne Garden servers join.
 // Changing this string creates a separate isolated network.
@@ -142,8 +150,21 @@ class FederationServer {
         break;
 
       case MSG.CHAT_FORWARD: {
-        // Deliver to local players, tagged as federated
-        const chatMsg = { ...payload, federated: true, serverName: this.peers.get(peerId)?.info?.serverName };
+        // Re-sanitize before forwarding — the remote server is untrusted
+        const serverName = this.peers.get(peerId)?.info?.serverName;
+        const safeText     = typeof payload.text     === 'string' ? xss(payload.text.slice(0, 500), XSS_OPTS) : '';
+        const safeUsername = typeof payload.username === 'string' ? xss(payload.username.slice(0, 50), XSS_OPTS) : 'Remote Player';
+        if (!safeText) break;  // drop empty or tag-only messages
+
+        const chatMsg = {
+          id:         Date.now(),
+          userId:     null,              // remote user has no local ID
+          username:   safeUsername,
+          text:       safeText,
+          timestamp:  new Date(),
+          federated:  true,
+          serverName: typeof serverName === 'string' ? xss(serverName.slice(0, 64), XSS_OPTS) : 'Remote Server',
+        };
         this.io.emit('chat:message', chatMsg);
         break;
       }
@@ -151,8 +172,20 @@ class FederationServer {
       case MSG.PLAYER_VISIT: {
         // Another server's player wants to visit a local garden
         const { targetUserId, visitorName, visitorServerId } = payload;
-        this.io.to(targetUserId).emit('garden:visitor', {
-          username: `${visitorName} (from ${visitorServerId?.slice(0, 8)}…)`,
+
+        // targetUserId must be a numeric string (local DB id)
+        const safeTarget = String(targetUserId ?? '').trim();
+        if (!/^\d+$/.test(safeTarget)) break;
+
+        const safeName = typeof visitorName === 'string'
+          ? xss(visitorName.slice(0, 50), XSS_OPTS)
+          : 'Remote Player';
+        const safeSrvId = typeof visitorServerId === 'string'
+          ? visitorServerId.replace(/[^a-f0-9]/gi, '').slice(0, 8)
+          : '????????';
+
+        this.io.to(safeTarget).emit('garden:visitor', {
+          username: `${safeName} (from ${safeSrvId}…)`,
           remote: true,
         });
         break;

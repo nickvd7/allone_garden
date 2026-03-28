@@ -78,6 +78,19 @@ const tradeLimiter = rateLimit({
 });
 
 /**
+ * Leaderboard limiter: 30 requests per minute per IP.
+ * Public endpoint — needs a tighter cap than the global 200 req/min.
+ */
+const leaderboardLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many leaderboard requests. Please slow down.' },
+  skip: (req) => process.env.NODE_ENV === 'test',
+});
+
+/**
  * Account / sensitive action limiter: 5 requests per 15 minutes per IP.
  * Protects password-change and account-delete from abuse.
  */
@@ -126,6 +139,7 @@ module.exports = {
   apiLimiter,
   tradeLimiter,
   accountLimiter,
+  leaderboardLimiter,
   bodyLimitLarge,
   bodyLimitSmall,
   requestId,

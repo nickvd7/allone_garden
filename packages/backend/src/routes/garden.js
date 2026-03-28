@@ -126,12 +126,26 @@ router.post('/action', requireAuth, validateGardenAction, async (req, res) => {
         plot.daysPlanted = 0;
       }
       break;
-    case 'harvest':
+    case 'spray':
+      // Removes pest from the plot (requires a planted plot)
+      if (plot.planted) plot.pest = false;
+      break;
+    case 'harvest': {
+      // Server-side ripeness check — must match frontend GROWTH_STAGES
+      const GROWTH_STAGES = {
+        tomato: 3, carrot: 2, lettuce: 2, radish: 1, corn: 4, potato: 3,
+        pumpkin: 5, sunflower: 2, blueberry: 4,
+      };
+      const required = GROWTH_STAGES[plot.plantType] ?? 3;
+      if (!plot.planted || (plot.daysPlanted || 0) < required) {
+        return res.status(400).json({ error: 'Crop is not ready to harvest yet' });
+      }
       Object.assign(plot, {
         planted: false, plantType: null,
-        waterLevel: 0, fertilized: false, daysPlanted: 0,
+        waterLevel: 0, fertilized: false, daysPlanted: 0, pest: false,
       });
       break;
+    }
     default:
       return res.status(400).json({ error: `Unknown action: ${type}` });
   }
@@ -227,7 +241,11 @@ router.post('/nextday', requireAuth, async (req, res) => {
 // ── GET /api/garden/visit/:userId  — view another player's garden (read-only) ─
 
 router.get('/visit/:targetId', requireAuth, async (req, res) => {
-  const { targetId } = req.params;
+  // Validate targetId is a positive integer to prevent SQL injection / type confusion
+  const targetId = req.params.targetId;
+  if (!/^\d+$/.test(targetId)) {
+    return res.status(400).json({ error: 'Invalid user ID' });
+  }
 
   if (db.isConnected()) {
     const result = await db.query(

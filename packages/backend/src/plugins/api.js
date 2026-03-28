@@ -68,12 +68,12 @@ class PluginAPI {
   async dbCreateTable(tableSuffix, columnDefs) {
     PluginAPI._validateSuffix(tableSuffix);
 
-    // Guard against SQL injection in columnDefs: reject semicolons and comments.
+    // Guard against SQL injection in columnDefs: reject statement terminators and comments.
     if (typeof columnDefs !== 'string' || columnDefs.trim().length === 0) {
       throw new Error('[PluginAPI] columnDefs must be a non-empty string');
     }
-    if (/;|--/.test(columnDefs)) {
-      throw new Error('[PluginAPI] columnDefs must not contain ";" or "--" (possible SQL injection)');
+    if (/;|--|\/\*/.test(columnDefs)) {
+      throw new Error('[PluginAPI] columnDefs must not contain ";", "--", or "/*" (possible SQL injection)');
     }
 
     const table = `plugin_${this._pluginName}_${tableSuffix}`;
