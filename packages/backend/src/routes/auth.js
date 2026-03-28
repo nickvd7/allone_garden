@@ -24,6 +24,9 @@ const RESET_TTL_MS   = 60 * 60 * 1000; // 1 hour
 // In-memory fallback (used when DATABASE_URL is not configured)
 const memUsers = [];
 
+// Admin usernames from env (same list used by admin.js and plugins.js)
+const ADMIN_USERS = (process.env.ADMIN_USERS || '').split(',').map((s) => s.trim()).filter(Boolean);
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function makeToken(user) {
@@ -43,6 +46,7 @@ function safeUser(user) {
     xp:          user.xp          || 0,
     coins:       user.coins       || 100,
     plantsGrown: user.plants_grown || user.plantsGrown || 0,
+    isAdmin:     ADMIN_USERS.includes(user.username) || (user.level || 1) >= 99,
   };
 }
 

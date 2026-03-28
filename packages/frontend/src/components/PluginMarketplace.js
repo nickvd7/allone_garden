@@ -1,95 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../hooks/useApi';
 
 /**
  * Plugin Marketplace
  *
- * Shows plugins currently installed on the connected server.
- * In the future this will also list community plugins available for download.
+ * Installed tab  — plugins currently running on this server.
+ * Community tab  — registry catalogue (served by backend, falls back to bundled list).
+ *
+ * Admins (user.isAdmin) can install plugins from the registry and unload running ones.
  */
 
-// Hard-coded community plugin catalogue (in a real deployment this comes from
-// a decentralised package registry served by trusted community mirrors)
-const CATALOGUE = [
+// Bundled fallback catalogue — shown when the backend registry is unreachable.
+const CATALOGUE_FALLBACK = [
   {
-    id: 'weather-forecast',
-    name: 'weather-forecast',
-    version: '1.0.0',
-    author: 'AllOne Community',
-    description: 'Shows a 5-day weather forecast for your garden.',
-    license: 'MIT',
-    tags: ['weather', 'gameplay'],
-    free: true,
+    name:        'achievements',
+    version:     '1.0.0',
+    author:      'AllOne Garden',
+    description: 'Unlockable badges for in-game milestones (first harvest, 100 coins, etc.)',
+    tags:        ['gameplay', 'progression'],
+    installed:   true,
+    downloadUrl: null,
   },
   {
-    id: 'achievements',
-    name: 'achievements',
-    version: '0.9.0',
-    author: 'AllOne Community',
-    description: 'Unlockable badges for planting milestones, trade records, and more.',
-    license: 'MIT',
-    tags: ['progression', 'gameplay'],
-    free: true,
-  },
-  {
-    id: 'garden-analytics',
-    name: 'garden-analytics',
-    version: '1.1.0',
-    author: 'AllOne Community',
-    description: 'Graphs your harvest rate, XP gains, and coin flow over time.',
-    license: 'MIT',
-    tags: ['analytics'],
-    free: true,
-  },
-  {
-    id: 'voice-chat',
-    name: 'voice-chat',
-    version: '0.5.0',
-    author: 'AllOne Community',
-    description: 'WebRTC voice chat for players on the same server.',
-    license: 'MIT',
-    tags: ['social', 'webrtc'],
-    free: true,
-  },
-  {
-    id: 'custom-plants',
-    name: 'custom-plants',
-    version: '2.0.0',
-    author: 'AllOne Community',
-    description: 'Add your own plant types with custom growth stages and artwork.',
-    license: 'MIT',
-    tags: ['customisation'],
-    free: true,
-  },
-  {
-    id: 'ai-assistant',
-    name: 'ai-assistant',
-    version: '1.0.0',
-    author: 'AllOne Official',
-    description: 'An AI garden advisor that suggests what to plant and when to water.',
-    license: 'Proprietary',
-    tags: ['ai', 'premium'],
-    free: false,
-    price: '🪙 99 / month',
+    name:        'weather-forecast',
+    version:     '1.0.0',
+    author:      'AllOne Garden',
+    description: 'Shows a 5-day weather forecast generated each new in-game day.',
+    tags:        ['weather', 'ui'],
+    installed:   true,
+    downloadUrl: null,
   },
 ];
 
+// ── Tag badge ─────────────────────────────────────────────────────────────────
+
+const TAG_COLORS = {
+  weather:      '#e3f2fd',
+  gameplay:     '#e8f5e9',
+  progression:  '#fff8e1',
+  analytics:    '#f3e5f5',
+  social:       '#fce4ec',
+  webrtc:       '#e0f7fa',
+  customisation:'#fff3e0',
+  ai:           '#e8eaf6',
+  premium:      '#fff9c4',
+  ui:           '#f1f8e9',
+};
+
 function TagBadge({ tag }) {
-  const tagColors = {
-    weather: '#e3f2fd',
-    gameplay: '#e8f5e9',
-    progression: '#fff8e1',
-    analytics: '#f3e5f5',
-    social: '#fce4ec',
-    webrtc: '#e0f7fa',
-    customisation: '#fff3e0',
-    ai: '#e8eaf6',
-    premium: '#fff9c4',
-  };
   return (
     <span style={{
       padding: '0.15rem 0.5rem', borderRadius: '10px',
-      background: tagColors[tag] || '#f5f5f5',
+      background: TAG_COLORS[tag] || '#f5f5f5',
       fontSize: '0.72rem', fontWeight: '600', color: '#555',
     }}>
       {tag}
@@ -97,7 +59,13 @@ function TagBadge({ tag }) {
   );
 }
 
-function PluginCard({ plugin, isInstalled }) {
+// ── Plugin card ───────────────────────────────────────────────────────────────
+
+function PluginCard({ plugin, isInstalled, isAdmin, busy, onInstall, onUnload, error }) {
+  const tags    = plugin.tags || [];
+  const canInstall = isAdmin && !isInstalled && !!plugin.downloadUrl;
+  const canUnload  = isAdmin && isInstalled;
+
   return (
     <div style={{
       ...styles.card,
@@ -106,37 +74,76 @@ function PluginCard({ plugin, isInstalled }) {
       <div style={styles.cardHeader}>
         <div>
           <strong style={{ fontSize: '1rem', color: '#2e7d32' }}>{plugin.name}</strong>
-          <span style={{ color: '#aaa', fontSize: '0.8rem', marginLeft: '0.5rem' }}>v{plugin.version}</span>
+          <span style={{ color: '#aaa', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
+            v{plugin.version}
+          </span>
         </div>
-        {isInstalled ? (
-          <span style={styles.badgeInstalled}>✓ Installed</span>
-        ) : plugin.free ? (
-          <span style={styles.badgeFree}>Free</span>
-        ) : (
-          <span style={styles.badgePaid}>{plugin.price}</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {isInstalled && <span style={styles.badgeInstalled}>✓ Installed</span>}
+          {!isInstalled && <span style={styles.badgeFree}>Free</span>}
+
+          {canInstall && (
+            <button
+              style={{ ...styles.actionBtn, ...(busy ? styles.actionBtnBusy : {}) }}
+              onClick={() => onInstall(plugin.name)}
+              disabled={busy}
+            >
+              {busy ? '⏳ Installing…' : '⬇ Install'}
+            </button>
+          )}
+          {canUnload && (
+            <button
+              style={{ ...styles.actionBtn, ...styles.actionBtnDanger, ...(busy ? styles.actionBtnBusy : {}) }}
+              onClick={() => onUnload(plugin.name)}
+              disabled={busy}
+            >
+              {busy ? '⏳ Unloading…' : '✕ Unload'}
+            </button>
+          )}
+        </div>
       </div>
 
       <p style={styles.desc}>{plugin.description}</p>
 
+      {error && (
+        <p style={{ color: '#c62828', fontSize: '0.8rem', margin: '0.25rem 0 0.5rem' }}>
+          ⚠ {error}
+        </p>
+      )}
+
       <div style={styles.cardFooter}>
         <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-          {plugin.tags.map((t) => <TagBadge key={t} tag={t} />)}
+          {tags.map((t) => <TagBadge key={t} tag={t} />)}
         </div>
-        <span style={{ fontSize: '0.75rem', color: '#aaa' }}>
-          by {plugin.author} · {plugin.license}
-        </span>
+        {plugin.author && (
+          <span style={{ fontSize: '0.75rem', color: '#aaa' }}>
+            by {plugin.author}{plugin.license ? ` · ${plugin.license}` : ''}
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
-function PluginMarketplace({ onClose }) {
+// ── Main component ────────────────────────────────────────────────────────────
+
+function PluginMarketplace({ user, onClose }) {
+  const isAdmin = user?.isAdmin || false;
+
   const [tab,       setTab]       = useState('installed');
   const [installed, setInstalled] = useState([]);
-  const [catalogue, setCatalogue] = useState(CATALOGUE);
+  const [catalogue, setCatalogue] = useState(CATALOGUE_FALLBACK);
   const [loading,   setLoading]   = useState(false);
-  const [filter,    setFilter]    = useState('');
+  // Map: pluginName -> 'installing' | 'unloading'
+  const [busy,      setBusy]      = useState({});
+  // Map: pluginName -> error string
+  const [errors,    setErrors]    = useState({});
+
+  const loadInstalled = useCallback(() => {
+    api.get('/api/plugins')
+      .then(setInstalled)
+      .catch(() => setInstalled([]));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -147,29 +154,60 @@ function PluginMarketplace({ onClose }) {
         .finally(() => setLoading(false));
     } else {
       api.get('/api/plugins/registry')
-        .then((data) => setCatalogue(Array.isArray(data) ? data : CATALOGUE))
-        .catch(() => setCatalogue(CATALOGUE))   // fall back to bundled list
+        .then((data) => setCatalogue(Array.isArray(data) ? data : CATALOGUE_FALLBACK))
+        .catch(() => setCatalogue(CATALOGUE_FALLBACK))
         .finally(() => setLoading(false));
     }
   }, [tab]);
 
+  const handleInstall = useCallback(async (name) => {
+    setBusy((b) => ({ ...b, [name]: 'installing' }));
+    setErrors((e) => { const next = { ...e }; delete next[name]; return next; });
+    try {
+      await api.post(`/api/plugins/${name}/install`, {});
+      loadInstalled();
+      // Mark as installed in catalogue
+      setCatalogue((c) => c.map((p) => p.name === name ? { ...p, installed: true } : p));
+    } catch (err) {
+      setErrors((e) => ({ ...e, [name]: err.message }));
+    } finally {
+      setBusy((b) => { const next = { ...b }; delete next[name]; return next; });
+    }
+  }, [loadInstalled]);
+
+  const handleUnload = useCallback(async (name) => {
+    setBusy((b) => ({ ...b, [name]: 'unloading' }));
+    setErrors((e) => { const next = { ...e }; delete next[name]; return next; });
+    try {
+      await api.post(`/api/plugins/${name}/unload`, {});
+      setInstalled((prev) => prev.filter((p) => p.name !== name));
+    } catch (err) {
+      setErrors((e) => ({ ...e, [name]: err.message }));
+    } finally {
+      setBusy((b) => { const next = { ...b }; delete next[name]; return next; });
+    }
+  }, []);
+
   const installedNames = new Set(installed.map((p) => p.name));
 
+  const [filter, setFilter] = useState('');
   const filteredCatalogue = catalogue.filter((p) =>
     !filter ||
-    p.name.includes(filter.toLowerCase()) ||
+    p.name.toLowerCase().includes(filter.toLowerCase()) ||
     (p.description || '').toLowerCase().includes(filter.toLowerCase()) ||
-    (p.tags || []).some((t) => t.includes(filter.toLowerCase()))
+    (p.tags || []).some((t) => t.toLowerCase().includes(filter.toLowerCase()))
   );
 
   return (
     <div style={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div style={styles.modal}>
+        {/* Header */}
         <div style={styles.modalHeader}>
           <h2 style={styles.modalTitle}>🔌 Plugin Marketplace</h2>
           <button style={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
 
+        {/* Tabs */}
         <div style={styles.tabs}>
           {['installed', 'community'].map((t) => (
             <button
@@ -182,7 +220,9 @@ function PluginMarketplace({ onClose }) {
           ))}
         </div>
 
+        {/* Body */}
         <div style={styles.body}>
+
           {/* Installed tab */}
           {tab === 'installed' && (
             loading ? (
@@ -193,12 +233,25 @@ function PluginMarketplace({ onClose }) {
                 No plugins installed on this server yet.
                 <br />
                 <span style={{ fontSize: '0.85rem', color: '#aaa' }}>
-                  Ask your server admin to install community plugins from the directory.
+                  {isAdmin
+                    ? 'Browse the Community tab to install plugins.'
+                    : 'Ask your server admin to install plugins from the Community tab.'}
                 </span>
               </div>
             ) : (
               <div style={styles.grid}>
-                {installed.map((p) => <PluginCard key={p.name} plugin={p} isInstalled />)}
+                {installed.map((p) => (
+                  <PluginCard
+                    key={p.name}
+                    plugin={p}
+                    isInstalled
+                    isAdmin={isAdmin}
+                    busy={!!busy[p.name]}
+                    error={errors[p.name]}
+                    onUnload={handleUnload}
+                    onInstall={handleInstall}
+                  />
+                ))}
               </div>
             )
           )}
@@ -213,19 +266,29 @@ function PluginMarketplace({ onClose }) {
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
-              <div style={styles.grid}>
-                {filteredCatalogue.map((p) => (
-                  <PluginCard
-                    key={p.id}
-                    plugin={p}
-                    isInstalled={installedNames.has(p.name)}
-                  />
-                ))}
-              </div>
+              {loading ? (
+                <div style={styles.empty}>Loading registry…</div>
+              ) : (
+                <div style={styles.grid}>
+                  {filteredCatalogue.map((p) => (
+                    <PluginCard
+                      key={p.name}
+                      plugin={p}
+                      isInstalled={installedNames.has(p.name) || !!p.installed}
+                      isAdmin={isAdmin}
+                      busy={!!busy[p.name]}
+                      error={errors[p.name]}
+                      onInstall={handleInstall}
+                      onUnload={handleUnload}
+                    />
+                  ))}
+                </div>
+              )}
               <div style={styles.helpNote}>
-                <strong>How to install:</strong> Place plugin folder in{' '}
-                <code>plugins/community/</code> on your server, then restart.
-                All plugins run in a sandboxed environment with limited API access.
+                <strong>How to install:</strong> Admins can click Install above (requires{' '}
+                <code>downloadUrl</code> in registry), or manually place a plugin folder in{' '}
+                <code>plugins/community/</code> and restart the server.
+                All plugins run in a sandboxed VM with limited API access.
               </div>
             </>
           )}
@@ -234,6 +297,8 @@ function PluginMarketplace({ onClose }) {
     </div>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = {
   overlay: {
@@ -266,22 +331,22 @@ const styles = {
     cursor: 'pointer', fontWeight: '600', color: '#888',
     borderBottom: '3px solid transparent', fontSize: '0.95rem',
   },
-  tabActive: { color: '#4caf50', borderBottomColor: '#4caf50' },
-  body: { padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 },
+  tabActive:  { color: '#4caf50', borderBottomColor: '#4caf50' },
+  body:       { padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 },
   search: {
     width: '100%', padding: '0.6rem 1rem',
     border: '1.5px solid #ddd', borderRadius: '8px',
     fontSize: '0.95rem', marginBottom: '1rem', outline: 'none',
+    boxSizing: 'border-box',
   },
-  grid: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  grid:  { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   card: {
     border: '1px solid #eee', borderRadius: '10px',
     padding: '1rem 1.1rem', background: '#fafafa',
-    transition: 'box-shadow 0.15s',
   },
   cardHeader: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-    marginBottom: '0.4rem',
+    marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem',
   },
   desc: { margin: '0 0 0.6rem', fontSize: '0.88rem', color: '#555', lineHeight: '1.45' },
   cardFooter: {
@@ -298,10 +363,17 @@ const styles = {
     padding: '0.2rem 0.6rem', borderRadius: '12px',
     fontSize: '0.78rem', fontWeight: '700',
   },
-  badgePaid: {
-    background: '#fff9c4', color: '#f57f17',
-    padding: '0.2rem 0.6rem', borderRadius: '12px',
-    fontSize: '0.78rem', fontWeight: '700',
+  actionBtn: {
+    padding: '0.25rem 0.7rem', borderRadius: '8px',
+    border: '1.5px solid #4caf50', background: '#f1f8e9',
+    color: '#2e7d32', fontSize: '0.78rem', fontWeight: '700',
+    cursor: 'pointer', whiteSpace: 'nowrap',
+  },
+  actionBtnDanger: {
+    border: '1.5px solid #e57373', background: '#fce4ec', color: '#c62828',
+  },
+  actionBtnBusy: {
+    opacity: 0.6, cursor: 'not-allowed',
   },
   empty: {
     color: '#aaa', textAlign: 'center', padding: '2.5rem 1rem',

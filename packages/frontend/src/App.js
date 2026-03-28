@@ -314,7 +314,7 @@ function App() {
       )}
 
       {showPlugins && (
-        <PluginMarketplace onClose={() => setShowPlugins(false)} />
+        <PluginMarketplace user={authUser} onClose={() => setShowPlugins(false)} />
       )}
 
       {showAchievements && (
