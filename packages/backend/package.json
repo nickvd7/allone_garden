@@ -4,10 +4,12 @@
   "description": "Backend server for AllOne Garden",
   "main": "src/index.js",
   "scripts": {
+    "prestart": "node scripts/security-check.js",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src --ext .js",
+    "security-check": "node scripts/security-check.js",
     "db:setup": "node scripts/setup-db.js",
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js"
