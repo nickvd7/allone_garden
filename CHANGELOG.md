@@ -8,89 +8,115 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial project structure
-- Core gameplay mechanics
-- Multilingual support (English, Dutch)
-- Chat system
-- Trading system
-- Demo version
+- `api.patch()` helper in frontend `useApi.js`
 
-### Changed
-- Nothing yet
+---
 
-### Deprecated
-- Nothing yet
-
-### Removed
-- Nothing yet
-
-### Fixed
-- Nothing yet
-
-### Security
-- Nothing yet
-
-## [0.1.0] - 2024-01-15
+## [1.0.0] — 2025-03-28
 
 ### Added
-- Initial alpha release
-- Basic garden management
-- Plant growing system
-- Weather effects
-- Simple multiplayer demo
-```
 
-### **7. .gitignore**
-```
-# Dependencies
-node_modules/
-/.pnp
-.pnp.js
+**Core gameplay**
+- Garden with 24 plots: till, plant, water, fertilize, harvest, next-day
+- Weather system (sunny / cloudy / rainy / windy) with per-day progression
+- XP, coins, level, and plants-grown player stats
+- Auto-save garden to backend (debounced, 3 s after last change)
+- In-memory fallback — runs fully offline without PostgreSQL
 
-# Testing
-/coverage
+**Multiplayer & social**
+- Real-time multiplayer via Socket.IO
+- Chat with XSS protection and persistence (DB insert after broadcast)
+- Garden visits: players can visit each other and earn XP by helping
+- Player list panel showing online users
 
-# Production
-/build
-/dist
+**Trade marketplace**
+- List crops for sale, buy from other players, earn coins
+- Trade modal with inventory and coin management
 
-# Environment
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+**Authentication**
+- Register / login with bcrypt (cost 12) + JWT (7-day expiry)
+- `isAdmin` flag in user response (covers `ADMIN_USERS` env var and `level >= 99`)
+- Password reset flow: `POST /api/auth/forgot-password` + `POST /api/auth/reset-password`
+  - Single-use token, 1-hour TTL
+  - Token exposed in response body in dev/in-memory mode (no SMTP needed for testing)
+- Constant-time password comparison to prevent timing attacks
+- Rate limiting on all auth endpoints (`authLimiter`: 10 req / 15 min)
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-*.log
+**Email service**
+- Nodemailer wrapper (`src/services/email.js`) — lazy-loaded, only when `SMTP_HOST` is set
+- HTML + plain-text password reset email
+- Falls back to stdout when no SMTP configured
 
-# OS
-.DS_Store
-Thumbs.db
+**GDPR / account**
+- `PATCH /api/account/password` — change password (requires current password)
+- `GET /api/account/export` — download full account data as JSON
+- `DELETE /api/account` — delete account + all data (requires password confirmation)
+- Rate limited to 5 req / 15 min
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+**Admin panel**
+- `GET /api/admin/stats` — server uptime, memory, CPU, plugin list, DB counts
+- `GET /api/admin/players` — full player table
+- `GET /api/admin/plugins` — loaded plugins
+- `POST /api/admin/plugins/:name/reload` — hot-unload a plugin
+- `GET /api/admin/peers` — known federation peers
+- Admin access via `ADMIN_USERS` env var or `level >= 99` in DB
 
-# Database
-*.sqlite
-*.db
+**Plugin system**
+- VM-sandboxed plugin loader (`vm` module, no `require`, no `process`)
+- Plugin API: `api.on`, `api.broadcast`, `api.sendTo`, `api.dbQuery`, `api.dbCreateTable`, `api.emit`, `api.log`
+- Plugin DB tables prefixed `plugin_{name}_{table}` — no access to core tables
+- Hot-unload with event listener cleanup
+- Plugin routes: `GET /api/plugins`, `GET /api/plugins/registry`, `POST /api/plugins/:name/install`, `POST /api/plugins/:name/unload`
+- Install validates SHA-256 checksum when registry entry includes one
+- Bundled catalogue served from backend when `PLUGIN_REGISTRY_URL` is not set
 
-# Redis
-dump.rdb
+**Community plugins**
+- `achievements` — 19 unlockable badges (planting, harvesting, watering, trading, social, survival, coins, variety)
+- `weather-forecast` — 5-day forecast generated each in-game day, broadcast to all clients
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+**PWA / mobile**
+- `manifest.json` with icons (192 + 512 px), shortcuts, screenshots
+- Service worker (`sw.js`): cache-first for app shell, network-only for `/api/` and `/socket.io/`
+- `serviceWorkerRegistration.js` with update event dispatch
+- iOS meta tags (`apple-mobile-web-app-capable`, status bar, splash screens)
+- Open Graph tags
 
-# Build files
-*.tgz
-*.zip
+**Leaderboard**
+- Top players by XP, coins, and plants grown
+- In-memory leaderboard updated on every login / register / game action
+
+**P2P federation**
+- Opt-in Hyperswarm DHT federation (`P2P_ENABLED=true`)
+- Cross-server chat with 🌍 badge
+- Known peers persisted in DB (`known_peers` table)
+
+**i18n**
+- English and Dutch translations via i18next
+
+**Multi-platform install**
+- `install.sh` — Raspberry Pi / Linux (Node 20, PostgreSQL, Nginx, Let's Encrypt)
+- `install-mac.sh` — macOS via Homebrew + pm2
+- `install-termux.sh` — Android (Termux / F-Droid)
+- `start.ps1` / `start.bat` — Windows dev starters
+- `docker-compose.yml` — production Docker stack with PostgreSQL + Redis
+
+**CI/CD**
+- GitHub Actions: Backend (Node 20 + 22), Frontend build, Docker build check
+- All tests run in in-memory mode — no external services needed
+
+**Tests** (67 passing, fully offline)
+- `auth.test.js` — register, login, /me, password reset, token expiry
+- `garden.test.js` — all garden actions, validation, persistence
+- `trade.test.js` — list, buy, validate, auth guards
+- `account.test.js` — password change, export, delete, rate limits
+- `admin.test.js` — stats, players, plugins, peers, auth guards
+
+### Fixed
+- Login looked up by email instead of username — changed `validateLogin` to accept `username`
+- `npm ci` in CI workflow and Dockerfiles replaced with `npm install` (no sub-package lockfiles committed)
+- `cache-dependency-path` in CI pointed to non-existent lockfiles — fixed to use root `package-lock.json`
+
+---
+
+[Unreleased]: https://github.com/nickvd7/allone_garden/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/nickvd7/allone_garden/releases/tag/v1.0.0

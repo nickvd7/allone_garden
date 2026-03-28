@@ -43,6 +43,7 @@ async function apiFetch(path, options = {}) {
 export const api = {
   get:    (path)         => apiFetch(path),
   post:   (path, body)   => apiFetch(path, { method: 'POST',   body: JSON.stringify(body) }),
+  patch:  (path, body)   => apiFetch(path, { method: 'PATCH',  body: JSON.stringify(body) }),
   delete: (path, body)   => apiFetch(path, { method: 'DELETE', body: JSON.stringify(body) }),
 };
 
