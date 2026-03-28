@@ -23,6 +23,7 @@ import Leaderboard from './components/Leaderboard';
 import SeasonBanner from './components/SeasonBanner';
 import StructuresPanel from './components/StructuresPanel';
 import WorldMap from './components/WorldMap';
+import VideoCall from './components/VideoCall';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -90,6 +91,7 @@ function App() {
   const [showAccount,      setShowAccount]      = useState(false);
   const [showLeaderboard,  setShowLeaderboard]  = useState(false);
   const [showWorldMap,     setShowWorldMap]     = useState(false);
+  const [callState,        setCallState]        = useState(null);   // { mode, peerId, peerUsername, offer? }
 
   const [gameState, setGameState] = useState(INITIAL_GAME);
 
@@ -229,12 +231,26 @@ function App() {
     socket.on('plugin:daily-bonus:awarded', onDailyBonus);
     socket.on('plugin:server-motd:data',    onMotd);
 
+    // ── Incoming video call ────────────────────────────────────────────
+    const onCallOffer = ({ from, fromUsername, offer }) => {
+      // Only show if not already in a call
+      setCallState((prev) => prev ? prev : {
+        mode:         'incoming',
+        peerId:       from,
+        peerUsername: fromUsername,
+        offer,
+      });
+    };
+
+    socket.on('call:offer', onCallOffer);
+
     return () => {
       socket.off('garden:visitor',  onVisitor);
       socket.off('player:helped',   onHelped);
       socket.off('chat:message',    onFederatedChat);
       socket.off('plugin:daily-bonus:awarded', onDailyBonus);
       socket.off('plugin:server-motd:data',    onMotd);
+      socket.off('call:offer',      onCallOffer);
     };
   }, [socket, showNotification]);
 
@@ -476,6 +492,16 @@ function App() {
           socket={socket}
           currentUserId={authUser.id}
           onClose={() => setShowWorldMap(false)}
+          onStartCall={(state) => setCallState(state)}
+        />
+      )}
+
+      {/* Video call overlay — rendered on top of everything */}
+      {callState && socket && (
+        <VideoCall
+          socket={socket}
+          callState={callState}
+          onEnd={() => setCallState(null)}
         />
       )}
 

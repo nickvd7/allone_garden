@@ -1079,6 +1079,352 @@ body {
   }
 }
 
+/* ─── Video Call Overlay ─────────────────────── */
+.vc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 1.5rem;
+  pointer-events: none;
+}
+
+.vc-card {
+  pointer-events: all;
+  background: #1a1f1a;
+  border-radius: 16px;
+  box-shadow: 0 16px 64px rgba(0,0,0,0.6);
+  width: 340px;
+  overflow: hidden;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.vc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #0e130e;
+}
+
+.vc-peer-name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.vc-status {
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.vc-status--active   { color: #69f0ae; }
+.vc-status--ringing  { color: #ffca28; }
+.vc-status--rejected { color: #ef5350; }
+.vc-status--error    { color: #ef5350; }
+
+/* Incoming call */
+.vc-incoming {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  gap: 0.75rem;
+}
+
+.vc-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--primary);
+  font-size: 1.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ringPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ringPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(76,175,80,0.5); }
+  50%       { box-shadow: 0 0 0 16px rgba(76,175,80,0); }
+}
+
+.vc-incoming-name {
+  font-size: 0.95rem;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.vc-incoming-btns {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.vc-accept-btn {
+  background: #2e7d32 !important;
+  color: #fff !important;
+  padding: 0.5rem 1.2rem !important;
+  font-size: 0.9rem !important;
+}
+
+.vc-accept-btn:hover { background: #1b5e20 !important; }
+
+.vc-reject-btn {
+  background: #c62828 !important;
+  color: #fff !important;
+  padding: 0.5rem 1.2rem !important;
+  font-size: 0.9rem !important;
+}
+
+.vc-reject-btn:hover { background: #b71c1c !important; }
+
+/* Error / rejected */
+.vc-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  opacity: 0.85;
+  text-align: center;
+}
+
+/* Video feeds */
+.vc-videos {
+  position: relative;
+  background: #000;
+  width: 100%;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+}
+
+.vc-remote {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vc-local {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 90px;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 2px solid #444;
+}
+
+.vc-waiting-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(0,0,0,0.7);
+  font-size: 0.9rem;
+  color: #eee;
+}
+
+/* Controls bar */
+.vc-controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: #0e130e;
+  align-items: center;
+  justify-content: center;
+}
+
+.vc-ctrl {
+  padding: 0.45rem 0.8rem;
+  background: rgba(255,255,255,0.12);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.15s;
+}
+
+.vc-ctrl:hover { background: rgba(255,255,255,0.22); }
+
+.vc-ctrl--muted { background: rgba(239,83,80,0.3); }
+.vc-ctrl--muted:hover { background: rgba(239,83,80,0.5); }
+
+.vc-ctrl--end {
+  background: rgba(239,83,80,0.6);
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+
+.vc-ctrl--end:hover { background: rgba(239,83,80,0.85); }
+
+/* ─── Proximity Chat panel ───────────────────── */
+.prox-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0;
+}
+
+.prox-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.1rem 0.6rem;
+  border-bottom: 1.5px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+.prox-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prox-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.prox-range {
+  font-size: 0.72rem;
+  color: #999;
+  margin-top: 0.1rem;
+}
+
+.prox-call-btn {
+  margin-left: auto;
+  padding: 0.35rem 0.75rem !important;
+  font-size: 0.8rem !important;
+  background: #1565c0 !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.prox-call-btn:hover { background: #0d47a1 !important; }
+
+.prox-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.6rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 120px;
+  max-height: 260px;
+}
+
+.prox-chat-empty {
+  font-size: 0.8rem;
+  color: #aaa;
+  text-align: center;
+  padding: 1rem 0.5rem;
+}
+
+.prox-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-width: 88%;
+  align-self: flex-start;
+}
+
+.prox-msg--own {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.prox-msg-author {
+  font-size: 0.68rem;
+  color: #aaa;
+  font-weight: 600;
+}
+
+.prox-msg-text {
+  background: #e8f5e9;
+  color: #1a2a1a;
+  border-radius: 10px 10px 10px 2px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.prox-msg--own .prox-msg-text {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px 10px 2px 10px;
+}
+
+.prox-chat-input-row {
+  display: flex;
+  gap: 0.4rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+/* Other walking players on tile */
+.walk-other-player {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  z-index: 3;
+}
+
+/* Yellow hint variant for nearby player */
+.walk-interact-hint--player {
+  background: rgba(33,150,243,0.9) !important;
+  color: #fff !important;
+  animation: hintPulse 1.2s ease-in-out infinite alternate;
+}
+
+/* ─── Dark Mode overrides ─────────────────────── */
+[data-theme="dark"] .prox-header {
+  border-color: #2e3e2e;
+}
+
+[data-theme="dark"] .prox-msg-text {
+  background: #253025;
+  color: #c8dcc8;
+}
+
+[data-theme="dark"] .prox-chat-input-row {
+  border-color: #2e3e2e;
+}
+
+[data-theme="dark"] .prox-range {
+  color: #6a8a6a;
+}
+
 /* ─── Walking World Map ──────────────────────── */
 .world-map-modal-walk {
   width: min(980px, 97vw);

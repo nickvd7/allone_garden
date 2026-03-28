@@ -18,8 +18,9 @@ const adminRoutes   = require('./routes/admin');
 const accountRoutes = require('./routes/account');
 const pluginRoutes      = require('./routes/plugins');
 const { router: leaderboardRoutes } = require('./routes/leaderboard');
-const chatHandler  = require('./socket/chat');
-const gameHandler  = require('./socket/game');
+const chatHandler      = require('./socket/chat');
+const gameHandler      = require('./socket/game');
+const proximityHandler = require('./socket/proximity');
 const pluginLoader = require('./plugins/loader');
 const { helmetMiddleware, requestId, apiLimiter } = require('./middleware/security');
 const { socketAuthMiddleware } = require('./middleware/socketAuth');
@@ -75,6 +76,7 @@ io.on('connection', (socket) => {
 
   chatHandler(socket, io);
   gameHandler(socket, io, eventBus);
+  proximityHandler(socket, io);
 
   // Forward plugin-targeted socket events to the event bus
   socket.onAny((event, data) => {
