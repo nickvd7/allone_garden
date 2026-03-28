@@ -114,7 +114,7 @@ const WEATHER_ICONS = {
 };
 
 // ─── Plot component ───────────────────────────────────────────────────────────
-function Plot({ plot, index, selectedTool, companionIcon, onPlotClick }) {
+function Plot({ plot, index, companionIcon, onPlotClick }) {
   const { tilled, planted, plantType, waterLevel, fertilized, daysPlanted, pest } = plot;
   const { stage, isReady } = planted
     ? getGrowthStage(plantType, daysPlanted)

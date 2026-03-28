@@ -48,7 +48,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again in 15 minutes.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -61,7 +61,7 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Rate limit exceeded. Slow down.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -74,7 +74,7 @@ const tradeLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many trade requests. Please slow down.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -87,7 +87,7 @@ const leaderboardLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many leaderboard requests. Please slow down.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 /**
@@ -100,7 +100,7 @@ const accountLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many account requests. Please try again in 15 minutes.' },
-  skip: (req) => process.env.NODE_ENV === 'test',
+  skip: (_req) => process.env.NODE_ENV === 'test',
 });
 
 // ── 3. Body size limits ────────────────────────────────────────────────────────

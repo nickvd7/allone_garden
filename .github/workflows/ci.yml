@@ -32,10 +32,14 @@ jobs:
 
       - name: Lint backend
         working-directory: packages/backend
+        env:
+          ESLINT_USE_FLAT_CONFIG: 'false'
         run: npm run lint --if-present
 
       - name: Lint frontend
         working-directory: packages/frontend
+        env:
+          ESLINT_USE_FLAT_CONFIG: 'false'
         run: npm run lint --if-present
 
   # ── Dependency audit ─────────────────────────────────────────────────────────

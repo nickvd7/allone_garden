@@ -104,7 +104,7 @@ function VideoCall({ socket, callState, onEnd }) {
     })();
 
     return () => { cancelled = true; };
-  }, []); // eslint-disable-line — only run on mount
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only run on mount
 
   // ── Answer incoming call ───────────────────────────────────────────────────
   const answerCall = useCallback(async () => {

@@ -3,7 +3,7 @@
  * Uses express-validator to define reusable rule chains,
  * and a handleValidationErrors middleware to return 400 on failure.
  */
-const { body, param, query, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 
 /**
  * Call after a validation chain — returns 400 with the first error

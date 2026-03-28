@@ -2,12 +2,11 @@
  * Trade / marketplace routes.
  * Uses PostgreSQL when available, falls back to in-memory store.
  */
-const express = require('express');
-const router  = require('express').Router();
-const db      = require('../db');
-const { requireAuth }                           = require('../middleware/auth');
-const { tradeLimiter, auditLog }               = require('../middleware/security');
-const { validateCreateListing, validateBuy }   = require('../middleware/validate');
+const router = require('express').Router();
+const db     = require('../db');
+const { requireAuth }                         = require('../middleware/auth');
+const { tradeLimiter }                        = require('../middleware/security');
+const { validateCreateListing, validateBuy }  = require('../middleware/validate');
 
 // In-memory fallback
 const memListings = {};
@@ -45,28 +44,44 @@ router.post('/listings', requireAuth, tradeLimiter, validateCreateListing, async
   }
 
   if (db.isConnected()) {
-    // Verify seller actually has enough inventory
-    const inv = await db.query(
-      'SELECT quantity FROM inventory WHERE user_id = $1 AND plant_type = $2',
-      [userId, cropId]
-    );
-    if (!inv.rows[0] || inv.rows[0].quantity < quantity) {
-      return res.status(400).json({ error: 'Not enough crops in inventory' });
+    // Wrap in a transaction so the inventory check + deduction + listing insert
+    // are atomic — prevents a double-spend race condition.
+    const client = await db.getClient();
+    try {
+      await client.query('BEGIN');
+
+      // Lock the inventory row for this crop while we check and deduct
+      const inv = await client.query(
+        'SELECT quantity FROM inventory WHERE user_id = $1 AND plant_type = $2 FOR UPDATE',
+        [userId, cropId]
+      );
+      if (!inv.rows[0] || inv.rows[0].quantity < quantity) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Not enough crops in inventory' });
+      }
+
+      // Deduct from inventory
+      await client.query(
+        'UPDATE inventory SET quantity = quantity - $1 WHERE user_id = $2 AND plant_type = $3',
+        [quantity, userId, cropId]
+      );
+
+      const result = await client.query(
+        `INSERT INTO trade_listings (seller_id, crop_id, quantity, price_per_unit)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, seller_id, crop_id, quantity, price_per_unit, created_at`,
+        [userId, cropId, quantity, pricePerUnit]
+      );
+
+      await client.query('COMMIT');
+      return res.status(201).json(result.rows[0]);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[trade] listing creation error:', err.message);
+      return res.status(500).json({ error: 'Failed to create listing' });
+    } finally {
+      client.release();
     }
-
-    // Deduct from inventory
-    await db.query(
-      'UPDATE inventory SET quantity = quantity - $1 WHERE user_id = $2 AND plant_type = $3',
-      [quantity, userId, cropId]
-    );
-
-    const result = await db.query(
-      `INSERT INTO trade_listings (seller_id, crop_id, quantity, price_per_unit)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, seller_id, crop_id, quantity, price_per_unit, created_at`,
-      [userId, cropId, quantity, pricePerUnit]
-    );
-    return res.status(201).json(result.rows[0]);
   }
 
   const listing = {

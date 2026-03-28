@@ -51,11 +51,43 @@ class PluginAPI {
     }
   }
 
+  // Allowed SQL statement prefixes for plugin queries.
+  // Plugins may only read/write their own namespaced tables — DDL is handled
+  // by dbCreateTable(), not here.
+  static _ALLOWED_SQL = /^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+/i;
+
   async dbQuery(tableSuffix, sql, params) {
     PluginAPI._validateSuffix(tableSuffix);
+
+    if (typeof sql !== 'string' || !sql.trim()) {
+      throw new Error('[PluginAPI] sql must be a non-empty string');
+    }
+
+    // Only permit DML against the plugin's own table.
+    // Reject DDL, TRUNCATE, COPY, transaction control, etc.
+    if (!PluginAPI._ALLOWED_SQL.test(sql)) {
+      throw new Error(
+        '[PluginAPI] dbQuery only allows SELECT, INSERT INTO, UPDATE, DELETE FROM statements'
+      );
+    }
+
+    // Block comment-based injection attempts
+    if (/--|\/\*/.test(sql)) {
+      throw new Error('[PluginAPI] sql must not contain "--" or "/*"');
+    }
+
     const table   = `plugin_${this._pluginName}_${tableSuffix}`;
-    const safeSql = sql.replace(/\{\{table\}\}/g, table);
-    return this._db.query(safeSql, params);
+
+    // Guard against direct string interpolation of the table name outside {{table}}
+    if (sql.includes('{{table}}')) {
+      const safeSql = sql.replace(/\{\{table\}\}/g, table);
+      return this._db.query(safeSql, params);
+    }
+
+    // If no {{table}} placeholder the plugin is querying another table — block it
+    throw new Error(
+      '[PluginAPI] sql must reference the plugin table via {{table}} placeholder'
+    );
   }
 
   /**

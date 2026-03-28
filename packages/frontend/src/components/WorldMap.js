@@ -358,7 +358,7 @@ function WorldMap({ socket, currentUserId, onClose, onStartCall }) {
               style={{ width: VIEW_W * TILE, height: VIEW_H * TILE, outline: 'none' }}
               onClick={() => viewportRef.current?.focus()}
             >
-              {tiles.map(({ vx, vy, mx, my, tile, gardenPlayer, isMe, walkersHere }) => {
+              {tiles.map(({ vx, vy, tile, gardenPlayer, isMe, walkersHere }) => {
                 const isHighlighted = isMe && !!nearGarden;
                 const bg = tile === 4
                   ? (isHighlighted ? '#7bc67e' : '#8bc34a')
@@ -557,7 +557,7 @@ function WorldMap({ socket, currentUserId, onClose, onStartCall }) {
             {showGardenHint && (
               <div className="walk-garden-empty">
                 <div style={{fontSize:'2.4rem'}}>🏡</div>
-                <div style={{fontWeight:700}}>{nearGarden.username}'s tuin</div>
+                <div style={{fontWeight:700}}>{nearGarden.username}&apos;s tuin</div>
                 <div>Druk <kbd className="walk-kbd">E</kbd> of <kbd className="walk-kbd">Enter</kbd> om te bezoeken</div>
                 <button className="btn btn-primary" style={{marginTop:'0.75rem'}} onClick={() => openVisit(nearGarden)}>
                   👁 Bezoek tuin

@@ -14,7 +14,6 @@ const https   = require('https');
 const crypto  = require('crypto');
 
 const pluginLoader     = require('../plugins/loader');
-const db               = require('../db');
 const { requireAuth }  = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
 const { auditLog }     = require('../middleware/security');
