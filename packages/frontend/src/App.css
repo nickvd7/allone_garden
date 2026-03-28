@@ -633,3 +633,676 @@ body {
   from { transform: translateX(-50%) translateY(20px); opacity: 0; }
   to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
 }
+
+/* ─── Tools + Structures wrapper ────────────── */
+.tools-and-structures {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ─── Structures Panel ───────────────────────── */
+.structures-panel h3 {
+  margin-bottom: 0.75rem;
+}
+
+.structures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.structure-item {
+  background: #f9fbe7;
+  border: 1.5px solid #c5e1a5;
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  transition: border-color 0.2s;
+}
+
+.structure-item--built {
+  border-color: var(--primary);
+  background: #f1f8e9;
+}
+
+.structure-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.structure-emoji {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.structure-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.structure-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.structure-desc {
+  font-size: 0.75rem;
+  color: var(--text);
+  opacity: 0.7;
+  margin-top: 0.1rem;
+  line-height: 1.4;
+}
+
+.structure-build-btn {
+  padding: 0.3rem 0.55rem !important;
+  font-size: 0.8rem !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.structure-tag {
+  font-size: 0.8rem;
+  color: var(--primary-dark);
+  font-weight: 700;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.structure-action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.structure-charges {
+  font-size: 0.78rem;
+  color: var(--text);
+  opacity: 0.85;
+  flex: 1;
+  min-width: 0;
+}
+
+.structure-use-btn {
+  padding: 0.25rem 0.6rem !important;
+  font-size: 0.78rem !important;
+  white-space: nowrap;
+}
+
+.structure-active {
+  font-size: 0.78rem;
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+/* ─── Companion Planting ─────────────────────── */
+.companion-indicator {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.companion-legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--text);
+  opacity: 0.75;
+  justify-content: flex-end;
+}
+
+.companion-legend span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.greenhouse-shield {
+  font-size: 0.85rem;
+}
+
+/* ─── Modal base ─────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 1rem;
+}
+
+.modal {
+  background: var(--card-bg);
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.4rem;
+  border-bottom: 1.5px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.modal-close {
+  border: none;
+  background: rgba(0,0,0,0.07);
+  color: var(--text);
+  font-size: 1rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* ─── World Map ──────────────────────────────── */
+.world-map-modal {
+  width: min(900px, 96vw);
+}
+
+.world-map-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 460px;
+  max-height: calc(90vh - 60px);
+  overflow: hidden;
+}
+
+.world-map-players {
+  border-right: 1.5px solid #e8e8e8;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.world-map-players h3 {
+  font-size: 0.9rem;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+}
+
+.world-empty {
+  font-size: 0.85rem;
+  color: #aaa;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.world-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.world-player-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #f5f9f5;
+  border: 1.5px solid transparent;
+  transition: all 0.15s;
+}
+
+.world-player-card:hover {
+  background: #e8f5e9;
+  border-color: var(--primary);
+}
+
+.world-player-card--active {
+  background: #e8f5e9;
+  border-color: var(--primary);
+}
+
+.world-player-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.world-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.world-player-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.world-player-meta {
+  font-size: 0.75rem;
+  color: #777;
+  margin-top: 0.1rem;
+}
+
+.world-server-badge {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.world-visit-hint {
+  font-size: 0.75rem;
+  color: var(--primary);
+  opacity: 0;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.world-player-card:hover .world-visit-hint {
+  opacity: 1;
+}
+
+.world-map-garden {
+  padding: 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.world-garden-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #999;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.world-garden-placeholder-icon {
+  font-size: 3rem;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.world-garden-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.world-garden-header h3 {
+  font-size: 1rem;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.world-garden-meta {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.world-help-btn {
+  padding: 0.45rem 1rem !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.world-help-msg {
+  background: #e8f5e9;
+  border: 1.5px solid var(--primary);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.85rem;
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.world-garden-note {
+  font-size: 0.75rem;
+  color: #aaa;
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  width: fit-content;
+}
+
+/* Mini (read-only) garden grid */
+.mini-garden-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  background: #3e2c1e;
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.mini-plot {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 0.7rem;
+  cursor: default;
+}
+
+.mini-plant-emoji {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.mini-pest {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  font-size: 7px;
+}
+
+/* Garden stat summary */
+.world-garden-stats {
+  display: flex;
+  gap: 1rem;
+}
+
+.world-stat {
+  background: #f5f9f5;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  flex: 1;
+}
+
+.world-stat span {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+
+.world-stat small {
+  font-size: 0.72rem;
+  color: #888;
+  margin-top: 0.1rem;
+}
+
+@media (max-width: 700px) {
+  .world-map-body {
+    grid-template-columns: 1fr;
+  }
+
+  .world-map-players {
+    border-right: none;
+    border-bottom: 1.5px solid #e8e8e8;
+    max-height: 220px;
+  }
+}
+
+/* ─── Dark Mode overrides for new components ── */
+[data-theme="dark"] .modal-header {
+  border-color: #2e3e2e;
+}
+
+[data-theme="dark"] .modal-close {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+
+[data-theme="dark"] .world-map-players {
+  border-color: #2e3e2e;
+}
+
+[data-theme="dark"] .world-player-card {
+  background: #253025;
+}
+
+[data-theme="dark"] .world-player-card:hover,
+[data-theme="dark"] .world-player-card--active {
+  background: #2d3e2d;
+}
+
+[data-theme="dark"] .world-garden-note {
+  background: #1e261e;
+  color: #888;
+}
+
+[data-theme="dark"] .world-help-msg {
+  background: #1e2e1e;
+}
+
+[data-theme="dark"] .world-stat {
+  background: #253025;
+}
+
+[data-theme="dark"] .world-map-players {
+  border-color: #2e3e2e;
+}
+
+[data-theme="dark"] .world-player-meta {
+  color: #7a9a7a;
+}
+
+[data-theme="dark"] .structure-item {
+  background: #1e2a1e;
+  border-color: #3a5a3a;
+}
+
+[data-theme="dark"] .structure-item--built {
+  background: #1e2e1e;
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .structure-name {
+  color: var(--text);
+}
+
+[data-theme="dark"] .structure-tag {
+  color: var(--secondary);
+}
+
+[data-theme="dark"] .structure-active {
+  color: var(--secondary);
+}
+
+/* ─── Dark Mode ──────────────────────────────── */
+[data-theme="dark"] {
+  --primary:      #66bb6a;
+  --primary-dark: #4caf50;
+  --secondary:    #aed581;
+  --background:   #161c16;
+  --soil:         #2c1d16;
+  --soil-light:   #4a3025;
+  --text:         #a5d6a7;
+  --card-bg:      #1e261e;
+  --border:       #5d4037;
+  --accent:       #ffca28;
+  --danger:       #ef5350;
+}
+
+[data-theme="dark"] body {
+  color: #d4e8d4;
+}
+
+[data-theme="dark"] .card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: var(--card-bg);
+  color: var(--text);
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+[data-theme="dark"] .tool-btn {
+  background: #253025;
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .tool-btn:hover,
+[data-theme="dark"] .tool-btn.active {
+  background: var(--primary);
+  color: #1a1a1a;
+}
+
+[data-theme="dark"] .seed-select {
+  background: #253025;
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .stat-item {
+  background: #253025;
+}
+
+[data-theme="dark"] .xp-bar {
+  background: #253025;
+}
+
+[data-theme="dark"] .xp-bar-track {
+  background: #1a2a1a;
+}
+
+[data-theme="dark"] .chat-messages {
+  background: #1a221a;
+  border-color: #2e3e2e;
+}
+
+[data-theme="dark"] .chat-message .text {
+  color: #c8dcc8;
+}
+
+[data-theme="dark"] .chat-message .username {
+  color: var(--secondary);
+}
+
+[data-theme="dark"] .chat-input {
+  background: #1e261e;
+  border-color: #3a4e3a;
+  color: #d4e8d4;
+}
+
+[data-theme="dark"] .chat-input:focus {
+  border-color: var(--primary);
+}
+
+[data-theme="dark"] .player-item {
+  background: #253025;
+}
+
+[data-theme="dark"] .player-action-btn {
+  background: #1e261e;
+  color: var(--text);
+}
+
+[data-theme="dark"] .inventory-item {
+  background: #26211a;
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .inventory-item .name {
+  color: var(--text);
+}
+
+/* Modal overlay in dark mode */
+[data-theme="dark"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .modal {
+  background: var(--card-bg);
+  color: #d4e8d4;
+}
+
+/* Auth screen dark mode */
+[data-theme="dark"] .auth-card {
+  background: var(--card-bg);
+}
+
+[data-theme="dark"] .auth-input,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] select {
+  background: #253025;
+  color: #d4e8d4;
+  border-color: #3a4e3a;
+}
+
+[data-theme="dark"] input::placeholder {
+  color: #7a9a7a;
+}
+
+/* Section title dim */
+[data-theme="dark"] .section-title {
+  color: var(--text);
+}
+
+/* Season banner */
+[data-theme="dark"] .season-banner {
+  filter: brightness(0.85);
+}
+
+/* LeaderBoard, Achievements, etc table rows */
+[data-theme="dark"] tr:nth-child(even) {
+  background: #1e261e;
+}
+
+[data-theme="dark"] tr:nth-child(odd) {
+  background: #232b23;
+}
+
+[data-theme="dark"] th {
+  background: #1a221a;
+  color: var(--text);
+}
+
+[data-theme="dark"] td {
+  color: #c8dcc8;
+  border-color: #2e3e2e;
+}

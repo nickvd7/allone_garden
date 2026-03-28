@@ -18,7 +18,7 @@ const HEADER_BTN = {
   fontWeight: '600',
 };
 
-function Header({ onLanguageChange, currentLang, serverInfo, username, onLogout, onOpenTrade, onOpenPlugins, onOpenAchievements, onOpenAdmin, onOpenAccount, onOpenLeaderboard }) {
+function Header({ onLanguageChange, currentLang, serverInfo, username, darkMode, onToggleDark, onLogout, onOpenTrade, onOpenPlugins, onOpenAchievements, onOpenAdmin, onOpenAccount, onOpenLeaderboard, onOpenWorldMap }) {
   const { t } = useTranslation();
 
   return (
@@ -51,6 +51,12 @@ function Header({ onLanguageChange, currentLang, serverInfo, username, onLogout,
           </button>
         )}
 
+        {onOpenWorldMap && (
+          <button style={HEADER_BTN} onClick={onOpenWorldMap} title="World Map — visit other players">
+            🗺️ World
+          </button>
+        )}
+
         {onOpenLeaderboard && (
           <button style={HEADER_BTN} onClick={onOpenLeaderboard} title="Leaderboard">
             📊 Scores
@@ -66,6 +72,17 @@ function Header({ onLanguageChange, currentLang, serverInfo, username, onLogout,
         {username && (
           <button style={HEADER_BTN} onClick={onOpenAccount} title="Account settings">
             👤 {username}
+          </button>
+        )}
+
+        {onToggleDark && (
+          <button
+            style={HEADER_BTN}
+            onClick={onToggleDark}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle dark mode"
+          >
+            {darkMode ? '☀️' : '🌙'}
           </button>
         )}
 

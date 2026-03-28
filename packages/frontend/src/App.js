@@ -21,6 +21,8 @@ import AdminPanel from './components/AdminPanel';
 import AccountSettings from './components/AccountSettings';
 import Leaderboard from './components/Leaderboard';
 import SeasonBanner from './components/SeasonBanner';
+import StructuresPanel from './components/StructuresPanel';
+import WorldMap from './components/WorldMap';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -28,6 +30,12 @@ const INITIAL_PLOTS = Array(24).fill(null).map(() => ({
   tilled: false, planted: false, plantType: null,
   waterLevel: 0, fertilized: false, daysPlanted: 0,
 }));
+
+const INITIAL_STRUCTURES = {
+  well:       { built: false, charges: 3 },
+  compost:    { built: false, charges: 0, harvestsUntilNext: 3 },
+  greenhouse: { built: false },
+};
 
 const INITIAL_GAME = {
   currentDay: 1,
@@ -37,6 +45,7 @@ const INITIAL_GAME = {
   playerStats: { xp: 0, coins: 100, level: 1, plantsGrown: 0 },
   inventory: { tomato: 0, carrot: 0, lettuce: 0, radish: 0, corn: 0, potato: 0, pumpkin: 0, sunflower: 0, blueberry: 0 },
   plots: INITIAL_PLOTS,
+  structures: INITIAL_STRUCTURES,
 };
 
 // Debounce helper — saves to backend at most once every N ms
@@ -51,6 +60,16 @@ function useDebounce(fn, delay) {
 function App() {
   const { i18n } = useTranslation();
   const { online } = useNetwork();
+
+  const [darkMode, setDarkMode] = useState(
+    () => localStorage.getItem('garden_dark') === 'true'
+  );
+
+  // Apply data-theme attribute + persist whenever darkMode changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('garden_dark', String(darkMode));
+  }, [darkMode]);
 
   const [authUser,    setAuthUser]    = useState(null);
   const [authToken,   setAuthToken]   = useState(null);
@@ -70,6 +89,7 @@ function App() {
   const [showAdmin,        setShowAdmin]        = useState(false);
   const [showAccount,      setShowAccount]      = useState(false);
   const [showLeaderboard,  setShowLeaderboard]  = useState(false);
+  const [showWorldMap,     setShowWorldMap]     = useState(false);
 
   const [gameState, setGameState] = useState(INITIAL_GAME);
 
@@ -269,6 +289,67 @@ function App() {
     showNotification(`Bought ${qty}× ${cropId} for 🪙${totalCost}`);
   }, [showNotification]);
 
+  // ── Structures ────────────────────────────────────────────────────────────────
+  const STRUCTURE_COSTS = { well: 50, compost: 30, greenhouse: 80 };
+
+  const handleBuildStructure = useCallback((id) => {
+    const cost = STRUCTURE_COSTS[id] || 0;
+    const defaults = {
+      well:       { built: true, charges: 3 },
+      compost:    { built: true, charges: 0, harvestsUntilNext: 3 },
+      greenhouse: { built: true },
+    };
+    setGameState((prev) => {
+      if (prev.playerStats.coins < cost) return prev;
+      return {
+        ...prev,
+        playerStats: { ...prev.playerStats, coins: prev.playerStats.coins - cost },
+        structures:  { ...prev.structures, [id]: defaults[id] },
+      };
+    });
+    showNotification(`🏗️ ${id} built!`);
+  }, [showNotification]); // eslint-disable-line
+
+  const handleUseWell = useCallback(() => {
+    setGameState((prev) => {
+      const well = prev.structures?.well;
+      if (!well?.built || (well.charges ?? 0) <= 0) return prev;
+      const updatedPlots = prev.plots.map((plot) =>
+        plot.tilled ? { ...plot, waterLevel: Math.min((plot.waterLevel || 0) + 2, 3) } : plot
+      );
+      showNotification('🪣 Well used — plots watered!');
+      return {
+        ...prev,
+        plots: updatedPlots,
+        structures: {
+          ...prev.structures,
+          well: { ...well, charges: (well.charges ?? 0) - 1 },
+        },
+      };
+    });
+  }, [showNotification]);
+
+  const handleUseCompost = useCallback(() => {
+    setGameState((prev) => {
+      const compost = prev.structures?.compost;
+      if (!compost?.built || (compost.charges || 0) <= 0) return prev;
+      const updatedPlots = prev.plots.map((plot) =>
+        (plot.tilled && plot.planted && !plot.fertilized)
+          ? { ...plot, fertilized: true }
+          : plot
+      );
+      showNotification('🌿 Compost applied — all planted plots fertilized!');
+      return {
+        ...prev,
+        plots: updatedPlots,
+        structures: {
+          ...prev.structures,
+          compost: { ...compost, charges: (compost.charges || 0) - 1 },
+        },
+      };
+    });
+  }, [showNotification]);
+
   // ── Render ────────────────────────────────────────────────────────────────────
   if (!authChecked) return null;
   if (!authUser)    return <AuthScreen onLogin={handleLogin} />;
@@ -289,6 +370,8 @@ function App() {
         currentLang={i18n.language}
         serverInfo={serverInfo}
         username={authUser.username}
+        darkMode={darkMode}
+        onToggleDark={() => setDarkMode((d) => !d)}
         onLogout={handleLogout}
         onOpenTrade={() => setShowTrade(true)}
         onOpenPlugins={() => setShowPlugins(true)}
@@ -296,22 +379,32 @@ function App() {
         onOpenAdmin={() => setShowAdmin(true)}
         onOpenAccount={() => setShowAccount(true)}
         onOpenLeaderboard={() => setShowLeaderboard(true)}
+        onOpenWorldMap={() => setShowWorldMap(true)}
       />
 
       <div className="game-container">
         <StatsBar stats={gameState.playerStats} />
         <SeasonBanner socket={socket} currentDay={gameState.currentDay} />
 
-        <ToolsPanel
-          selectedTool={gameState.selectedTool}
-          selectedSeed={gameState.selectedSeed}
-          onToolSelect={(tool) =>
-            setGameState((prev) => ({ ...prev, selectedTool: tool }))
-          }
-          onSeedSelect={(seed) =>
-            setGameState((prev) => ({ ...prev, selectedSeed: seed }))
-          }
-        />
+        <div className="tools-and-structures">
+          <ToolsPanel
+            selectedTool={gameState.selectedTool}
+            selectedSeed={gameState.selectedSeed}
+            onToolSelect={(tool) =>
+              setGameState((prev) => ({ ...prev, selectedTool: tool }))
+            }
+            onSeedSelect={(seed) =>
+              setGameState((prev) => ({ ...prev, selectedSeed: seed }))
+            }
+          />
+          <StructuresPanel
+            structures={gameState.structures}
+            coins={gameState.playerStats.coins}
+            onBuild={handleBuildStructure}
+            onUseWell={handleUseWell}
+            onUseCompost={handleUseCompost}
+          />
+        </div>
 
         <Garden
           plots={gameState.plots}
@@ -319,6 +412,7 @@ function App() {
           selectedSeed={gameState.selectedSeed}
           currentDay={gameState.currentDay}
           weather={gameState.weather}
+          structures={gameState.structures}
           onUpdateGame={setGameState}
           socket={socket}
         />
@@ -374,6 +468,14 @@ function App() {
         <Leaderboard
           currentUserId={authUser.id}
           onClose={() => setShowLeaderboard(false)}
+        />
+      )}
+
+      {showWorldMap && (
+        <WorldMap
+          socket={socket}
+          currentUserId={authUser.id}
+          onClose={() => setShowWorldMap(false)}
         />
       )}
 
