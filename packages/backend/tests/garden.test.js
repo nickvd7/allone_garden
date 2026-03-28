@@ -205,7 +205,7 @@ describe('POST /api/garden/nextday', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.currentDay).toBe(2);
-    expect(['sunny', 'cloudy', 'rainy', 'windy']).toContain(res.body.weather);
+    expect(['sunny', 'cloudy', 'rainy', 'windy', 'storm', 'drought']).toContain(res.body.weather);
     expect(Array.isArray(res.body.plots)).toBe(true);
   });
 
