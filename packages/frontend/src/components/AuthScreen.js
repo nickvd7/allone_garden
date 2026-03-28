@@ -21,7 +21,7 @@ function AuthScreen({ onLogin }) {
       const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
       const body =
         mode === 'login'
-          ? { email: form.email, password: form.password }
+          ? { username: form.username, password: form.password }
           : { username: form.username, email: form.email, password: form.password };
 
       const { data } = await axios.post(`${API}${endpoint}`, body);
@@ -65,29 +65,29 @@ function AuthScreen({ onLogin }) {
         </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
+          <input
+            style={styles.input}
+            type="text"
+            placeholder="Username"
+            value={form.username}
+            onChange={update('username')}
+            required
+            minLength={3}
+            maxLength={50}
+            autoComplete="username"
+          />
+
           {mode === 'register' && (
             <input
               style={styles.input}
-              type="text"
-              placeholder="Username"
-              value={form.username}
-              onChange={update('username')}
+              type="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={update('email')}
               required
-              minLength={3}
-              maxLength={50}
-              autoComplete="username"
+              autoComplete="email"
             />
           )}
-
-          <input
-            style={styles.input}
-            type="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={update('email')}
-            required
-            autoComplete="email"
-          />
 
           <input
             style={styles.input}
