@@ -198,6 +198,24 @@ const BUNDLED_CATALOGUE = [
     installed:   true,
     downloadUrl: null,
   },
+  {
+    name:        'leaderboard',
+    version:     '1.0.0',
+    author:      'AllOne Garden',
+    description: 'Live top-10 leaderboards for coins, level, and crops harvested. Updates each in-game day.',
+    tags:        ['social', 'gameplay'],
+    installed:   true,
+    downloadUrl: null,
+  },
+  {
+    name:        'seasons',
+    version:     '1.0.0',
+    author:      'AllOne Garden',
+    description: '4-season calendar (Spring/Summer/Autumn/Winter, 28 days each). Bonus and penalty yields per crop.',
+    tags:        ['gameplay', 'weather'],
+    installed:   true,
+    downloadUrl: null,
+  },
 ];
 
 module.exports = router;
