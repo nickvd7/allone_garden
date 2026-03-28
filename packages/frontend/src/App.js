@@ -24,6 +24,8 @@ import SeasonBanner from './components/SeasonBanner';
 import StructuresPanel from './components/StructuresPanel';
 import WorldMap from './components/WorldMap';
 import VideoCall from './components/VideoCall';
+import TourOverlay from './components/TourOverlay';
+import HelpPanel from './components/HelpPanel';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -92,6 +94,11 @@ function App() {
   const [showLeaderboard,  setShowLeaderboard]  = useState(false);
   const [showWorldMap,     setShowWorldMap]     = useState(false);
   const [callState,        setCallState]        = useState(null);   // { mode, peerId, peerUsername, offer? }
+
+  // ── Tour & Help ───────────────────────────────────────────────────────────────
+  // Show the tour automatically on first-ever login; persisted in localStorage
+  const [showTour, setShowTour] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const [gameState, setGameState] = useState(INITIAL_GAME);
 
@@ -268,6 +275,15 @@ function App() {
         plantsGrown: user.plantsGrown  || 0,
       },
     }));
+    // Launch the tour automatically on first-ever login
+    if (localStorage.getItem('garden_tour_done') !== 'true') {
+      setShowTour(true);
+    }
+  };
+
+  const handleTourFinish = () => {
+    localStorage.setItem('garden_tour_done', 'true');
+    setShowTour(false);
   };
 
   const handleLogout = () => {
@@ -403,25 +419,30 @@ function App() {
         <SeasonBanner socket={socket} currentDay={gameState.currentDay} />
 
         <div className="tools-and-structures">
-          <ToolsPanel
-            selectedTool={gameState.selectedTool}
-            selectedSeed={gameState.selectedSeed}
-            onToolSelect={(tool) =>
-              setGameState((prev) => ({ ...prev, selectedTool: tool }))
-            }
-            onSeedSelect={(seed) =>
-              setGameState((prev) => ({ ...prev, selectedSeed: seed }))
-            }
-          />
-          <StructuresPanel
-            structures={gameState.structures}
-            coins={gameState.playerStats.coins}
-            onBuild={handleBuildStructure}
-            onUseWell={handleUseWell}
-            onUseCompost={handleUseCompost}
-          />
+          <div data-tour="tools">
+            <ToolsPanel
+              selectedTool={gameState.selectedTool}
+              selectedSeed={gameState.selectedSeed}
+              onToolSelect={(tool) =>
+                setGameState((prev) => ({ ...prev, selectedTool: tool }))
+              }
+              onSeedSelect={(seed) =>
+                setGameState((prev) => ({ ...prev, selectedSeed: seed }))
+              }
+            />
+          </div>
+          <div data-tour="structures">
+            <StructuresPanel
+              structures={gameState.structures}
+              coins={gameState.playerStats.coins}
+              onBuild={handleBuildStructure}
+              onUseWell={handleUseWell}
+              onUseCompost={handleUseCompost}
+            />
+          </div>
         </div>
 
+        <div data-tour="garden">
         <Garden
           plots={gameState.plots}
           selectedTool={gameState.selectedTool}
@@ -432,17 +453,20 @@ function App() {
           onUpdateGame={setGameState}
           socket={socket}
         />
+        </div>{/* /data-tour="garden" */}
 
-        <div className="multiplayer-section">
+        <div className="multiplayer-section" data-tour="chat">
           <ChatPanel socket={socket} username={authUser.username} />
           <PlayersPanel socket={socket} />
         </div>
 
+        <div data-tour="inventory">
         <Inventory
           inventory={gameState.inventory}
           onSell={handleSell}
           onOpenTrade={() => setShowTrade(true)}
         />
+        </div>{/* /data-tour="inventory" */}
       </div>
 
       {/* Modals */}
@@ -551,6 +575,47 @@ function App() {
       )}
 
       {notification && <div className="notification">{notification}</div>}
+
+      {/* ── Persistent ❓ Help button ── */}
+      <button
+        onClick={() => setShowHelp(true)}
+        title="Help & Reference"
+        aria-label="Open help panel"
+        style={{
+          position: 'fixed', bottom: '1.25rem', right: '1.25rem',
+          zIndex: 1400,
+          width: 44, height: 44,
+          borderRadius: '50%',
+          border: '2px solid #a5d6a7',
+          background: '#e8f5e9',
+          color: '#2e7d32',
+          fontSize: '1.2rem',
+          fontWeight: 700,
+          cursor: 'pointer',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'transform 0.15s',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+      >
+        ❓
+      </button>
+
+      {/* ── Help Panel ── */}
+      {showHelp && (
+        <HelpPanel
+          onClose={() => setShowHelp(false)}
+          onStartTour={() => { setShowHelp(false); setShowTour(true); }}
+        />
+      )}
+
+      {/* ── First-time tour (or manual replay) ── */}
+      {showTour && (
+        <TourOverlay onFinish={handleTourFinish} />
+      )}
     </div>
   );
 }

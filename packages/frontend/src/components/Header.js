@@ -23,7 +23,7 @@ function Header({ onLanguageChange, currentLang, serverInfo, username, darkMode,
   const { t } = useTranslation();
 
   return (
-    <header className="header">
+    <header className="header" data-tour="header">
       <h1>🌱 {t('app_title')}</h1>
 
       <div className="header-actions">
