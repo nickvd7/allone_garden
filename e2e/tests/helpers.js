@@ -39,7 +39,7 @@ export async function login(page, user) {
   // Default tab is Login
   await page.getByPlaceholder('Username').fill(user.username);
   await page.getByPlaceholder('Password').fill(user.password);
-  await page.getByRole('button', { name: /Login/i }).click();
+  await page.getByRole('button', { name: '🚪 Login' }).click();
   await page.waitForSelector('.header', { timeout: 15_000 });
 }
 

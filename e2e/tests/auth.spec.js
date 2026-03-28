@@ -6,8 +6,8 @@ test.describe('Authentication', () => {
   test('shows login screen on first visit', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('🌱 AllOne Garden')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Register' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Login', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Register', exact: true })).toBeVisible();
   });
 
   test('can register a new account', async ({ page }) => {
@@ -37,7 +37,7 @@ test.describe('Authentication', () => {
     await logout(page);
 
     // Should be back at auth screen
-    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Login', exact: true })).toBeVisible();
 
     await login(page, user);
     await expect(page.getByRole('button', { name: new RegExp(user.username, 'i') })).toBeVisible();
@@ -50,7 +50,7 @@ test.describe('Authentication', () => {
 
     await page.getByPlaceholder('Username').fill(user.username);
     await page.getByPlaceholder('Password').fill('WrongPassword9');
-    await page.getByRole('button', { name: /Login/i }).click();
+    await page.getByRole('button', { name: '🚪 Login' }).click();
     await expect(page.getByText(/Invalid credentials/i)).toBeVisible();
   });
 
