@@ -88,6 +88,8 @@ module.exports = function chatHandler(socket, io) {
   });
 
   socket.on('chat:typing', () => {
+    // Re-use the same rate limiter — typing events count toward the same budget
+    if (!rateLimiter()) return;
     // Only broadcast the fact that someone is typing — no client-supplied data
     socket.broadcast.emit('chat:typing', {
       userId:    socket.userId,

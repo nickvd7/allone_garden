@@ -52,9 +52,12 @@ const validateLogin = [
 
 // ── Garden validators ─────────────────────────────────────────────────────────
 
-const VALID_PLANT_TYPES = ['tomato', 'carrot', 'lettuce', 'radish', 'corn', 'potato'];
-const VALID_ACTIONS     = ['till', 'plant', 'water', 'fertilize', 'harvest'];
-const VALID_WEATHERS    = ['sunny', 'cloudy', 'rainy', 'windy'];
+const VALID_PLANT_TYPES = [
+  'tomato', 'carrot', 'lettuce', 'radish', 'corn',
+  'potato', 'pumpkin', 'sunflower', 'blueberry',
+];
+const VALID_ACTIONS  = ['till', 'plant', 'water', 'fertilize', 'spray', 'harvest'];
+const VALID_WEATHERS = ['sunny', 'cloudy', 'rainy', 'windy', 'storm', 'drought'];
 
 const validateGardenAction = [
   body('type')
@@ -77,6 +80,44 @@ const validateGardenSave = [
   body('plots')
     .isArray({ min: 1, max: 100 })
     .withMessage('plots must be an array of 1–100 items'),
+
+  // Per-plot field validation — prevents clients from sending cheat values
+  body('plots.*')
+    .custom((plot) => {
+      if (typeof plot !== 'object' || plot === null || Array.isArray(plot)) {
+        throw new Error('Each plot must be an object');
+      }
+      if (plot.tilled !== undefined && typeof plot.tilled !== 'boolean') {
+        throw new Error('plot.tilled must be boolean');
+      }
+      if (plot.planted !== undefined && typeof plot.planted !== 'boolean') {
+        throw new Error('plot.planted must be boolean');
+      }
+      if (plot.fertilized !== undefined && typeof plot.fertilized !== 'boolean') {
+        throw new Error('plot.fertilized must be boolean');
+      }
+      if (plot.pest !== undefined && typeof plot.pest !== 'boolean') {
+        throw new Error('plot.pest must be boolean');
+      }
+      if (plot.waterLevel !== undefined) {
+        const wl = Number(plot.waterLevel);
+        if (!Number.isInteger(wl) || wl < 0 || wl > 3) {
+          throw new Error('plot.waterLevel must be an integer 0–3');
+        }
+      }
+      if (plot.daysPlanted !== undefined) {
+        const dp = Number(plot.daysPlanted);
+        if (!Number.isInteger(dp) || dp < 0 || dp > 9999) {
+          throw new Error('plot.daysPlanted must be an integer 0–9999');
+        }
+      }
+      if (plot.plantType !== undefined && plot.plantType !== null) {
+        if (!VALID_PLANT_TYPES.includes(plot.plantType)) {
+          throw new Error(`plot.plantType must be one of: ${VALID_PLANT_TYPES.join(', ')}`);
+        }
+      }
+      return true;
+    }),
 
   body('currentDay')
     .optional()

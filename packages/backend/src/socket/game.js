@@ -44,18 +44,25 @@ module.exports = function gameHandler(socket, io, eventBus) {
 
   // Garden visit request
   socket.on('garden:visit', (data) => {
-    io.to(data.targetUserId).emit('garden:visitor', {
-      userId: socket.userId,
+    // targetUserId must be a numeric string (db primary key)
+    const targetId = String(data.targetUserId || '').trim();
+    if (!targetId || !/^\d+$/.test(targetId)) return;
+    io.to(targetId).emit('garden:visitor', {
+      userId:   socket.userId,
       username: socket.username || 'Guest',
     });
   });
 
-  // Help action (gives XP to target)
+  // Help action — amount is SERVER-DEFINED (max 15 XP), never trusted from client
   socket.on('player:help', (data) => {
-    io.to(data.targetUserId).emit('player:helped', {
-      userId: socket.userId,
+    const targetId = String(data.targetUserId || '').trim();
+    if (!targetId || !/^\d+$/.test(targetId)) return;
+    // Clamp amount: ignore client value, always award exactly 15 XP
+    const amount = 15;
+    io.to(targetId).emit('player:helped', {
+      userId:   socket.userId,
       username: socket.username || 'Guest',
-      amount: data.amount || 10,
+      amount,
     });
   });
 };

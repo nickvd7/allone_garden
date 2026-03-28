@@ -5,6 +5,20 @@
  * and optionally connects to the P2P federation network.
  */
 require('dotenv').config();
+
+// ── Security pre-flight checks ────────────────────────────────────────────────
+const JWT_SECRET_VAL = process.env.JWT_SECRET;
+if (!JWT_SECRET_VAL || JWT_SECRET_VAL.length < 32) {
+  const msg = JWT_SECRET_VAL
+    ? `JWT_SECRET is only ${JWT_SECRET_VAL.length} chars — minimum 32 required`
+    : 'JWT_SECRET is not set';
+  if (process.env.NODE_ENV === 'production') {
+    console.error(`\n🚨 FATAL: ${msg}\n`);
+    process.exit(1);
+  } else {
+    console.warn(`\n⚠️  Security warning: ${msg} (will cause 500s in production)\n`);
+  }
+}
 const path    = require('path');
 const express = require('express');
 const http    = require('http');

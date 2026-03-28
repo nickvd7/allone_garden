@@ -43,9 +43,17 @@ class PluginAPI {
    * @param {string} sql          SQL with $1 placeholders (table name injected)
    * @param {Array}  params
    */
+  // Validate that a tableSuffix is safe to interpolate into SQL identifiers.
+  // Only lowercase alphanumeric, hyphens, and underscores; max 32 chars.
+  static _validateSuffix(suffix) {
+    if (typeof suffix !== 'string' || !/^[a-z0-9_-]{1,32}$/.test(suffix)) {
+      throw new Error(`[PluginAPI] Invalid tableSuffix "${suffix}" — use only a-z, 0-9, _, - (max 32 chars)`);
+    }
+  }
+
   async dbQuery(tableSuffix, sql, params) {
-    const table = `plugin_${this._pluginName}_${tableSuffix}`;
-    // Replace the placeholder {{table}} in the SQL
+    PluginAPI._validateSuffix(tableSuffix);
+    const table   = `plugin_${this._pluginName}_${tableSuffix}`;
     const safeSql = sql.replace(/\{\{table\}\}/g, table);
     return this._db.query(safeSql, params);
   }
@@ -58,10 +66,18 @@ class PluginAPI {
    * @param {string} columnDefs  e.g. 'id SERIAL PRIMARY KEY, value TEXT'
    */
   async dbCreateTable(tableSuffix, columnDefs) {
+    PluginAPI._validateSuffix(tableSuffix);
+
+    // Guard against SQL injection in columnDefs: reject semicolons and comments.
+    if (typeof columnDefs !== 'string' || columnDefs.trim().length === 0) {
+      throw new Error('[PluginAPI] columnDefs must be a non-empty string');
+    }
+    if (/;|--/.test(columnDefs)) {
+      throw new Error('[PluginAPI] columnDefs must not contain ";" or "--" (possible SQL injection)');
+    }
+
     const table = `plugin_${this._pluginName}_${tableSuffix}`;
-    await this._db.query(
-      `CREATE TABLE IF NOT EXISTS ${table} (${columnDefs})`
-    );
+    await this._db.query(`CREATE TABLE IF NOT EXISTS ${table} (${columnDefs})`);
     this.log(`Table ${table} ready`);
   }
 
