@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('Trade marketplace', () => {
   test('opens and closes trade modal', async ({ page }) => {
-    await page.getByRole('button', { name: /Trade/i }).click();
+    await page.getByTitle('Marketplace').click();
     await expect(page.getByText(/marketplace|trade/i).first()).toBeVisible();
     // Close via Escape or close button
     await page.keyboard.press('Escape');
@@ -28,7 +28,7 @@ test.describe('Trade marketplace', () => {
   });
 
   test('trade modal shows market listings section', async ({ page }) => {
-    await page.getByRole('button', { name: /Trade/i }).click();
+    await page.getByTitle('Marketplace').click();
     // Market tab or heading should appear
     await expect(page.getByText(/market|listing/i).first()).toBeVisible();
   });
@@ -89,6 +89,6 @@ test.describe('Achievements', () => {
   test('achievements panel shows progress bar', async ({ page }) => {
     await page.getByRole('button', { name: /Badges/i }).click();
     // Counter shows 0 / 19 initially
-    await expect(page.getByText(/\d+ \/ \d+/)).toBeVisible();
+    await expect(page.getByText(/\d+ \/ \d+/).first()).toBeVisible();
   });
 });
