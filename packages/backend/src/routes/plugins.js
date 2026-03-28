@@ -77,15 +77,21 @@ router.post('/:name/install', requireAuth, requireAdmin, async (req, res) => {
   if (!entry) return res.status(404).json({ error: `Plugin "${name}" not found in registry` });
   if (!entry.downloadUrl) return res.status(400).json({ error: 'No download URL for this plugin' });
 
+  // SHA-256 checksum is mandatory for all installable plugins.
+  // A missing sha256 in the catalogue is treated as an untrusted entry.
+  if (!entry.sha256 || typeof entry.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(entry.sha256)) {
+    return res.status(400).json({
+      error: 'Plugin catalogue entry is missing a valid SHA-256 checksum — installation refused',
+    });
+  }
+
   try {
     const source = await fetchText(entry.downloadUrl, 10000);
 
-    // Verify SHA-256 if the catalogue provides one
-    if (entry.sha256) {
-      const actual = crypto.createHash('sha256').update(source).digest('hex');
-      if (actual !== entry.sha256) {
-        return res.status(400).json({ error: 'Plugin checksum mismatch — installation aborted' });
-      }
+    // Always verify the downloaded source against the catalogue checksum
+    const actual = crypto.createHash('sha256').update(source).digest('hex');
+    if (actual !== entry.sha256.toLowerCase()) {
+      return res.status(400).json({ error: 'Plugin checksum mismatch — installation aborted' });
     }
 
     const pluginDir = path.join(PLUGINS_ROOT, name);

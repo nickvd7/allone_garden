@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 const LANGUAGES = [
   { code: 'en', label: 'EN 🇬🇧' },
   { code: 'nl', label: 'NL 🇳🇱' },
+  { code: 'de', label: 'DE 🇩🇪' },
 ];
 
 const HEADER_BTN = {

@@ -19,6 +19,9 @@ if (!JWT_SECRET_VAL || JWT_SECRET_VAL.length < 32) {
     console.warn(`\n⚠️  Security warning: ${msg} (will cause 500s in production)\n`);
   }
 }
+// Initialise Redis early so the store is ready before the first request
+require('./redis');
+
 const path    = require('path');
 const express = require('express');
 const http    = require('http');

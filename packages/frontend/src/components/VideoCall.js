@@ -18,7 +18,63 @@ const ICE_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
+// Detect WebRTC support at module load time (avoids repeated checks)
+const WEBRTC_SUPPORTED =
+  typeof RTCPeerConnection !== 'undefined' &&
+  typeof navigator.mediaDevices?.getUserMedia === 'function';
+
+/**
+ * Fallback shown when the browser doesn't support WebRTC.
+ * Old iOS Safari (< 14.5), some Android webviews, and Electron lite builds
+ * all lack full WebRTC support.
+ */
+function WebRTCUnsupported({ peerUsername, onEnd, socket, peerId }) {
+  // Notify the remote peer that the call cannot proceed
+  React.useEffect(() => {
+    socket.emit('call:reject', { to: peerId });
+  }, [socket, peerId]);
+
+  return (
+    <div className="vc-overlay">
+      <div className="vc-card">
+        <div className="vc-header">
+          <span className="vc-peer-name">📹 {peerUsername}</span>
+        </div>
+        <div className="vc-error">
+          <div style={{ fontSize: '2rem' }}>📵</div>
+          <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>
+            Videobellen niet beschikbaar
+          </div>
+          <div style={{ fontSize: '0.88rem', color: '#888', marginBottom: '0.75rem' }}>
+            Jouw browser ondersteunt geen WebRTC videogesprekken.<br />
+            Probeer Chrome 74+, Firefox 78+, Safari 14.5+, of Edge 79+.
+          </div>
+          <button className="btn btn-secondary" onClick={onEnd}>Sluiten</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Public wrapper — swaps in the fallback component when WebRTC is unavailable
+ * so that hooks in VideoCallInner are always called unconditionally.
+ */
 function VideoCall({ socket, callState, onEnd }) {
+  if (!WEBRTC_SUPPORTED) {
+    return (
+      <WebRTCUnsupported
+        peerUsername={callState.peerUsername}
+        peerId={callState.peerId}
+        socket={socket}
+        onEnd={onEnd}
+      />
+    );
+  }
+  return <VideoCallInner socket={socket} callState={callState} onEnd={onEnd} />;
+}
+
+function VideoCallInner({ socket, callState, onEnd }) {
   const localVideoRef  = useRef(null);
   const remoteVideoRef = useRef(null);
   const pcRef          = useRef(null);

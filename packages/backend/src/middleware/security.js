@@ -11,7 +11,24 @@
  */
 const helmet      = require('helmet');
 const rateLimit   = require('express-rate-limit');
+const { RedisStore } = require('rate-limit-redis');
 const express     = require('express');
+const { redisClient, isRedisReady } = require('../redis');
+
+/**
+ * Returns the rate-limit store to use.
+ * Uses Redis when available so limits survive restarts and work in clustered
+ * deployments. Falls back to default in-memory store when Redis is not configured.
+ */
+function makeStore(prefix) {
+  if (isRedisReady()) {
+    return new RedisStore({
+      sendCommand: (...args) => redisClient.sendCommand(args),
+      prefix: `rl:${prefix}:`,
+    });
+  }
+  return undefined; // express-rate-limit default: in-memory Map
+}
 
 // ── 1. Helmet (security headers) ──────────────────────────────────────────────
 const helmetMiddleware = helmet({
@@ -49,6 +66,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again in 15 minutes.' },
   skip: (_req) => process.env.NODE_ENV === 'test',
+  store: makeStore('auth'),
 });
 
 /**
@@ -62,6 +80,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Rate limit exceeded. Slow down.' },
   skip: (_req) => process.env.NODE_ENV === 'test',
+  store: makeStore('api'),
 });
 
 /**
@@ -75,6 +94,7 @@ const tradeLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many trade requests. Please slow down.' },
   skip: (_req) => process.env.NODE_ENV === 'test',
+  store: makeStore('trade'),
 });
 
 /**
@@ -88,6 +108,7 @@ const leaderboardLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many leaderboard requests. Please slow down.' },
   skip: (_req) => process.env.NODE_ENV === 'test',
+  store: makeStore('leaderboard'),
 });
 
 /**
@@ -101,6 +122,7 @@ const accountLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many account requests. Please try again in 15 minutes.' },
   skip: (_req) => process.env.NODE_ENV === 'test',
+  store: makeStore('account'),
 });
 
 // ── 3. Body size limits ────────────────────────────────────────────────────────
