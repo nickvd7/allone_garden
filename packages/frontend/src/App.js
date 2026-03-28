@@ -20,6 +20,7 @@ import AchievementsPanel from './components/AchievementsPanel';
 import AdminPanel from './components/AdminPanel';
 import AccountSettings from './components/AccountSettings';
 import Leaderboard from './components/Leaderboard';
+import SeasonBanner from './components/SeasonBanner';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -60,6 +61,9 @@ function App() {
   const [serverInfo, setServerInfo] = useState(null);
 
   const [notification,     setNotification]     = useState(null);
+  const [bonusToast,       setBonusToast]       = useState(null);  // daily-bonus popup
+  const [motd,             setMotd]             = useState(null);  // MOTD shown once per session
+  const motdShown = useRef(false);
   const [showTrade,        setShowTrade]        = useState(false);
   const [showPlugins,      setShowPlugins]      = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -179,10 +183,38 @@ function App() {
     socket.on('player:helped',   onHelped);
     socket.on('chat:message',    onFederatedChat);
 
+    // ── Plugin: daily-bonus ────────────────────────────────────────────────
+    const onDailyBonus = (data) => {
+      setBonusToast(data);
+      setTimeout(() => setBonusToast(null), 5000);
+      // Also update coin/xp counts
+      setGameState((prev) => ({
+        ...prev,
+        playerStats: {
+          ...prev.playerStats,
+          coins: prev.playerStats.coins + (data.coins || 0),
+          xp:    prev.playerStats.xp    + (data.xp    || 0),
+        },
+      }));
+    };
+
+    // ── Plugin: server-motd ────────────────────────────────────────────────
+    const onMotd = (data) => {
+      if (!motdShown.current && data.message) {
+        motdShown.current = true;
+        setMotd(data.message);
+      }
+    };
+
+    socket.on('plugin:daily-bonus:awarded', onDailyBonus);
+    socket.on('plugin:server-motd:data',    onMotd);
+
     return () => {
       socket.off('garden:visitor',  onVisitor);
       socket.off('player:helped',   onHelped);
       socket.off('chat:message',    onFederatedChat);
+      socket.off('plugin:daily-bonus:awarded', onDailyBonus);
+      socket.off('plugin:server-motd:data',    onMotd);
     };
   }, [socket, showNotification]);
 
@@ -268,6 +300,7 @@ function App() {
 
       <div className="game-container">
         <StatsBar stats={gameState.playerStats} />
+        <SeasonBanner socket={socket} currentDay={gameState.currentDay} />
 
         <ToolsPanel
           selectedTool={gameState.selectedTool}
@@ -308,6 +341,7 @@ function App() {
           inventory={gameState.inventory}
           coins={gameState.playerStats.coins}
           userId={authUser.id}
+          socket={socket}
           onBuy={handleTradeBuy}
           onClose={() => setShowTrade(false)}
         />
@@ -341,6 +375,51 @@ function App() {
           currentUserId={authUser.id}
           onClose={() => setShowLeaderboard(false)}
         />
+      )}
+
+      {/* MOTD banner — shown once per session after connect */}
+      {motd && (
+        <div style={{
+          position: 'fixed', bottom: '5rem', left: '50%', transform: 'translateX(-50%)',
+          background: '#1b5e20', color: '#fff', borderRadius: '12px',
+          padding: '0.9rem 1.4rem', maxWidth: '480px', width: '90%',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)', zIndex: 1100,
+          display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+        }}>
+          <span style={{ fontSize: '1.4rem' }}>📋</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: '0.8rem', opacity: 0.7, marginBottom: '0.25rem' }}>
+              SERVER MESSAGE
+            </div>
+            <div style={{ fontSize: '0.95rem', lineHeight: 1.5 }}>{motd}</div>
+          </div>
+          <button
+            onClick={() => setMotd(null)}
+            style={{ border: 'none', background: 'rgba(255,255,255,0.15)', color: '#fff', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Daily bonus toast */}
+      {bonusToast && (
+        <div style={{
+          position: 'fixed', bottom: motd ? '10rem' : '5rem', left: '50%', transform: 'translateX(-50%)',
+          background: '#f57f17', color: '#fff', borderRadius: '12px',
+          padding: '0.9rem 1.4rem', maxWidth: '360px', width: '90%',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.25)', zIndex: 1100,
+          animation: 'slideUp 0.3s ease',
+        }}>
+          <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.2rem' }}>
+            {bonusToast.message || `🌅 Daily bonus claimed!`}
+          </div>
+          {bonusToast.streak > 1 && (
+            <div style={{ fontSize: '0.82rem', opacity: 0.9 }}>
+              🔥 {bonusToast.streak}-day streak · keep it up!
+            </div>
+          )}
+        </div>
       )}
 
       {notification && <div className="notification">{notification}</div>}

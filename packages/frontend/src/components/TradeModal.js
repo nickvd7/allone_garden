@@ -10,6 +10,78 @@ const PLANT_INFO = {
   potato:  { emoji: '🥔', name: 'Potato'  },
 };
 
+// ── Crop Prices sub-component ─────────────────────────────────────────────────
+
+function CropPricesTab({ socket }) {
+  const [prices, setPrices] = useState(null);
+  const [hot,    setHot]    = useState(null);
+  const [cheap,  setCheap]  = useState(null);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onUpdate = ({ prices: p, hot: h, cheap: c }) => {
+      setPrices(p); setHot(h); setCheap(c);
+    };
+    const onData = ({ prices: p }) => setPrices(p);
+
+    socket.on('plugin:crop-prices:update', onUpdate);
+    socket.on('plugin:crop-prices:data',   onData);
+    socket.emit('plugin:crop-prices:request', {});
+
+    return () => {
+      socket.off('plugin:crop-prices:update', onUpdate);
+      socket.off('plugin:crop-prices:data',   onData);
+    };
+  }, [socket]);
+
+  if (!socket) {
+    return <div style={styles.empty}>Connect to server to see live prices.</div>;
+  }
+
+  if (!prices) {
+    return <div style={styles.empty}>Loading live prices…</div>;
+  }
+
+  const entries = Object.entries(prices).sort((a, b) => b[1] - a[1]);
+
+  return (
+    <div>
+      <div style={{ marginBottom: '0.75rem', fontSize: '0.82rem', color: '#888' }}>
+        Prices update each in-game day. Sell high, buy low!
+      </div>
+      <table style={styles.table}>
+        <thead>
+          <tr>
+            {['Crop', 'Price / unit', ''].map((h) => (
+              <th key={h} style={styles.th}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(([crop, price]) => {
+            const info    = PLANT_INFO[crop] || { emoji: '🌿', name: crop };
+            const isHot   = crop === hot;
+            const isCheap = crop === cheap;
+            return (
+              <tr key={crop} style={styles.tr}>
+                <td style={styles.td}>{info.emoji} {info.name}</td>
+                <td style={{ ...styles.td, fontWeight: 700, color: '#2e7d32' }}>
+                  🪙 {price}
+                </td>
+                <td style={styles.td}>
+                  {isHot   && <span style={{ background: '#fff3e0', color: '#e65100', padding: '0.1rem 0.45rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>🔥 Hot</span>}
+                  {isCheap && <span style={{ background: '#e8f5e9', color: '#2e7d32', padding: '0.1rem 0.45rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>💚 Cheap</span>}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function ListingRow({ listing, onBuy, ownUserId }) {
@@ -64,8 +136,8 @@ function ListingRow({ listing, onBuy, ownUserId }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-function TradeModal({ inventory, coins, userId, onBuy, onClose }) {
-  const [tab, setTab]         = useState('browse'); // 'browse' | 'sell'
+function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
+  const [tab, setTab]         = useState('browse'); // 'browse' | 'sell' | 'prices'
   const [listings, setListings] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
@@ -131,13 +203,17 @@ function TradeModal({ inventory, coins, userId, onBuy, onClose }) {
 
         {/* Tabs */}
         <div style={styles.tabs}>
-          {['browse', 'sell'].map((t) => (
+          {[
+            { key: 'browse', label: '🛒 Browse' },
+            { key: 'sell',   label: '📦 Sell'   },
+            { key: 'prices', label: '📈 Prices'  },
+          ].map(({ key, label }) => (
             <button
-              key={t}
-              style={{ ...styles.tab, ...(tab === t ? styles.tabActive : {}) }}
-              onClick={() => setTab(t)}
+              key={key}
+              style={{ ...styles.tab, ...(tab === key ? styles.tabActive : {}) }}
+              onClick={() => setTab(key)}
             >
-              {t === 'browse' ? '🛒 Browse' : '📦 Sell'}
+              {label}
             </button>
           ))}
         </div>
@@ -175,6 +251,13 @@ function TradeModal({ inventory, coins, userId, onBuy, onClose }) {
               </div>
             )}
             <button style={styles.btnRefresh} onClick={fetchListings}>↻ Refresh</button>
+          </div>
+        )}
+
+        {/* Prices tab */}
+        {tab === 'prices' && (
+          <div style={styles.tabContent}>
+            <CropPricesTab socket={socket} />
           </div>
         )}
 
