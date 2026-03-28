@@ -166,18 +166,47 @@ router.post('/nextday', requireAuth, async (req, res) => {
     garden = memGardens[userId];
   }
 
-  const weathers = ['sunny', 'cloudy', 'rainy', 'windy'];
-  const nextWeather = weathers[Math.floor(Math.random() * weathers.length)];
+  // 10% storm, 10% drought, 80% normal
+  const roll = Math.random();
+  const weatherPool =
+    roll < 0.10 ? ['storm']   :
+    roll < 0.20 ? ['drought'] :
+    ['sunny', 'cloudy', 'rainy', 'windy'];
+  const nextWeather = weatherPool[Math.floor(Math.random() * weatherPool.length)];
+  const pestChance = nextWeather === 'drought' ? 0.15 : 0.05;
+
+  // Crop growth-stage map (must match frontend)
+  const GROWTH_STAGES = {
+    tomato: 3, carrot: 2, lettuce: 2, radish: 1, corn: 4, potato: 3,
+    pumpkin: 5, sunflower: 2, blueberry: 4,
+  };
 
   garden.plots = garden.plots.map((plot) => {
     if (!plot.planted) return plot;
-    const waterBonus = plot.waterLevel > 0 || nextWeather === 'rainy' ? 1 : 0;
+
+    const hasPest = plot.pest || Math.random() < pestChance;
+    const totalDays = GROWTH_STAGES[plot.plantType] || 3;
+    let days = plot.daysPlanted || 0;
+
+    // Storm partially rolls back mature crops
+    if (nextWeather === 'storm' && days >= totalDays) {
+      days = Math.max(0, days - 1);
+    }
+
+    const waterBonus = (plot.waterLevel > 0 || nextWeather === 'rainy' || nextWeather === 'storm') ? 1 : 0;
     const fertBonus  = plot.fertilized ? 1 : 0;
-    return {
-      ...plot,
-      daysPlanted: (plot.daysPlanted || 0) + waterBonus + fertBonus,
-      waterLevel: nextWeather === 'rainy' ? 3 : Math.max(0, (plot.waterLevel || 0) - 1),
-    };
+    const growthDays = hasPest ? days : days + waterBonus + fertBonus;
+
+    let newWaterLevel = plot.waterLevel || 0;
+    if (nextWeather === 'rainy' || nextWeather === 'storm') {
+      newWaterLevel = 3;
+    } else if (nextWeather === 'drought') {
+      newWaterLevel = Math.max(0, newWaterLevel - 2);
+    } else {
+      newWaterLevel = Math.max(0, newWaterLevel - 1);
+    }
+
+    return { ...plot, daysPlanted: growthDays, waterLevel: newWaterLevel, pest: hasPest };
   });
 
   garden.currentDay = (garden.currentDay || 1) + 1;

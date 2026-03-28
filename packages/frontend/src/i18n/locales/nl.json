@@ -12,6 +12,7 @@
   "tool_plant": "Planten",
   "tool_water": "Water Geven",
   "tool_fertilize": "Bemesten",
+  "tool_spray": "Spuiten tegen plagen",
   "tool_harvest": "Oogsten",
 
   "seeds": "Zaden",
@@ -21,11 +22,16 @@
   "plant_radish": "Radijs",
   "plant_corn": "Maïs",
   "plant_potato": "Aardappel",
+  "plant_pumpkin": "Pompoen",
+  "plant_sunflower": "Zonnebloem",
+  "plant_blueberry": "Bosbes",
 
   "weather_sunny": "Zonnig",
   "weather_cloudy": "Bewolkt",
   "weather_rainy": "Regenachtig",
   "weather_windy": "Winderig",
+  "weather_storm": "Storm",
+  "weather_drought": "Droogte",
 
   "chat": "Chat",
   "online_players": "Online Spelers",

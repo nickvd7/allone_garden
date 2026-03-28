@@ -35,7 +35,7 @@ const INITIAL_GAME = {
   selectedTool: null,
   selectedSeed: 'tomato',
   playerStats: { xp: 0, coins: 100, level: 1, plantsGrown: 0 },
-  inventory: { tomato: 0, carrot: 0, lettuce: 0, radish: 0, corn: 0, potato: 0 },
+  inventory: { tomato: 0, carrot: 0, lettuce: 0, radish: 0, corn: 0, potato: 0, pumpkin: 0, sunflower: 0, blueberry: 0 },
   plots: INITIAL_PLOTS,
 };
 

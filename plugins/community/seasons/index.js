@@ -26,34 +26,34 @@ const SEASONS = [
   {
     name:         'Spring',
     emoji:        '🌸',
-    bonusCrops:   ['carrot', 'lettuce', 'radish'],
+    bonusCrops:   ['carrot', 'lettuce', 'radish', 'sunflower'],
     penaltyCrops: [],
-    yieldMult:    1.25,   // 25 % more yield for bonus crops
-    description:  'Mild weather — root vegetables and greens thrive.',
+    yieldMult:    1.25,
+    description:  'Mild weather — root vegetables, greens, and sunflowers thrive.',
   },
   {
     name:         'Summer',
     emoji:        '☀️',
-    bonusCrops:   ['tomato', 'corn'],
+    bonusCrops:   ['tomato', 'corn', 'blueberry'],
     penaltyCrops: ['lettuce'],  // lettuce bolts in heat
     yieldMult:    1.35,
-    description:  'Hot and sunny — perfect for tomatoes and corn.',
+    description:  'Hot and sunny — perfect for tomatoes, corn, and blueberries.',
   },
   {
     name:         'Autumn',
     emoji:        '🍂',
     bonusCrops:   ['potato', 'corn', 'pumpkin'],
-    penaltyCrops: [],
+    penaltyCrops: ['blueberry'],
     yieldMult:    1.20,
-    description:  'Harvest season — starchy crops reach peak yield.',
+    description:  'Harvest season — starchy crops and pumpkins reach peak yield.',
   },
   {
     name:         'Winter',
     emoji:        '❄️',
     bonusCrops:   [],
-    penaltyCrops: ['tomato', 'corn', 'lettuce', 'radish'],
-    yieldMult:    0.75,   // 25 % less yield overall
-    description:  'Frost reduces most yields. Use a greenhouse for warmth.',
+    penaltyCrops: ['tomato', 'corn', 'lettuce', 'radish', 'sunflower', 'blueberry'],
+    yieldMult:    0.75,
+    description:  'Frost reduces most yields. Potatoes and pumpkins survive best.',
   },
 ];
 

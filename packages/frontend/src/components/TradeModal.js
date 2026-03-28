@@ -2,12 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../hooks/useApi';
 
 const PLANT_INFO = {
-  tomato:  { emoji: '🍅', name: 'Tomato'  },
-  carrot:  { emoji: '🥕', name: 'Carrot'  },
-  lettuce: { emoji: '🥬', name: 'Lettuce' },
-  radish:  { emoji: '🌸', name: 'Radish'  },
-  corn:    { emoji: '🌽', name: 'Corn'    },
-  potato:  { emoji: '🥔', name: 'Potato'  },
+  tomato:    { emoji: '🍅', name: 'Tomato'    },
+  carrot:    { emoji: '🥕', name: 'Carrot'    },
+  lettuce:   { emoji: '🥬', name: 'Lettuce'   },
+  radish:    { emoji: '🌸', name: 'Radish'    },
+  corn:      { emoji: '🌽', name: 'Corn'      },
+  potato:    { emoji: '🥔', name: 'Potato'    },
+  pumpkin:   { emoji: '🎃', name: 'Pumpkin'   },
+  sunflower: { emoji: '🌻', name: 'Sunflower' },
+  blueberry: { emoji: '🫐', name: 'Blueberry' },
 };
 
 // ── Crop Prices sub-component ─────────────────────────────────────────────────

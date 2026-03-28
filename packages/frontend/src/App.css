@@ -388,6 +388,15 @@ body {
   50% { transform: translateY(-3px); }
 }
 
+.pest-indicator {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 13px;
+  animation: pulse 1.2s ease-in-out infinite;
+  cursor: help;
+}
+
 .water-indicator {
   position: absolute;
   bottom: 3px;

@@ -3,12 +3,15 @@ import { useTranslation } from 'react-i18next';
 
 // Map plant IDs to display info
 const PLANT_INFO = {
-  tomato:  { emoji: '🍅', labelKey: 'plant_tomato',  sellPrice: 10 },
-  carrot:  { emoji: '🥕', labelKey: 'plant_carrot',  sellPrice: 6  },
-  lettuce: { emoji: '🥬', labelKey: 'plant_lettuce', sellPrice: 5  },
-  radish:  { emoji: '🌸', labelKey: 'plant_radish',  sellPrice: 4  },
-  corn:    { emoji: '🌽', labelKey: 'plant_corn',    sellPrice: 12 },
-  potato:  { emoji: '🥔', labelKey: 'plant_potato',  sellPrice: 8  },
+  tomato:    { emoji: '🍅', labelKey: 'plant_tomato',    sellPrice: 10 },
+  carrot:    { emoji: '🥕', labelKey: 'plant_carrot',    sellPrice: 6  },
+  lettuce:   { emoji: '🥬', labelKey: 'plant_lettuce',   sellPrice: 5  },
+  radish:    { emoji: '🌸', labelKey: 'plant_radish',    sellPrice: 4  },
+  corn:      { emoji: '🌽', labelKey: 'plant_corn',      sellPrice: 12 },
+  potato:    { emoji: '🥔', labelKey: 'plant_potato',    sellPrice: 8  },
+  pumpkin:   { emoji: '🎃', labelKey: 'plant_pumpkin',   sellPrice: 22 },
+  sunflower: { emoji: '🌻', labelKey: 'plant_sunflower', sellPrice: 9  },
+  blueberry: { emoji: '🫐', labelKey: 'plant_blueberry', sellPrice: 16 },
 };
 
 function Inventory({ inventory, onSell }) {

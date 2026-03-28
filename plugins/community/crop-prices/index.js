@@ -14,12 +14,15 @@
 
 // Base price and allowed range per crop type
 const CROPS = {
-  tomato:  { base: 12, min: 6,  max: 28 },
-  carrot:  { base: 8,  min: 4,  max: 20 },
-  lettuce: { base: 6,  min: 3,  max: 16 },
-  radish:  { base: 5,  min: 2,  max: 14 },
-  corn:    { base: 15, min: 8,  max: 35 },
-  potato:  { base: 10, min: 5,  max: 25 },
+  tomato:    { base: 12, min: 6,  max: 28 },
+  carrot:    { base: 8,  min: 4,  max: 20 },
+  lettuce:   { base: 6,  min: 3,  max: 16 },
+  radish:    { base: 5,  min: 2,  max: 14 },
+  corn:      { base: 15, min: 8,  max: 35 },
+  potato:    { base: 10, min: 5,  max: 25 },
+  pumpkin:   { base: 22, min: 12, max: 48 },
+  sunflower: { base: 10, min: 5,  max: 22 },
+  blueberry: { base: 18, min: 9,  max: 40 },
 };
 
 // Maximum daily change as fraction of base price

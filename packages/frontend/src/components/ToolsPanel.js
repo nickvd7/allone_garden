@@ -6,16 +6,20 @@ const TOOLS = [
   { id: 'plant',     emoji: '🌱',  labelKey: 'tool_plant' },
   { id: 'water',     emoji: '💧',  labelKey: 'tool_water' },
   { id: 'fertilize', emoji: '⭐',  labelKey: 'tool_fertilize' },
+  { id: 'spray',     emoji: '🧴',  labelKey: 'tool_spray' },
   { id: 'harvest',   emoji: '🧺',  labelKey: 'tool_harvest' },
 ];
 
 const SEEDS = [
-  { id: 'tomato',  emoji: '🍅', labelKey: 'plant_tomato',  days: 3 },
-  { id: 'carrot',  emoji: '🥕', labelKey: 'plant_carrot',  days: 2 },
-  { id: 'lettuce', emoji: '🥬', labelKey: 'plant_lettuce', days: 2 },
-  { id: 'radish',  emoji: '🌸', labelKey: 'plant_radish',  days: 1 },
-  { id: 'corn',    emoji: '🌽', labelKey: 'plant_corn',    days: 4 },
-  { id: 'potato',  emoji: '🥔', labelKey: 'plant_potato',  days: 3 },
+  { id: 'tomato',     emoji: '🍅', labelKey: 'plant_tomato',     days: 3 },
+  { id: 'carrot',     emoji: '🥕', labelKey: 'plant_carrot',     days: 2 },
+  { id: 'lettuce',    emoji: '🥬', labelKey: 'plant_lettuce',    days: 2 },
+  { id: 'radish',     emoji: '🌸', labelKey: 'plant_radish',     days: 1 },
+  { id: 'corn',       emoji: '🌽', labelKey: 'plant_corn',       days: 4 },
+  { id: 'potato',     emoji: '🥔', labelKey: 'plant_potato',     days: 3 },
+  { id: 'pumpkin',    emoji: '🎃', labelKey: 'plant_pumpkin',    days: 5 },
+  { id: 'sunflower',  emoji: '🌻', labelKey: 'plant_sunflower',  days: 2 },
+  { id: 'blueberry',  emoji: '🫐', labelKey: 'plant_blueberry',  days: 4 },
 ];
 
 function ToolsPanel({ selectedTool, selectedSeed, onToolSelect, onSeedSelect }) {

@@ -12,6 +12,7 @@
   "tool_plant": "Plant",
   "tool_water": "Water",
   "tool_fertilize": "Fertilize",
+  "tool_spray": "Spray Pests",
   "tool_harvest": "Harvest",
 
   "seeds": "Seeds",
@@ -21,11 +22,16 @@
   "plant_radish": "Radish",
   "plant_corn": "Corn",
   "plant_potato": "Potato",
+  "plant_pumpkin": "Pumpkin",
+  "plant_sunflower": "Sunflower",
+  "plant_blueberry": "Blueberry",
 
   "weather_sunny": "Sunny",
   "weather_cloudy": "Cloudy",
   "weather_rainy": "Rainy",
   "weather_windy": "Windy",
+  "weather_storm": "Storm",
+  "weather_drought": "Drought",
 
   "chat": "Chat",
   "online_players": "Online Players",

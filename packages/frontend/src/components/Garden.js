@@ -4,22 +4,34 @@ import { SEEDS } from './ToolsPanel';
 
 // Growth stages per plant type (days to reach each stage)
 const GROWTH_STAGES = {
-  tomato:  [0, 1, 2, 3],  // seedling → growing → mature → ready
-  carrot:  [0, 1, 2],
-  lettuce: [0, 1, 2],
-  radish:  [0, 1],
-  corn:    [0, 1, 2, 3, 4],
-  potato:  [0, 1, 2, 3],
+  tomato:    [0, 1, 2, 3],   // seedling → growing → mature → ready
+  carrot:    [0, 1, 2],
+  lettuce:   [0, 1, 2],
+  radish:    [0, 1],
+  corn:      [0, 1, 2, 3, 4],
+  potato:    [0, 1, 2, 3],
+  pumpkin:   [0, 1, 2, 3, 4, 5],
+  sunflower: [0, 1, 2],
+  blueberry: [0, 1, 2, 3, 4],
+};
+
+// Harvest coin value per crop
+const CROP_COINS = {
+  tomato: 15, carrot: 10, lettuce: 8, radish: 6, corn: 18, potato: 12,
+  pumpkin: 28, sunflower: 12, blueberry: 22,
 };
 
 // Emoji to show for each growth stage
 const PLANT_EMOJIS = {
-  tomato:  ['🌱', '🌿', '🍅', '🍅'],
-  carrot:  ['🌱', '🌿', '🥕'],
-  lettuce: ['🌱', '🌿', '🥬'],
-  radish:  ['🌱', '🌸'],
-  corn:    ['🌱', '🌿', '🌾', '🌽', '🌽'],
-  potato:  ['🌱', '🌿', '🌿', '🥔'],
+  tomato:    ['🌱', '🌿', '🍅', '🍅'],
+  carrot:    ['🌱', '🌿', '🥕'],
+  lettuce:   ['🌱', '🌿', '🥬'],
+  radish:    ['🌱', '🌸'],
+  corn:      ['🌱', '🌿', '🌾', '🌽', '🌽'],
+  potato:    ['🌱', '🌿', '🌿', '🥔'],
+  pumpkin:   ['🌱', '🌿', '🌿', '🟠', '🎃', '🎃'],
+  sunflower: ['🌱', '🌿', '🌻'],
+  blueberry: ['🌱', '🌿', '🌿', '🫐', '🫐'],
 };
 
 // Determine growth stage index based on days planted
@@ -42,14 +54,16 @@ function getGrowthProgress(plantType, daysPlanted) {
 
 // Weather labels and emoji
 const WEATHER_ICONS = {
-  sunny:  '☀️',
-  cloudy: '☁️',
-  rainy:  '🌧️',
-  windy:  '💨',
+  sunny:   '☀️',
+  cloudy:  '☁️',
+  rainy:   '🌧️',
+  windy:   '💨',
+  storm:   '⛈️',
+  drought: '🏜️',
 };
 
 function Plot({ plot, index, selectedTool, onPlotClick }) {
-  const { tilled, planted, plantType, waterLevel, fertilized, daysPlanted } = plot;
+  const { tilled, planted, plantType, waterLevel, fertilized, daysPlanted, pest } = plot;
   const { stage, isReady } = planted
     ? getGrowthStage(plantType, daysPlanted)
     : { stage: 0, isReady: false };
@@ -83,6 +97,10 @@ function Plot({ plot, index, selectedTool, onPlotClick }) {
         <span className={`plant-emoji ${stageClass}`}>{plantEmoji}</span>
       )}
 
+      {pest && (
+        <div className="pest-indicator" title="Pests! Use 🧴 Spray to remove">🐛</div>
+      )}
+
       {waterLevel > 0 && (
         <div className="water-indicator">
           {'💧'.repeat(Math.min(waterLevel, 3))}
@@ -91,7 +109,10 @@ function Plot({ plot, index, selectedTool, onPlotClick }) {
 
       {planted && (
         <div className="growth-bar">
-          <div className="growth-bar-fill" style={{ width: `${progress}%` }} />
+          <div
+            className="growth-bar-fill"
+            style={{ width: `${progress}%`, background: pest ? '#e57373' : undefined }}
+          />
         </div>
       )}
     </div>
@@ -145,6 +166,13 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, onUpda
           }
           break;
 
+        case 'spray':
+          if (plot.pest) {
+            plot.pest = false;
+            xpGained = 3;
+          }
+          break;
+
         case 'harvest': {
           if (plot.planted) {
             const { isReady } = getGrowthStage(plot.plantType, plot.daysPlanted || 0);
@@ -156,13 +184,14 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, onUpda
                 plantsGrown: stats.plantsGrown + 1,
               };
               // Reset plot
-              plot.planted = false;
+              plot.planted   = false;
               plot.plantType = null;
               plot.waterLevel = 0;
               plot.fertilized = false;
               plot.daysPlanted = 0;
-              xpGained = 25;
-              coinsGained = 15;
+              plot.pest       = false;
+              xpGained    = 25;
+              coinsGained = CROP_COINS[crop] || 15;
             }
           }
           break;
@@ -193,24 +222,47 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, onUpda
 
   // Advance the game by one day
   const handleNextDay = () => {
-    const weathers = ['sunny', 'cloudy', 'rainy', 'windy'];
-    const nextWeather = weathers[Math.floor(Math.random() * weathers.length)];
+    // Drought and storm are rare (10% chance each)
+    const roll = Math.random();
+    const weatherPool =
+      roll < 0.10 ? ['storm'] :
+      roll < 0.20 ? ['drought'] :
+      ['sunny', 'cloudy', 'rainy', 'windy'];
+    const nextWeather = weatherPool[Math.floor(Math.random() * weatherPool.length)];
+
+    // Pest spawn probability per planted plot (5% normally, 15% drought)
+    const pestChance = nextWeather === 'drought' ? 0.15 : 0.05;
 
     onUpdateGame((prev) => {
       const updatedPlots = prev.plots.map((plot) => {
         if (!plot.planted) return plot;
 
-        const extra = plot.fertilized ? 1 : 0;
-        const waterBonus = plot.waterLevel > 0 || nextWeather === 'rainy' ? 1 : 0;
-        const growthDays = (plot.daysPlanted || 0) + waterBonus + extra;
+        // Pests block growth
+        const hasPest = plot.pest || Math.random() < pestChance;
 
-        // Rain refills water
-        const newWaterLevel =
-          nextWeather === 'rainy'
-            ? 3
-            : Math.max(0, (plot.waterLevel || 0) - 1);
+        // Storm can partially damage mature plots (lose 1 growth day)
+        let days = plot.daysPlanted || 0;
+        if (nextWeather === 'storm') {
+          const { isReady } = getGrowthStage(plot.plantType, days);
+          if (isReady) days = Math.max(0, days - 1);
+        }
 
-        return { ...plot, daysPlanted: growthDays, waterLevel: newWaterLevel };
+        // Growth: pests stop progress, drought needs water to grow
+        const extra      = plot.fertilized ? 1 : 0;
+        const waterBonus = (plot.waterLevel > 0 || nextWeather === 'rainy' || nextWeather === 'storm') ? 1 : 0;
+        const growthDays = hasPest ? days : days + waterBonus + extra;
+
+        // Water: storm fills to 3, drought drains an extra 1, rain fills to 3
+        let newWaterLevel = plot.waterLevel || 0;
+        if (nextWeather === 'rainy' || nextWeather === 'storm') {
+          newWaterLevel = 3;
+        } else if (nextWeather === 'drought') {
+          newWaterLevel = Math.max(0, newWaterLevel - 2);
+        } else {
+          newWaterLevel = Math.max(0, newWaterLevel - 1);
+        }
+
+        return { ...plot, daysPlanted: growthDays, waterLevel: newWaterLevel, pest: hasPest };
       });
 
       return {
