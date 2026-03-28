@@ -62,6 +62,6 @@ test.describe('Garden', () => {
 
   test('stats bar shows XP, coins and level', async ({ page }) => {
     await expect(page.locator('text=/XP|xp|⭐/').first()).toBeVisible();
-    await expect(page.locator('text=/coin|🪙/i')).toBeVisible();
+    await expect(page.locator('text=/coin|🪙/i').first()).toBeVisible();
   });
 });
