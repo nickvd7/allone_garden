@@ -6,6 +6,14 @@
  */
 
 let _seq = Date.now();
+
+/** CRA/webpack dev overlay blokkeert clicks in e2e — verwijderen na load */
+export async function dismissWebpackOverlay(page) {
+  await page.evaluate(() => {
+    document.getElementById('webpack-dev-server-client-overlay')?.remove();
+  });
+}
+
 export function uniqueUser() {
   _seq++;
   return {
@@ -20,8 +28,12 @@ export function uniqueUser() {
  * Returns the user object used.
  */
 export async function register(page, user) {
+  await page.addInitScript(() => {
+    localStorage.setItem('garden_tour_done', 'true');
+  });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Register' }).click();
+  await dismissWebpackOverlay(page);
+  await page.getByRole('tab', { name: 'Register' }).click();
   await page.getByPlaceholder('Username').fill(user.username);
   await page.getByPlaceholder('Email').fill(user.email);
   await page.getByPlaceholder('Password').fill(user.password);
@@ -35,7 +47,11 @@ export async function register(page, user) {
  * Login an existing user.
  */
 export async function login(page, user) {
+  await page.addInitScript(() => {
+    localStorage.setItem('garden_tour_done', 'true');
+  });
   await page.goto('/');
+  await dismissWebpackOverlay(page);
   // Default tab is Login
   await page.getByPlaceholder('Username').fill(user.username);
   await page.getByPlaceholder('Password').fill(user.password);
@@ -49,4 +65,13 @@ export async function login(page, user) {
 export async function logout(page) {
   await page.getByRole('button', { name: /Logout/i }).click();
   await page.waitForSelector('text=AllOne Garden', { timeout: 5_000 });
+}
+
+/**
+ * Open the header "More" dropdown and click an item.
+ * Uses role=menuitem to avoid matching other buttons in the page.
+ */
+export async function clickHeaderMoreItem(page, itemNameRegex) {
+  await page.getByRole('button', { name: /More/i }).click();
+  await page.getByRole('menuitem', { name: itemNameRegex }).click();
 }

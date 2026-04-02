@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
+import appLogo from '../assets/allone-garden-logo-transparent.png';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function AuthScreen({ onLogin }) {
+  const { t } = useTranslation();
   // mode: 'login' | 'register' | 'forgot' | 'reset'
   const [mode,    setMode]    = useState('login');
   const [form,    setForm]    = useState({ username: '', email: '', password: '', token: '', newPassword: '' });
@@ -17,10 +20,10 @@ function AuthScreen({ onLogin }) {
   const switchMode = (m) => { setMode(m); setError(''); setSuccess(''); };
 
   // Parse ?token=... from the URL for the reset-password deep-link
-  React.useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const t = params.get('token');
-    if (t) { setForm((prev) => ({ ...prev, token: t })); switchMode('reset'); }
+    const tok = params.get('token');
+    if (tok) { setForm((prev) => ({ ...prev, token: tok })); switchMode('reset'); }
   }, []);
 
   const handleSubmit = async (e) => {
@@ -43,18 +46,18 @@ function AuthScreen({ onLogin }) {
 
       } else if (mode === 'forgot') {
         await axios.post(`${API}/api/auth/forgot-password`, { email: form.email });
-        setSuccess('Als dit adres bekend is, ontvang je een e-mail met een resetlink.');
+        setSuccess(t('auth.forgot_success'));
 
       } else if (mode === 'reset') {
         await axios.post(`${API}/api/auth/reset-password`, {
           token:       form.token,
           newPassword: form.newPassword,
         });
-        setSuccess('Wachtwoord succesvol gewijzigd! Je kunt nu inloggen.');
+        setSuccess(t('auth.reset_success'));
         setTimeout(() => switchMode('login'), 2000);
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong');
+      setError(err.response?.data?.error || t('auth.error_generic'));
     } finally {
       setLoading(false);
     }
@@ -69,48 +72,64 @@ function AuthScreen({ onLogin }) {
   };
 
   return (
-    <div style={styles.backdrop}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>🌱 AllOne Garden</h1>
-        <p style={styles.subtitle}>Open-source multiplayer gardening game</p>
+    <div className="auth-backdrop">
+      <div className="auth-card">
+        <button
+          type="button"
+          className="auth-title-btn"
+          id="auth-main-title"
+          onClick={() => { window.location.href = '/home'; }}
+          title="Open homepage"
+        >
+          <h1 className="auth-title">
+            <img src={appLogo} alt={t('app_title')} className="auth-title-logo" />
+          </h1>
+        </button>
+        <p className="auth-subtitle">{t('auth.tagline')}</p>
 
         {/* Tabs — only for login / register */}
         {(mode === 'login' || mode === 'register') && (
-          <div style={styles.tabs}>
+          <div className="auth-tabs" role="tablist" aria-labelledby="auth-main-title">
             <button
-              style={{ ...styles.tab, ...(mode === 'login' ? styles.tabActive : {}) }}
+              type="button"
+              role="tab"
+              aria-selected={mode === 'login'}
+              className={`auth-tab ${mode === 'login' ? 'auth-tab--active' : ''}`}
               onClick={() => switchMode('login')}
             >
-              Login
+              {t('login')}
             </button>
             <button
-              style={{ ...styles.tab, ...(mode === 'register' ? styles.tabActive : {}) }}
+              type="button"
+              role="tab"
+              aria-selected={mode === 'register'}
+              className={`auth-tab ${mode === 'register' ? 'auth-tab--active' : ''}`}
               onClick={() => switchMode('register')}
             >
-              Register
+              {t('register')}
             </button>
           </div>
         )}
 
         {/* Forgot / Reset heading */}
         {mode === 'forgot' && (
-          <h2 style={{ color: '#2e7d32', marginBottom: '1rem', fontSize: '1.2rem' }}>
-            🔑 Wachtwoord vergeten
+          <h2 className="auth-mode-title">
+            🔑 {t('auth.forgot_heading')}
           </h2>
         )}
         {mode === 'reset' && (
-          <h2 style={{ color: '#2e7d32', marginBottom: '1rem', fontSize: '1.2rem' }}>
-            🔐 Nieuw wachtwoord
+          <h2 className="auth-mode-title">
+            🔐 {t('auth.new_password_heading')}
           </h2>
         )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form onSubmit={handleSubmit} className="auth-form">
           {/* Username — login & register only */}
           {(mode === 'login' || mode === 'register') && (
             <input
-              style={styles.input}
+              className="auth-input"
               type="text"
-              placeholder="Username"
+              placeholder={t('username')}
               value={form.username}
               onChange={update('username')}
               required
@@ -123,9 +142,9 @@ function AuthScreen({ onLogin }) {
           {/* Email — register & forgot */}
           {(mode === 'register' || mode === 'forgot') && (
             <input
-              style={styles.input}
+              className="auth-input"
               type="email"
-              placeholder="Email"
+              placeholder={t('email')}
               value={form.email}
               onChange={update('email')}
               required
@@ -136,9 +155,9 @@ function AuthScreen({ onLogin }) {
           {/* Password — login & register */}
           {(mode === 'login' || mode === 'register') && (
             <input
-              style={styles.input}
+              className="auth-input"
               type="password"
-              placeholder="Password"
+              placeholder={t('password')}
               value={form.password}
               onChange={update('password')}
               required
@@ -150,9 +169,9 @@ function AuthScreen({ onLogin }) {
           {/* Reset token (hidden when pre-filled from URL) */}
           {mode === 'reset' && !form.token && (
             <input
-              style={styles.input}
+              className="auth-input"
               type="text"
-              placeholder="Reset token (from email)"
+              placeholder={t('auth.placeholder_reset_token')}
               value={form.token}
               onChange={update('token')}
               required
@@ -162,9 +181,9 @@ function AuthScreen({ onLogin }) {
           {/* New password — reset mode */}
           {mode === 'reset' && (
             <input
-              style={styles.input}
+              className="auth-input"
               type="password"
-              placeholder="Nieuw wachtwoord"
+              placeholder={t('auth.placeholder_new_password')}
               value={form.newPassword}
               onChange={update('newPassword')}
               required
@@ -173,25 +192,25 @@ function AuthScreen({ onLogin }) {
             />
           )}
 
-          {error   && <div style={styles.error}>{error}</div>}
-          {success && <div style={styles.success}>{success}</div>}
+          {error   && <div className="auth-alert auth-alert--error" role="alert">{error}</div>}
+          {success && <div className="auth-alert auth-alert--success" role="status">{success}</div>}
 
-          <button style={styles.btnPrimary} type="submit" disabled={loading}>
+          <button className="auth-submit" type="submit" disabled={loading}>
             {loading ? '…' :
-              mode === 'login'    ? '🚪 Login' :
-              mode === 'register' ? '🌱 Create account' :
-              mode === 'forgot'   ? '📧 Stuur resetlink' :
-              '🔐 Wachtwoord opslaan'}
+              mode === 'login'    ? t('auth.btn_login_submit') :
+              mode === 'register' ? t('auth.btn_create_account') :
+              mode === 'forgot'   ? t('auth.btn_send_reset') :
+              t('auth.btn_save_password')}
           </button>
 
           {/* Forgot link under login form */}
           {mode === 'login' && (
             <button
               type="button"
-              style={styles.linkBtn}
+              className="auth-link"
               onClick={() => switchMode('forgot')}
             >
-              Wachtwoord vergeten?
+              {t('auth.forgot_link')}
             </button>
           )}
 
@@ -199,27 +218,26 @@ function AuthScreen({ onLogin }) {
           {(mode === 'forgot' || mode === 'reset') && (
             <button
               type="button"
-              style={styles.linkBtn}
+              className="auth-link"
               onClick={() => switchMode('login')}
             >
-              ← Terug naar inloggen
+              {t('auth.back_to_login')}
             </button>
           )}
         </form>
 
         {(mode === 'login' || mode === 'register') && (
-        <div style={styles.divider}>or</div>
+        <div className="auth-divider">{t('auth.divider_or')}</div>
         )}
 
         {(mode === 'login' || mode === 'register') && (
           <>
-            <button style={styles.btnGuest} onClick={handleGuest}>
-              🌿 Play as Guest (offline)
+            <button type="button" className="auth-btn-guest" onClick={handleGuest}>
+              🌿 {t('play_as_guest')}
             </button>
 
-            <p style={styles.note}>
-              No account needed to play offline. Create one to save progress and
-              visit other gardens across the community.
+            <p className="auth-note">
+              {t('auth.guest_note')}
             </p>
           </>
         )}
@@ -227,130 +245,5 @@ function AuthScreen({ onLogin }) {
     </div>
   );
 }
-
-// Inline styles keep this component self-contained (no extra CSS file needed)
-const styles = {
-  backdrop: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #e8f5e9, #c8e6c9)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '1rem',
-  },
-  card: {
-    background: 'white',
-    borderRadius: '16px',
-    padding: '2.5rem',
-    width: '100%',
-    maxWidth: '400px',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-    textAlign: 'center',
-  },
-  title: {
-    fontSize: '2rem',
-    color: '#2e7d32',
-    marginBottom: '0.25rem',
-  },
-  subtitle: {
-    color: '#888',
-    fontSize: '0.9rem',
-    marginBottom: '1.5rem',
-  },
-  tabs: {
-    display: 'flex',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    border: '1.5px solid #4caf50',
-    marginBottom: '1.5rem',
-  },
-  tab: {
-    flex: 1,
-    padding: '0.6rem',
-    border: 'none',
-    background: 'white',
-    cursor: 'pointer',
-    fontWeight: '600',
-    color: '#4caf50',
-    fontSize: '0.95rem',
-    transition: 'all 0.2s',
-  },
-  tabActive: {
-    background: '#4caf50',
-    color: 'white',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-  },
-  input: {
-    padding: '0.75rem 1rem',
-    border: '1.5px solid #ddd',
-    borderRadius: '8px',
-    fontSize: '1rem',
-    outline: 'none',
-    transition: 'border-color 0.2s',
-  },
-  error: {
-    background: '#ffebee',
-    color: '#c62828',
-    padding: '0.6rem 1rem',
-    borderRadius: '6px',
-    fontSize: '0.9rem',
-  },
-  btnPrimary: {
-    padding: '0.85rem',
-    background: '#4caf50',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '1rem',
-    fontWeight: '700',
-    cursor: 'pointer',
-    marginTop: '0.25rem',
-    transition: 'background 0.2s',
-  },
-  divider: {
-    color: '#aaa',
-    margin: '1.25rem 0 0.75rem',
-    fontSize: '0.85rem',
-    position: 'relative',
-  },
-  btnGuest: {
-    width: '100%',
-    padding: '0.75rem',
-    background: 'white',
-    color: '#388e3c',
-    border: '1.5px solid #4caf50',
-    borderRadius: '8px',
-    fontSize: '0.95rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  note: {
-    marginTop: '1rem',
-    fontSize: '0.78rem',
-    color: '#aaa',
-    lineHeight: '1.4',
-  },
-  success: {
-    background: '#e8f5e9',
-    color: '#2e7d32',
-    padding: '0.6rem 1rem',
-    borderRadius: '6px',
-    fontSize: '0.9rem',
-  },
-  linkBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#4caf50',
-    cursor: 'pointer',
-    fontSize: '0.85rem',
-    padding: '0.25rem 0',
-    textDecoration: 'underline',
-  },
-};
 
 export default AuthScreen;

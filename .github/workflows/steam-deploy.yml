@@ -1,0 +1,167 @@
+name: Steam Deploy
+
+# Trigger manually or on a release tag (v*.*.*)
+on:
+  workflow_dispatch:
+    inputs:
+      description:
+        description: 'Build description shown in Steam'
+        required: false
+        default: 'Automated build'
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  # ── 1. Build Windows installer ────────────────────────────────────────────────
+  build-win:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Install frontend deps
+        run: cd packages/frontend && npm ci
+
+      - name: Install backend deps
+        run: cd packages/backend && npm ci
+
+      - name: Install desktop deps
+        run: cd packages/desktop && npm ci
+
+      - name: Build frontend
+        run: cd packages/frontend && npm run build
+        env:
+          REACT_APP_API_URL: ''   # relative URLs — backend serves static files
+
+      - name: Build Electron (Windows)
+        run: cd packages/desktop && npm run build -- --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-unpacked
+          path: packages/desktop/build/win-unpacked/
+
+  # ── 2. Build macOS dmg ────────────────────────────────────────────────────────
+  build-mac:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install all deps
+        run: |
+          npm ci
+          cd packages/frontend && npm ci
+          cd ../backend && npm ci
+          cd ../desktop && npm ci
+
+      - name: Build frontend
+        run: cd packages/frontend && npm run build
+        env:
+          REACT_APP_API_URL: ''
+
+      - name: Build Electron (macOS)
+        run: cd packages/desktop && npm run build -- --mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # For notarisation (optional) set APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-build
+          path: packages/desktop/build/mac/
+
+  # ── 3. Build Linux AppImage ───────────────────────────────────────────────────
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install system deps (for Electron on Linux)
+        run: sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 libgbm-dev
+
+      - name: Install all deps
+        run: |
+          npm ci
+          cd packages/frontend && npm ci
+          cd ../backend && npm ci
+          cd ../desktop && npm ci
+
+      - name: Build frontend
+        run: cd packages/frontend && npm run build
+        env:
+          REACT_APP_API_URL: ''
+
+      - name: Build Electron (Linux)
+        run: cd packages/desktop && npm run build -- --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-unpacked
+          path: packages/desktop/build/linux-unpacked/
+
+  # ── 4. Deploy to Steam (after all builds succeed) ─────────────────────────────
+  deploy-steam:
+    name: Deploy to Steam
+    needs: [build-win, build-mac, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: win-unpacked
+          path: packages/desktop/build/win-unpacked/
+
+      - name: Download macOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-build
+          path: packages/desktop/build/mac/
+
+      - name: Download Linux build
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-unpacked
+          path: packages/desktop/build/linux-unpacked/
+
+      - name: Deploy to Steam via SteamCMD
+        uses: game-ci/steam-deploy@v3
+        with:
+          username:        ${{ secrets.STEAM_USERNAME }}
+          configVdf:       ${{ secrets.STEAM_CONFIG_VDF }}
+          appId:           ${{ secrets.STEAM_APP_ID }}
+          buildDescription: ${{ github.event.inputs.description || github.ref_name }}
+          rootPath:        packages/desktop
+          depot1Path:      build/win-unpacked
+          depot2Path:      build/mac
+          depot3Path:      build/linux-unpacked
+          releaseBranch:   beta           # set to 'default' to push to public branch

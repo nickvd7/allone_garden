@@ -39,8 +39,7 @@ describe('Garden', () => {
 
   it('shows the current day number', () => {
     render(<Garden {...BASE_PROPS} plots={makePlots()} currentDay={7} />);
-    // day-display div text is exactly "📅 day 7" (t('day') → 'day' via mock)
-    expect(screen.getByText('📅 day 7')).toBeInTheDocument();
+    expect(screen.getByText('📅 Day 7')).toBeInTheDocument();
   });
 
   it('shows a "Next Day" button', () => {
@@ -50,8 +49,7 @@ describe('Garden', () => {
 
   it('shows the weather icon for sunny weather', () => {
     render(<Garden {...BASE_PROPS} plots={makePlots()} weather="sunny" />);
-    // weather-display div text is exactly "☀️ weather_sunny"
-    expect(screen.getByText('☀️ weather_sunny')).toBeInTheDocument();
+    expect(screen.getByText('☀️ Sunny')).toBeInTheDocument();
   });
 
   it('shows the active tool name when a tool is selected', () => {
@@ -208,6 +206,10 @@ describe('Garden', () => {
   });
 
   it('Next Day grows planted crops by 1 day (when watered)', () => {
+    // Pin Math.random = 0.5 for the whole test so weather stays calm and no pest spawns.
+    // Without this, the 5 % pestChance inside the updater closure makes the test flaky.
+    const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5);
+
     const plots = makePlots([{ tilled: true, planted: true, plantType: 'tomato', daysPlanted: 0, waterLevel: 1 }]);
     const onUpdateGame = jest.fn();
     render(<Garden {...BASE_PROPS} plots={plots} weather="sunny" onUpdateGame={onUpdateGame} />);
@@ -215,7 +217,48 @@ describe('Garden', () => {
 
     const updater = onUpdateGame.mock.calls[0][0];
     const next = updater({ plots, currentDay: 1, weather: 'sunny', structures: {} });
-    // Watered plot should grow by 1 day (waterBonus = 1), no pest assumed
+    // With random=0.5: weather=rainy, hasPest=false, waterBonus=1 → daysPlanted should be 1
     expect(next.plots[0].daysPlanted).toBeGreaterThanOrEqual(1);
+
+    randomSpy.mockRestore();
+  });
+
+  // ── Farm: nextDay animal timers ──────────────────────────────────────────────
+  describe('Farm animal timers on Next Day', () => {
+    function nextDayState(structuresIn) {
+      const plots = makePlots();
+      const onUpdateGame = jest.fn();
+      render(<Garden {...BASE_PROPS} plots={plots} structures={structuresIn} onUpdateGame={onUpdateGame} />);
+      fireEvent.click(screen.getByRole('button', { name: /⏭/ }));
+      const updater = onUpdateGame.mock.calls[0][0];
+      return updater({ plots, currentDay: 1, weather: 'sunny', structures: structuresIn });
+    }
+
+    it('chicken coop increments daysSinceEgg each day', () => {
+      const state = nextDayState({ chickenCoop: { built: true, daysSinceEgg: 0, eggReady: false } });
+      expect(state.structures.chickenCoop.daysSinceEgg + (state.structures.chickenCoop.eggReady ? 2 : 0)).toBe(1);
+    });
+
+    it('chicken coop sets eggReady after 2 days', () => {
+      // Start at daysSinceEgg=1 — next day should trigger eggReady
+      const state = nextDayState({ chickenCoop: { built: true, daysSinceEgg: 1, eggReady: false } });
+      expect(state.structures.chickenCoop.eggReady).toBe(true);
+    });
+
+    it('stable increments daysSinceMilk each day', () => {
+      const state = nextDayState({ stable: { built: true, daysSinceMilk: 0, milkReady: false } });
+      expect(state.structures.stable.daysSinceMilk + (state.structures.stable.milkReady ? 3 : 0)).toBe(1);
+    });
+
+    it('stable sets milkReady after 3 days', () => {
+      const state = nextDayState({ stable: { built: true, daysSinceMilk: 2, milkReady: false } });
+      expect(state.structures.stable.milkReady).toBe(true);
+    });
+
+    it('eggReady stays true across days until collected', () => {
+      // Already ready → stays ready
+      const state = nextDayState({ chickenCoop: { built: true, daysSinceEgg: 0, eggReady: true } });
+      expect(state.structures.chickenCoop.eggReady).toBe(true);
+    });
   });
 });

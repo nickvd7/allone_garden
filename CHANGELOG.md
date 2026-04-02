@@ -8,7 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- i18n: `auth.*`, `videoCall.*`, `worldMap.*` fully translated in `packages/frontend/src/i18n/locales/*.json`
 - `api.patch()` helper in frontend `useApi.js`
+- Gradendex: **fr** / **es** / **pt** bundles in `i18n/config.js`; `gradendex-localize-fr-es-pt.js` writes `gradendex.{fr,es,pt}.json` (UI + entries from `gradendex-entries-overrides/`)
+- Gradendex: **ru**, **it**, **pl**, **tr**, **ja**, **ko**, **zh**, **ar**, **hi**, **id**, **vi**, **uk** bundles via `npm run gradendex:extra` (`gradendex-bundle-remaining.js` + merge overrides)
+- Leaderboard: optional `?season=` query (spring/summer/autumn/winter) and UI season filters (MVP)
+- Offline: optional garden action queue (`REACT_APP_ENABLE_OFFLINE_QUEUE`) via `useOfflineGardenQueue`; conflict modal + Capacitor Preferences mirror for native
+- Push: FCM HTTP v1 / legacy, optional **APNs** (`APNS_*`), `POST /api/push/analytics`, `GET /api/admin/push/logs`, DB logging, scheduled broadcast (`PUSH_SCHEDULE_*`); admin **Push** tab shows broadcast log
+- CI: **Docker Compose validate** job (`docker compose config`) on every push/PR
+- i18n: `gardenConflict.*` in all UI locale files (not only `en`/`nl`)
+- Gradendex: entry overrides in `scripts/gradendex-entries-overrides/` for **de, fr, es, pt, nl** plus **ru, it, pl, tr, ja, ko, zh, ar, hi, id, vi, uk** (single source for copy; `gradendex:extra` merges into `src/i18n`)
+- Gradendex: Ukrainian copy fixes in `uk.json` (класика, компост, орані грядки, теплиця/посуха)
+- CI: **Lint** and **Frontend build** jobs run `gradendex:extra` + `git diff` check on `gradendex.*.json`
+- ESLint: relaxed rules for `__tests__`; remaining test imports cleaned up
+- Tests: `GardenConflictModal.test.js`; AdminPanel tab style conflict (borderBottom) fixed
+
+### Changed
+- Frontend tests: `setupTests.js` uses real i18next (`i18n/config`) instead of a stub `t()` that returned keys; expectations in Header, Garden, ToolsPanel, GradendexView, PluginConfigurator, etc. updated for resolved English copy
+- AuthScreen, VideoCall, WorldMap: hardcoded UI strings moved to `useTranslation` and the namespaces above
+- Docs: Gradendex workflow in `SETUP_CHECKLIST.md` and `docs/NATIVE_REVIEW.md`; release checklist §7 (Gradendex) updated; redundant/outdated Gradendex bullets in this file cleaned up
+- `CODE_OF_CONDUCT.md`: restored proper Contributor Covenant 2.1 text (removed stray license paste); `README.md` i18n/architecture lines updated for 18 languages + Gradendex bundles
 
 ---
 

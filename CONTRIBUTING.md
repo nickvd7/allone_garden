@@ -148,7 +148,7 @@ Help translate AllOne Garden!
 1. Copy `packages/frontend/src/i18n/en.json`
 2. Rename to your language code (e.g. `fr.json`)
 3. Translate all strings
-4. Register in `packages/frontend/src/i18n/index.js`
+4. Register the locale in `packages/frontend/src/i18n/config.js` (and add Gradendex bundles/overrides if applicable; see `docs/NATIVE_REVIEW.md`)
 5. Submit a PR
 
 ## Questions?

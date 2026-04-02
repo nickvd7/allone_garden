@@ -24,5 +24,18 @@
     "react/prop-types":       "off",
     "react/display-name":     "off",
     "react/react-in-jsx-scope": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/__tests__/**/*.js", "**/__tests__/**/*.jsx"],
+      "rules": {
+        "testing-library/prefer-find-by": "off",
+        "testing-library/no-node-access": "off",
+        "testing-library/no-container": "off",
+        "testing-library/no-wait-for-multiple-assertions": "off",
+        "testing-library/no-wait-for-side-effects": "off",
+        "testing-library/no-unnecessary-act": "off"
+      }
+    }
+  ]
 }

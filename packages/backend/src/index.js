@@ -35,20 +35,38 @@ const adminRoutes   = require('./routes/admin');
 const accountRoutes = require('./routes/account');
 const pluginRoutes      = require('./routes/plugins');
 const { router: leaderboardRoutes } = require('./routes/leaderboard');
+const gradendexRoutes = require('./routes/gradendex');
+const worldRoutes     = require('./routes/world');
+const contentRoutes     = require('./routes/content');
+const analyticsRoutes   = require('./routes/analytics');
+const weatherRoutes     = require('./routes/weather');
+const qrRoutes          = require('./routes/qr');
+const recognizeRoutes   = require('./routes/recognize');
+const { router: pushRouter } = require('./routes/push');
+const proposalStore   = require('./state/proposalStore');
 const chatHandler      = require('./socket/chat');
 const gameHandler      = require('./socket/game');
 const proximityHandler = require('./socket/proximity');
+const playersHandler   = require('./socket/players');
 const pluginLoader = require('./plugins/loader');
-const { helmetMiddleware, requestId, apiLimiter } = require('./middleware/security');
+const { helmetMiddleware, requestId, apiLimiter, bodyLimitSmall, bodyLimitLarge } = require('./middleware/security');
 const { socketAuthMiddleware } = require('./middleware/socketAuth');
+const {
+  parseAllowedOrigins,
+  buildCorsOriginValidator,
+  parseTrustProxy,
+} = require('./config/networkSecurity');
 
-const ALLOWED_ORIGIN = process.env.FRONTEND_URL || 'http://localhost:3000';
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.FRONTEND_URL);
+const corsOriginValidator = buildCorsOriginValidator(ALLOWED_ORIGINS);
 
 const app    = express();
+app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY, process.env.NODE_ENV));
+
 const server = http.createServer(app);
 const io     = socketIO(server, {
   cors: {
-    origin: ALLOWED_ORIGIN,
+    origin: corsOriginValidator,
     methods: ['GET', 'POST'],
   },
 });
@@ -59,8 +77,7 @@ app.set('io', io);
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(helmetMiddleware);
 app.use(requestId);
-app.use(cors({ origin: ALLOWED_ORIGIN }));
-app.use(express.json({ limit: '64kb' }));   // cap body size
+app.use(cors({ origin: corsOriginValidator }));
 app.use(apiLimiter);                         // global rate limit
 
 // ── REST routes ───────────────────────────────────────────────────────────────
@@ -68,13 +85,36 @@ app.get('/health', (req, res) =>
   res.json({ status: 'ok', timestamp: new Date(), version: '1.0.0' })
 );
 
-app.use('/api/auth',    authRoutes);
-app.use('/api/garden',  gardenRoutes);
-app.use('/api/trade',   tradeRoutes);
-app.use('/api/admin',   adminRoutes);
-app.use('/api/account', accountRoutes);
-app.use('/api/plugins',      pluginRoutes);
-app.use('/api/leaderboard',  leaderboardRoutes);
+app.use('/api/auth',         bodyLimitSmall, authRoutes);
+app.use('/api/garden',       bodyLimitLarge, gardenRoutes);
+app.use('/api/trade',        bodyLimitSmall, tradeRoutes);
+app.use('/api/admin',        bodyLimitSmall, adminRoutes);
+app.use('/api/account',      bodyLimitSmall, accountRoutes);
+app.use('/api/plugins',      bodyLimitSmall, pluginRoutes);
+app.use('/api/leaderboard',  bodyLimitSmall, leaderboardRoutes);
+app.use('/api/gradendex',    bodyLimitSmall, gradendexRoutes);
+app.use('/api/world',        bodyLimitSmall, worldRoutes);
+app.use('/api/content',      bodyLimitSmall, contentRoutes);
+app.use('/api/analytics',    bodyLimitSmall, analyticsRoutes);
+app.use('/api/weather',      bodyLimitSmall, weatherRoutes);
+app.use('/api/qr',           bodyLimitSmall, qrRoutes);
+app.use('/api/recognize',    bodyLimitLarge, recognizeRoutes);
+app.use('/api/push',         bodyLimitSmall, pushRouter);
+
+// ── Electron desktop mode: serve built React frontend ─────────────────────────
+// When running inside the Electron desktop app (ELECTRON_MODE=1) the backend
+// also serves the compiled frontend so both are reachable on the same port.
+// Registered AFTER all /api/* routes so API calls are never intercepted.
+if (process.env.ELECTRON_MODE === '1') {
+  const frontendBuild = path.resolve(__dirname, '../../../frontend/build');
+  app.use(express.static(frontendBuild));
+  // SPA fallback — non-API, non-socket GET requests return index.html
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api/') && !req.path.startsWith('/socket.io/')) {
+      res.sendFile(path.join(frontendBuild, 'index.html'));
+    }
+  });
+}
 
 // ── Socket.IO ─────────────────────────────────────────────────────────────────
 const eventBus = pluginLoader.getEventBus();
@@ -91,6 +131,7 @@ io.on('connection', (socket) => {
     socket.join(String(socket.userId));
   }
 
+  playersHandler(socket, io);
   chatHandler(socket, io);
   gameHandler(socket, io, eventBus);
   proximityHandler(socket, io);
@@ -115,6 +156,24 @@ const db = require('./db');
 const PLUGINS_ROOT = path.resolve(__dirname, '../../../../plugins/community');
 pluginLoader.loadAll(PLUGINS_ROOT, { db, io });
 
+// ── Seed in-memory stores from DB (best-effort, non-fatal) ────────────────────
+if (db.isConnected()) {
+  db.query('SELECT * FROM content_proposals ORDER BY created_at ASC')
+    .then((r) => proposalStore.seed(r.rows.map((row) => ({
+      id:              row.id,
+      type:            row.type,
+      item:            row.item,
+      submittedBy:     row.submitted_by,
+      submittedByName: row.submitted_by_name,
+      status:          row.status,
+      note:            row.note || '',
+      createdAt:       row.created_at,
+      reviewedAt:      row.reviewed_at || null,
+      revisionCount:   row.revision_count || 0,  // DB column is snake_case
+    }))))
+    .catch(() => {}); // table may not exist yet
+}
+
 // ── P2P Federation (optional) ─────────────────────────────────────────────────
 if (process.env.P2P_ENABLED === 'true') {
   const federation = require('./p2p/federation');
@@ -127,10 +186,22 @@ if (process.env.P2P_ENABLED === 'true') {
 // Only listen when run directly (not when imported by tests)
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`\n❌  Port ${PORT} is already in use. Stop the other process or set PORT to a free port (e.g. PORT=5001).\n`);
+      process.exit(1);
+    }
+    throw err;
+  });
   server.listen(PORT, () => {
     console.log(`🌱 AllOne Garden server running on port ${PORT}`);
-    console.log(`🔗 Frontend: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log(`🔗 Frontend origins: ${ALLOWED_ORIGINS.join(', ')}`);
     console.log(`🔌 P2P federation: ${process.env.P2P_ENABLED === 'true' ? 'enabled' : 'disabled'}`);
+    try {
+      require('./pushScheduler').startPushScheduler();
+    } catch (e) {
+      console.warn('[push] scheduler:', e.message);
+    }
   });
 }
 

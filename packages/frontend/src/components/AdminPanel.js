@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../hooks/useApi';
+import WorldBuilder      from './WorldBuilder';
+import PluginConfigurator from './PluginConfigurator';
+import ContentCreator     from './ContentCreator';
+import ProposalsPanel     from './ProposalsPanel';
 
 function StatCard({ label, value, sub, color = '#4caf50' }) {
   return (
@@ -20,26 +24,37 @@ function Section({ title, children }) {
   );
 }
 
-function AdminPanel({ onClose }) {
-  const [stats,   setStats]   = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [peers,   setPeers]   = useState([]);
-  const [tab,     setTab]     = useState('overview');
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+function AdminPanel({ onClose, embedded = false }) {
+  const [stats,        setStats]        = useState(null);
+  const [players,      setPlayers]      = useState([]);
+  const [peers,        setPeers]        = useState([]);
+  const [analytics,    setAnalytics]    = useState(null);
+  const [pushLogs,     setPushLogs]     = useState(null);
+  const [pushLogsNote, setPushLogsNote] = useState('');
+  const [tab,          setTab]          = useState('overview');
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState('');
+
+  const fetchPushLogs = useCallback(async () => {
+    const r = await api.get('/api/admin/push/logs');
+    setPushLogs(r.logs || []);
+    setPushLogsNote(r.note || '');
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [s, p, pe] = await Promise.all([
+      const [s, p, pe, an] = await Promise.all([
         api.get('/api/admin/stats'),
         api.get('/api/admin/players'),
         api.get('/api/admin/peers'),
+        api.get('/api/analytics/summary?days=30').catch(() => null),
       ]);
       setStats(s);
       setPlayers(p.players || []);
       setPeers(pe);
+      setAnalytics(an);
     } catch (err) {
       setError(err.message || 'Could not load admin data');
     } finally {
@@ -49,15 +64,55 @@ function AdminPanel({ onClose }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const TABS = ['overview', 'players', 'plugins', 'peers'];
+  useEffect(() => {
+    if (tab !== 'push') return undefined;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        await fetchPushLogs();
+      } catch (err) {
+        if (!cancelled) setError(err.message || 'Could not load push logs');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [tab, fetchPushLogs]);
+
+  const refresh = useCallback(async () => {
+    await load();
+    if (tab === 'push') {
+      setLoading(true);
+      setError('');
+      try {
+        await fetchPushLogs();
+      } catch (err) {
+        setError(err.message || 'Could not load push logs');
+      } finally {
+        setLoading(false);
+      }
+    }
+  }, [load, tab, fetchPushLogs]);
+
+  const TABS = ['overview', 'players', 'plugins', 'peers', 'world', 'plugincfg', 'content', 'proposals', 'analytics', 'push'];
+
+  const shellStyle = embedded ? styles.embeddedShell : styles.overlay;
+  const modalStyle = embedded ? styles.embeddedModal : styles.modal;
 
   return (
-    <div style={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={styles.modal}>
+    <div
+      style={shellStyle}
+      onClick={(e) => {
+        if (!embedded && e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div style={modalStyle}>
         {/* Header */}
         <div style={styles.header}>
           <h2 style={styles.title}>⚙️ Admin Panel</h2>
-          <button style={styles.refreshBtn} onClick={load} disabled={loading}>↻ Refresh</button>
+          <button style={styles.refreshBtn} onClick={refresh} disabled={loading}>↻ Refresh</button>
           <button style={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
 
@@ -69,7 +124,18 @@ function AdminPanel({ onClose }) {
               style={{ ...styles.tab, ...(tab === t ? styles.tabActive : {}) }}
               onClick={() => setTab(t)}
             >
-              {{ overview: '📊 Overview', players: '👥 Players', plugins: '🔌 Plugins', peers: '🌍 Peers' }[t]}
+              {{
+                overview:   '📊 Overview',
+                players:    '👥 Players',
+                plugins:    '🔌 Plugins',
+                peers:      '🌍 Peers',
+                world:      '🗺️ World Builder',
+                plugincfg:  '⚙️ Plugin Config',
+                content:    '🎮 Content Creator',
+                proposals:  '🎯 Proposals',
+                analytics:  '📈 Analytics',
+                push:       '🔔 Push',
+              }[t]}
             </button>
           ))}
         </div>
@@ -220,6 +286,111 @@ function AdminPanel({ onClose }) {
               </table>
             )
           )}
+          {/* ── World Builder ─────────────────────────────────────────── */}
+          {tab === 'world' && (
+            <WorldBuilder onClose={() => setTab('overview')} inline />
+          )}
+
+          {/* ── Plugin Config ──────────────────────────────────────────── */}
+          {tab === 'plugincfg' && (
+            <PluginConfigurator />
+          )}
+
+          {/* ── Content Creator ────────────────────────────────────────── */}
+          {tab === 'content' && (
+            <ContentCreator />
+          )}
+
+          {/* ── Proposals ──────────────────────────────────────────────── */}
+          {tab === 'proposals' && (
+            <ProposalsPanel />
+          )}
+
+          {/* ── Analytics ───────────────────────────────────────────────── */}
+          {tab === 'analytics' && (
+            <div>
+              <p style={{ color: '#888', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                Last 30 days · source: {analytics?.source || '—'}
+              </p>
+              {!analytics && <p style={{ color: '#aaa' }}>No analytics data yet.</p>}
+              {analytics?.rows?.length > 0 && (
+                <table style={styles.analyticsTable}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Event</th>
+                      <th style={styles.th}>Count</th>
+                      {analytics.source === 'db' && <th style={styles.th}>Sessions</th>}
+                      {analytics.source === 'db' && <th style={styles.th}>Unique users</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(
+                      analytics.rows.reduce((acc, r) => {
+                        acc[r.event_name] = (acc[r.event_name] || 0) + Number(r.total);
+                        return acc;
+                      }, {})
+                    )
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([name, total]) => (
+                        <tr key={name}>
+                          <td style={styles.td}>{name}</td>
+                          <td style={{ ...styles.td, fontWeight: 600 }}>{total}</td>
+                          {analytics.source === 'db' && <td style={styles.td}>—</td>}
+                          {analytics.source === 'db' && <td style={styles.td}>—</td>}
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {/* ── Push broadcasts (DB log) ───────────────────────────────────── */}
+          {tab === 'push' && (
+            <div>
+              {pushLogsNote && (
+                <p style={{ color: '#856404', background: '#fff3cd', padding: '0.65rem 0.9rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                  {pushLogsNote}
+                </p>
+              )}
+              {!pushLogs?.length && !pushLogsNote && (
+                <div style={styles.empty}>No push broadcasts logged yet.</div>
+              )}
+              {!pushLogs?.length && pushLogsNote && (
+                <div style={styles.empty}>No rows — see note above.</div>
+              )}
+              {pushLogs?.length > 0 && (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        {['Time', 'Title', 'Tokens', 'Sent', 'Failures', 'Mode', 'Source'].map((h) => (
+                          <th key={h} style={styles.th}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pushLogs.map((row) => (
+                        <tr key={row.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                          <td style={{ ...styles.td, fontSize: '0.8rem', color: '#666' }}>
+                            {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+                          </td>
+                          <td style={{ ...styles.td, fontWeight: 600, maxWidth: '200px' }} title={row.title}>
+                            {row.title}
+                          </td>
+                          <td style={styles.td}>{row.token_count ?? '—'}</td>
+                          <td style={styles.td}>{row.sent ?? '—'}</td>
+                          <td style={styles.td}>{row.failures ?? '—'}</td>
+                          <td style={styles.td}>{row.mode ?? '—'}</td>
+                          <td style={{ ...styles.td, fontSize: '0.8rem' }}>{row.source ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -238,6 +409,23 @@ const styles = {
     width: '100%', maxWidth: '860px', maxHeight: '88vh',
     display: 'flex', flexDirection: 'column',
     boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden',
+  },
+  embeddedShell: {
+    minHeight: 'calc(100vh - 52px)',
+    padding: '0.75rem',
+    background: '#f1f8e9',
+  },
+  embeddedModal: {
+    background: 'white',
+    borderRadius: '14px',
+    width: '100%',
+    maxWidth: 'min(1400px, 100%)',
+    margin: '0 auto',
+    minHeight: 'calc(100vh - 76px)',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 12px 30px rgba(0,0,0,0.14)',
+    overflow: 'hidden',
   },
   header: {
     display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -264,7 +452,7 @@ const styles = {
     borderBottom: '3px solid transparent', fontSize: '0.88rem',
     whiteSpace: 'nowrap',
   },
-  tabActive: { color: '#4caf50', borderBottomColor: '#4caf50' },
+  tabActive: { color: '#4caf50', borderBottom: '3px solid #4caf50' },
   body: { padding: '1.25rem 1.5rem', overflowY: 'auto', flex: 1 },
   error: {
     background: '#ffebee', color: '#c62828',
@@ -312,6 +500,7 @@ const styles = {
     cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600',
   },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' },
+  analyticsTable: { width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem', marginTop: '0.5rem' },
   th: {
     textAlign: 'left', padding: '0.6rem 0.75rem',
     background: '#f9fbe7', color: '#558b2f',

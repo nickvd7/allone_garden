@@ -1,0 +1,12 @@
+"DepotBuildConfig"
+{
+  "DepotID"     "YOUR_DEPOT_LINUX"
+  "ContentRoot" "../../build/linux-unpacked"
+  "FileMapping"
+  {
+    "LocalPath"  "*"
+    "DepotPath"  "."
+    "Recursive"  "1"
+  }
+  "FileExclusion" "*.map"
+}

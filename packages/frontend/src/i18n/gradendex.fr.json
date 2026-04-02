@@ -1,0 +1,181 @@
+{
+  "gradendex": {
+    "ui": {
+      "loading": "Chargement du Gradendex…",
+      "error_load": "Impossible de charger le Gradendex. Le serveur est-il démarré ?",
+      "search_placeholder": "🔍 Rechercher plantes ou bâtiments…",
+      "no_results": "Aucune entrée pour « {{search}} ».",
+      "tab_all": "🌍 Tout",
+      "tab_plants": "🌱 Plantes",
+      "tab_structures": "🏗️ Bâtiments",
+      "back_to_list": "← Retour à la liste",
+      "back": "← Retour",
+      "edit": "✏️ Modifier",
+      "edit_title_suffix": "— Modifier",
+      "companion_planting": "Cultures associées",
+      "tips": "Astuces",
+      "last_edited": "Dernière modification par {{user}} · {{date}}",
+      "admin_hint": "✏️ Mode admin — cliquez une entrée pour modifier",
+      "stats_days": "{{count}} jour",
+      "stats_days_plural": "{{count}} jours",
+      "stats_coins": "{{count}} pièces",
+      "aria_search": "Rechercher dans le Gradendex",
+      "aria_view": "Voir {{name}}",
+      "saving": "Enregistrement…",
+      "save_changes": "💾 Enregistrer",
+      "cancel": "Annuler",
+      "load_error_detail": "Impossible d’enregistrer",
+      "form_emoji": "Emoji",
+      "form_name": "Nom",
+      "form_category": "Catégorie",
+      "form_short": "Description courte (max 300 car.)",
+      "form_long": "Description longue (Markdown : **gras**, *italique*, sauts de ligne)",
+      "form_growth": "Jours de croissance",
+      "form_coins": "Pièces de base 🪙",
+      "form_tips": "Astuces (une par ligne)",
+      "cat_plant": "Plante",
+      "cat_structure": "Bâtiment",
+      "cat_tool": "Outil",
+      "cat_other": "Autre"
+    },
+    "entries": {
+      "radish": {
+        "name": "Radis",
+        "short_desc": "Culture la plus rapide. Parfait pour débuter.",
+        "long_desc": "Le radis est le sprinter d’AllOne Garden — prêt à récolter après seulement **1 jour**. Sa valeur modeste (🪙6) est compensée par la vitesse des cycles, ce qui accumule vite XP et inventaire.\n\nLes radis poussent bien à côté de la laitue et de la carotte : excellente culture de remplissage dans un jardin planifié en associations.",
+        "tips": {
+          "0": "Plantez des radis sur les parcelles libres pendant que les cultures lentes mûrissent.",
+          "1": "S’accorde bien avec laitue et carotte pour de petits bonus d’association.",
+          "2": "Idéal pour monter de niveau rapidement au début du jeu."
+        }
+      },
+      "carrot": {
+        "name": "Carotte",
+        "short_desc": "Culture fiable en 2 jours. Excellente synergie en association.",
+        "long_desc": "Les carottes sont parmi les cultures les plus polyvalentes. Elles mûrissent en **2 jours** et s’entendent avec presque toutes les plantes — elles profitent des tomates, de la laitue et des radis à proximité.\n\nÀ 🪙10 par récolte, c’est un revenu solide du milieu de partie.",
+        "tips": {
+          "0": "Entourez les carottes de tomates (+20 %) et de laitue (+15 %) pour le plus gros bonus.",
+          "1": "Éloignez-les du maïs — pas de synergie.",
+          "2": "Bon choix pour une stratégie « tas de compost » grâce aux cycles de 2 jours."
+        }
+      },
+      "lettuce": {
+        "name": "Laitue",
+        "short_desc": "Culture bon marché. Bonne associée pour la plupart des plantes.",
+        "long_desc": "La laitue mûrit en **2 jours** pour un modeste 🪙8. Sa vraie valeur est en association : elle aide les voisines comme les carottes et les radis tout en étant boostée par les carottes.\n\nNe plantez pas à côté du maïs — antagonisme (−15 % pour la laitue).",
+        "tips": {
+          "0": "La laitue est une assurance bon marché : comblez les trous entre cultures à forte valeur.",
+          "1": "Le trio carotte/laitue/radis profite à tout le monde.",
+          "2": "Jamais à côté du maïs si vous voulez le rendement."
+        }
+      },
+      "sunflower": {
+        "name": "Tournesol",
+        "short_desc": "Culture lumineuse en 2 jours. Meilleur ami des citrouilles.",
+        "long_desc": "Les tournesols sont les rois de l’association. Ils mûrissent en **2 jours** pour 🪙12 et donnent +15 % aux citrouilles adjacentes — indispensables pour toute optimisation citrouille en fin de partie.\n\nIls profitent aussi des myrtilles voisines (+10 %).",
+        "tips": {
+          "0": "Entourez toujours les parcelles de citrouilles de tournesols.",
+          "1": "Tournesol + myrtille + citrouille : trio puissant en fin de partie.",
+          "2": "Cycle court : 2–3 récoltes par cycle citrouille."
+        }
+      },
+      "tomato": {
+        "name": "Tomate",
+        "short_desc": "Classique en 3 jours. Bons gains avec les bons voisins.",
+        "long_desc": "Les tomates prennent **3 jours** mais rapportent 🪙15. Avec le bonus carotte (+20 %), la valeur effective monte à ~🪙18 — parmi les meilleurs rendements du milieu de partie.\n\nÉloignez-les des citrouilles, qui réduisent le rendement tomate de 10 %.",
+        "tips": {
+          "0": "Tomate + carotte : duo fort en début de partie (+20 %).",
+          "1": "Ajoutez une bordure de laitue pour un petit bonus en plus.",
+          "2": "Arrosez chaque jour — les tomates punissent les parcelles négligées."
+        }
+      },
+      "potato": {
+        "name": "Pomme de terre",
+        "short_desc": "Culture robuste en 3 jours. Aime le maïs, déteste les citrouilles.",
+        "long_desc": "Les pommes de terre mûrissent en **3 jours** pour 🪙12. Leur point fort : forte synergie avec le maïs : +20 % quand elles sont côte à côte (réciproque), ce qui fait du duo maïs/patate l’un des agencements les plus efficaces.\n\nÉvitez les citrouilles à côté.",
+        "tips": {
+          "0": "Alternez rangées de maïs et de pommes de terre pour +20 % mutuel.",
+          "1": "Ne plantez jamais à côté des citrouilles.",
+          "2": "La serre protège les parcelles maïs/patate à forte valeur des tempêtes."
+        }
+      },
+      "blueberry": {
+        "name": "Myrtille",
+        "short_desc": "Culture de valeur en 4 jours. S’accorde magnifiquement aux tournesols.",
+        "long_desc": "Les myrtilles mûrissent en **4 jours** mais récompensent la patience avec 🪙22. Elles profitent des tournesols et des carottes voisins, idéales dans un jardin mixte.\n\nAvec un cycle long, fertilisez chaque parcelle myrtille pour accélérer la croissance.",
+        "tips": {
+          "0": "Fertilisez toujours les myrtilles — gagner même une demi-journée compte sur le long terme.",
+          "1": "Un tournesol voisin donne +10 %.",
+          "2": "Utilisez le puits tôt dans le cycle pour arroser tout d’un coup."
+        }
+      },
+      "corn": {
+        "name": "Maïs",
+        "short_desc": "Grande culture en 4 jours. Meilleur ami de la patate, pire ennemi de la citrouille.",
+        "long_desc": "Le maïs mûrit en **4 jours** pour 🪙18. Le lien maïs/patate (+20 % chacun) en fait l’épine dorsale d’un jardin orienté productivité.\n\nLe maïs nuit à la laitue (−15 %) et aux citrouilles (−20 %) : planifiez bien les parcelles.",
+        "tips": {
+          "0": "Alternez colonnes maïs et pommes de terre pour le bonus mutuel max.",
+          "1": "Éloignez le maïs des parcelles laitue et citrouille.",
+          "2": "Fertilisez pour raccourcir efficacement le cycle de 4 jours."
+        }
+      },
+      "pumpkin": {
+        "name": "Citrouille",
+        "short_desc": "Culture la plus précieuse. Lente mais rentable.",
+        "long_desc": "Les citrouilles mettent **5 jours** entiers mais paient 🪙28 — la plus haute valeur de base. Avec tournesol (+15 %), le rendement effectif grimpe vers 🪙32.\n\nFragiles : maïs, patate et tomates voisins réduisent le rendement. Réservez un coin dédié au bloc citrouille.",
+        "tips": {
+          "0": "Entourez chaque citrouille de tournesols — +15 % sur 🪙28, ça compte vite.",
+          "1": "Construisez la serre avant les citrouilles : une tempête peut repousser une récolte mûre d’un jour.",
+          "2": "Fertilisez + arrosez chaque cycle. Ne sautez jamais un jour sur les citrouilles.",
+          "3": "Gardez les citrouilles dans un coin, loin du maïs et de la patate."
+        }
+      },
+      "well": {
+        "name": "Puits",
+        "short_desc": "Arrose toutes les parcelles labourées en un clic. 3 charges par jour.",
+        "long_desc": "Le puits coûte **50 🪙** et donne 3 charges par jour (rechargées à chaque « jour suivant »). Chaque utilisation augmente le niveau d’eau de **toutes** les parcelles labourées de +2.\n\nIndispensable au-delà de 10–12 parcelles actives — le temps gagné est énorme.",
+        "tips": {
+          "0": "Construisez le puits en deuxième bâtiment (après le tas de compost).",
+          "1": "Les charges se réinitialisent chaque jour — utilisez les 3, ne les gardez pas.",
+          "2": "Combinez engrais et eau le même jour pour la croissance maximale."
+        }
+      },
+      "compost_heap": {
+        "name": "Tas de compost",
+        "short_desc": "Génère automatiquement des charges d’engrais tous les 3 récoltes.",
+        "long_desc": "Le tas coûte **30 🪙** et est rentabilisé en quelques récoltes. Après chaque 3 récoltes, 1 charge d’engrais. « Engraiser tout » applique cette charge à toutes les parcelles plantées non fertilisées.\n\nLe bâtiment le moins cher — à construire en premier.",
+        "tips": {
+          "0": "Construisez-le en premier — 30 🪙 se gagnent en 5–10 récoltes.",
+          "1": "Gardez la charge pour quand vous avez beaucoup de parcelles plantées.",
+          "2": "Engrais + eau le même jour = croissance la plus rapide possible."
+        }
+      },
+      "greenhouse": {
+        "name": "Serre",
+        "short_desc": "Bouclier passif contre tempêtes et sécheresse.",
+        "long_desc": "La serre coûte **80 🪙** et fonctionne sans charge ni clic. Elle transforme tempête ⛈️ et sécheresse 🏜️ en temps nuageux sûr, évite les dégâts aux cultures et ramène le risque de parasites sécheresse de 15 % à 5 %.\n\nEssentielle avant un grand jardin citrouille ou myrtille sur 24 parcelles.",
+        "tips": {
+          "0": "Construisez la serre avant la première citrouille.",
+          "1": "Une tempête peut repousser une citrouille mûre d’un jour entier — la serre l’empêche.",
+          "2": "Une fois construite, les événements météo ne sont plus un souci."
+        }
+      }
+    },
+    "page": {
+      "title": "📖 Gradendex",
+      "subtitle": "— référence cultures et bâtiments",
+      "brand": "🌱 AllOne Garden",
+      "back_game": "🎮 Retour au jeu",
+      "intro": "Référence tenue par la communauté pour chaque culture et bâtiment dans AllOne Garden.",
+      "intro_logged_in": "Vous êtes connecté — les admins peuvent modifier les entrées.",
+      "intro_guest_before": "",
+      "log_in": "Connexion",
+      "intro_guest_after": "pour contribuer en tant qu’admin.",
+      "footer": "AllOne Garden · Gradendex · Données chargées depuis",
+      "open_full": "↗ Page entière",
+      "open_full_title": "Ouvrir le Gradendex en pleine page",
+      "close": "Fermer le Gradendex",
+      "aria_dialog": "Gradendex"
+    }
+  }
+}

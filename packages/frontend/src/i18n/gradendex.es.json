@@ -1,0 +1,181 @@
+{
+  "gradendex": {
+    "ui": {
+      "loading": "Cargando Gradendex…",
+      "error_load": "No se pudo cargar Gradendex. ¿Está el servidor en marcha?",
+      "search_placeholder": "🔍 Buscar plantas o edificios…",
+      "no_results": "No hay entradas para «{{search}}».",
+      "tab_all": "🌍 Todo",
+      "tab_plants": "🌱 Plantas",
+      "tab_structures": "🏗️ Edificios",
+      "back_to_list": "← Volver a la lista",
+      "back": "← Volver",
+      "edit": "✏️ Editar",
+      "edit_title_suffix": "— Editar",
+      "companion_planting": "Cultivos asociados",
+      "tips": "Consejos",
+      "last_edited": "Última edición por {{user}} · {{date}}",
+      "admin_hint": "✏️ Modo admin — haz clic en una entrada para editar",
+      "stats_days": "{{count}} día",
+      "stats_days_plural": "{{count}} días",
+      "stats_coins": "{{count}} monedas",
+      "aria_search": "Buscar en Gradendex",
+      "aria_view": "Ver {{name}}",
+      "saving": "Guardando…",
+      "save_changes": "💾 Guardar cambios",
+      "cancel": "Cancelar",
+      "load_error_detail": "No se pudieron guardar los cambios",
+      "form_emoji": "Emoji",
+      "form_name": "Nombre",
+      "form_category": "Categoría",
+      "form_short": "Descripción breve (máx. 300 caracteres)",
+      "form_long": "Descripción larga (Markdown: **negrita**, *cursiva*, saltos de línea)",
+      "form_growth": "Días de crecimiento",
+      "form_coins": "Monedas base 🪙",
+      "form_tips": "Consejos (uno por línea)",
+      "cat_plant": "Planta",
+      "cat_structure": "Edificio",
+      "cat_tool": "Herramienta",
+      "cat_other": "Otro"
+    },
+    "entries": {
+      "radish": {
+        "name": "Rábano",
+        "short_desc": "El cultivo más rápido. Ideal para principiantes.",
+        "long_desc": "El rábano es el velocista de AllOne Garden: listo en solo **1 día**. Su valor modesto (🪙6) se compensa con ciclos tan rápidos que acumulas XP e inventario al instante.\n\nCrece bien junto a lechuga y zanahoria: gran cultura de relleno en un huerto de asociación.",
+        "tips": {
+          "0": "Planta rábanos en parcelas vacías mientras maduran cultivos lentos.",
+          "1": "Combina bien con lechuga y zanahoria para pequeños bonos de asociación.",
+          "2": "Perfecto para subir de nivel rápido al inicio."
+        }
+      },
+      "carrot": {
+        "name": "Zanahoria",
+        "short_desc": "Cultivo fiable en 2 días. Gran sinergia de asociación.",
+        "long_desc": "Las zanahorias son de las más versátiles. Maduran en **2 días** y conviven con casi todo: se benefician de tomates, lechuga y rábanos cercanos.\n\nA 🪙10 por cosecha, son un ingreso sólido a mitad de partida.",
+        "tips": {
+          "0": "Rodea zanahorias de tomates (+20 %) y lechuga (+15 %) para el mayor bono.",
+          "1": "Aléjalas del maíz: no hay sinergia.",
+          "2": "Buena elección para la estrategia de Montón de compost por ciclos de 2 días."
+        }
+      },
+      "lettuce": {
+        "name": "Lechuga",
+        "short_desc": "Cultivo barato de relleno. Buena compañera para la mayoría.",
+        "long_desc": "La lechuga madura en **2 días** por un modesto 🪙8. Su valor real es como compañera: ayuda a zanahorias y rábanos y ella misma se potencia con zanahorias.\n\nNo plantes junto al maíz: se antagonizan (−15 % para la lechuga).",
+        "tips": {
+          "0": "La lechuga es un seguro barato: rellena huecos entre cultivos caros.",
+          "1": "El trío zanahoria/lechuga/rábano beneficia a todos.",
+          "2": "Nunca junto al maíz si te importa el rendimiento."
+        }
+      },
+      "sunflower": {
+        "name": "Girasol",
+        "short_desc": "Cultivo luminoso en 2 días. El mejor amigo de la calabaza.",
+        "long_desc": "Los girasoles son reyes de la asociación. Maduran en **2 días** por 🪙12 y dan +15 % a calabazas adyacentes: imprescindibles en cualquier setup de calabaza tardío.\n\nTambién se benefician de arándanos vecinos (+10 %).",
+        "tips": {
+          "0": "Rodea siempre las parcelas de calabaza con girasoles.",
+          "1": "Girasol + arándano + calabaza: trío potente a final de partida.",
+          "2": "Ciclo corto: 2–3 cosechas por ciclo de calabaza."
+        }
+      },
+      "tomato": {
+        "name": "Tomate",
+        "short_desc": "Clásico de 3 días. Buenos ingresos con los vecinos adecuados.",
+        "long_desc": "Los tomates tardan **3 días** pero pagan 🪙15. Con bono de zanahoria (+20 %), el valor efectivo sube a ~🪙18: entre los mejores retornos a mitad de partida.\n\nAléjalos de las calabazas, que reducen el rendimiento del tomate un 10 %.",
+        "tips": {
+          "0": "Tomate + zanahoria: dúo muy fuerte al inicio (+20 %).",
+          "1": "Añade un borde de lechuga para un extra pequeño.",
+          "2": "Riega cada día: los tomates castigan el descuido."
+        }
+      },
+      "potato": {
+        "name": "Patata",
+        "short_desc": "Cultivo contundente en 3 días. Ama el maíz, odia las calabazas.",
+        "long_desc": "Las patatas maduran en **3 días** por 🪙12. Su punto fuerte es la sinergia con el maíz: +20 % cuando están juntas (recíproco), haciendo del par maíz/patata uno de los más eficientes.\n\nEvita calabazas al lado.",
+        "tips": {
+          "0": "Alterna filas de maíz y patata para +20 % mutuo.",
+          "1": "Nunca junto a calabazas.",
+          "2": "El invernadero protege parcelas maíz/patata valiosas de tormentas."
+        }
+      },
+      "blueberry": {
+        "name": "Arándano",
+        "short_desc": "Cultivo de alto valor en 4 días. Combina de maravilla con girasoles.",
+        "long_desc": "Los arándanos tardan **4 días** pero recompensan con 🪙22. Se benefician de girasoles y zanahorias vecinas, encajan en un huerto mixto.\n\nCon ciclo largo, fertiliza cada parcela de arándano para acelerar.",
+        "tips": {
+          "0": "Siempre fertiliza arándanos: ahorrar medio día cuenta a largo plazo.",
+          "1": "Un girasol vecino da +10 %.",
+          "2": "Usa el pozo al inicio del ciclo para regar todo de una vez."
+        }
+      },
+      "corn": {
+        "name": "Maíz",
+        "short_desc": "Alto cultivo de 4 días. Mejor amigo de la patata, peor enemigo de la calabaza.",
+        "long_desc": "El maíz madura en **4 días** por 🪙18. El vínculo maíz/patata (+20 % cada uno) es la columna de un huerto orientado a productividad.\n\nPerjudica a lechuga (−15 %) y calabaza (−20 %): planifica bien.",
+        "tips": {
+          "0": "Alterna columnas de maíz y patata para el máximo bono mutuo.",
+          "1": "Mantén el maíz lejos de lechuga y calabaza.",
+          "2": "Fertiliza para acortar el ciclo de 4 días con efecto."
+        }
+      },
+      "pumpkin": {
+        "name": "Calabaza",
+        "short_desc": "El cultivo más valioso. Lenta pero merece la pena.",
+        "long_desc": "Las calabazas tardan **5 días** enteros pero pagan 🪙28 — el mayor valor base. Con girasol (+15 %), el rendimiento efectivo sube hacia 🪙32.\n\nSon frágiles: maíz, patata y tomate vecinos reducen rendimiento. Reserva un rincón dedicado.",
+        "tips": {
+          "0": "Rodea cada calabaza de girasoles: +15 % sobre 🪙28 suma rápido.",
+          "1": "Construye el invernadero antes: una tormenta puede retrasar una cosecha madura un día entero.",
+          "2": "Fertiliza + riega cada ciclo. No saltes ningún día en calabazas.",
+          "3": "Mantén las calabazas en un rincón, lejos de maíz y patata."
+        }
+      },
+      "well": {
+        "name": "Pozo de agua",
+        "short_desc": "Riega todas las parcelas labradas de un clic. 3 cargas al día.",
+        "long_desc": "El pozo cuesta **50 🪙** y da 3 cargas diarias (se renuevan en cada « día siguiente »). Cada uso sube el agua de **todas** las parcelas labradas +2.\n\nImprescindible con más de 10–12 parcelas activas: ahorras un tiempo enorme.",
+        "tips": {
+          "0": "Construye el pozo como segunda estructura (tras el montón de compost).",
+          "1": "Las cargas se reinician cada día: úsalas las 3, no las guardes.",
+          "2": "Combina fertilizante y agua el mismo día para el máximo crecimiento diario."
+        }
+      },
+      "compost_heap": {
+        "name": "Montón de compost",
+        "short_desc": "Genera cargas de fertilizante automáticamente cada 3 cosechas.",
+        "long_desc": "El montón cuesta **30 🪙** y se amortiza en pocas cosechas. Cada 3 cosechas genera 1 carga. « Fertilizar todo » aplica esa carga a todas las parcelas plantadas sin fertilizar.\n\nLa estructura más barata: constrúyela primero.",
+        "tips": {
+          "0": "Constrúyela primero: 30 🪙 se consiguen en 5–10 cosechas.",
+          "1": "Guarda la carga para cuando tengas muchas parcelas plantadas.",
+          "2": "Fertilizante + agua el mismo día = crecimiento lo más rápido posible."
+        }
+      },
+      "greenhouse": {
+        "name": "Invernadero",
+        "short_desc": "Escudo pasivo contra tormentas y sequía.",
+        "long_desc": "El invernadero cuesta **80 🪙** y funciona sin cargas ni clics. Convierte tormenta ⛈️ y sequía 🏜️ en tiempo nublado seguro, evita daño a cultivos y baja el riesgo de plagas de sequía del 15 % al 5 %.\n\nEsencial antes de un huerto grande de calabaza o arándano en 24 parcelas.",
+        "tips": {
+          "0": "Construye el invernadero antes de la primera calabaza.",
+          "1": "Una tormenta puede retrasar una calabaza madura un día entero: el invernadero lo evita.",
+          "2": "Una vez construido, el clima deja de preocuparte."
+        }
+      }
+    },
+    "page": {
+      "title": "📖 Gradendex",
+      "subtitle": "— referencia de cultivos y edificios",
+      "brand": "🌱 AllOne Garden",
+      "back_game": "🎮 Volver al juego",
+      "intro": "Referencia mantenida por la comunidad para cada cultivo y edificio en AllOne Garden.",
+      "intro_logged_in": "Has iniciado sesión — los admins pueden editar entradas.",
+      "intro_guest_before": "",
+      "log_in": "Iniciar sesión",
+      "intro_guest_after": "para contribuir como admin.",
+      "footer": "AllOne Garden · Gradendex · Datos cargados desde",
+      "open_full": "↗ Página completa",
+      "open_full_title": "Abrir Gradendex a página completa",
+      "close": "Cerrar Gradendex",
+      "aria_dialog": "Gradendex"
+    }
+  }
+}

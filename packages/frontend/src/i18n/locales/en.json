@@ -40,6 +40,21 @@
   "visit": "Visit",
   "help": "Help",
   "trade": "Trade",
+  "header_more": "More",
+  "header_world_short": "World",
+  "header_world_map_title": "World Map — visit other players",
+  "header_menu_plugins": "Plugins",
+  "header_menu_badges": "Badges",
+  "header_menu_gradendex": "Gradendex",
+  "header_menu_content_wiki": "Content Wiki",
+  "header_menu_scores": "Scores",
+  "header_menu_admin": "Admin",
+  "header_profile_title": "Profile",
+  "header_gradendex_title": "Gradendex — crop & structure reference",
+  "header_content_wiki_title": "Content Wiki — browse & propose game content",
+  "header_leaderboard_title": "Leaderboard",
+  "header_logout_short": "Logout",
+  "header_next_day": "Next day",
   "send": "Send",
 
   "marketplace": "Marketplace",
@@ -68,5 +83,339 @@
   "play_as_guest": "Play as Guest (offline)",
   "email": "Email",
   "username": "Username",
-  "password": "Password"
+  "password": "Password",
+
+  "leaderboard": {
+    "title": "🏆 Leaderboard",
+    "loading": "Loading…",
+    "empty": "No players yet.",
+    "you": "you",
+    "sort_xp": "⭐ XP",
+    "sort_coins": "🪙 Coins",
+    "sort_plants": "🌱 Plants",
+    "season_all": "🌍 All",
+    "season_spring": "🌸 Spring",
+    "season_summer": "☀️ Summer",
+    "season_autumn": "🍂 Autumn",
+    "season_winter": "❄️ Winter",
+    "mode_live": "Live",
+    "mode_history": "Archive",
+    "history_cycle": "Year cycle",
+    "history_empty": "No archived scores for this season yet. Play across a season change to build history."
+  },
+  "auth": {
+    "tagline": "Open-source multiplayer gardening game",
+    "forgot_heading": "Forgot password",
+    "new_password_heading": "New password",
+    "placeholder_reset_token": "Reset token (from email)",
+    "placeholder_new_password": "New password",
+    "btn_login_submit": "🚪 Login",
+    "btn_create_account": "🌱 Create account",
+    "btn_send_reset": "📧 Send reset link",
+    "btn_save_password": "🔐 Save password",
+    "forgot_link": "Forgot password?",
+    "back_to_login": "← Back to login",
+    "divider_or": "or",
+    "guest_note": "No account needed to play offline. Create one to save progress and visit other gardens across the community.",
+    "forgot_success": "If this address is registered, you will receive an email with a reset link.",
+    "reset_success": "Password changed successfully. You can now log in.",
+    "error_generic": "Something went wrong"
+  },
+  "home": {
+    "nav": {
+      "features": "Features",
+      "preview": "Preview",
+      "federation": "Federation",
+      "community": "Community",
+      "content_wiki": "Content Wiki",
+      "plugins": "Plugins",
+      "setup": "Setup",
+      "open_source": "Open Source",
+      "get_started": "Login / Register"
+    },
+    "hero": {
+      "badge": "Open Source · Decentralized · Community Owned",
+      "title_line1": "Grow Together,",
+      "title_line2": "Own Your World",
+      "body": "AllOne Garden is a multiplayer gardening game you can self-host on any device - Raspberry Pi, Mac, Windows PC, Linux server, or Android phone. No central server. No subscriptions. Just community, plants, and good soil.",
+      "login_primary": "Login / Register",
+      "cta_primary": "Plant your server",
+      "cta_secondary": "View on GitHub"
+    },
+    "features": {
+      "title_line1": "Everything you need,",
+      "title_line2": "nothing you don't",
+      "subtitle": "Designed from the ground up for community servers - private, fast, and fully under your control.",
+      "cards": {
+        "decentralized": {
+          "title": "Decentralized by design",
+          "body": "Every server is independent. Connect with other gardens through P2P federation."
+        },
+        "privacy": {
+          "title": "Privacy first",
+          "body": "Your data lives on your own hardware without cloud lock-in."
+        },
+        "plugins": {
+          "title": "Plugin system",
+          "body": "Extend the game with community plugins - sandboxed and safe."
+        },
+        "mobile": {
+          "title": "Mobile ready",
+          "body": "Play on iOS and Android as a Progressive Web App."
+        },
+        "seasons": {
+          "title": "Real seasons",
+          "body": "Weather changes daily and affects strategy and growth."
+        },
+        "multiplayer": {
+          "title": "True multiplayer",
+          "body": "Visit neighbours, trade crops, and help with daily tasks."
+        }
+      }
+    },
+    "preview": {
+      "title_line1": "Simple to play,",
+      "title_line2": "deep to explore",
+      "subtitle": "A clean web UI that feels at home in the browser, on mobile, or on a community kiosk screen.",
+      "window_title": "AllOne Garden - Alice's Server · 12 players online",
+      "day_weather": "☁️ Day 14 - Cloudy",
+      "garden_area": "Garden area with plots and tools",
+      "chat": "Chat",
+      "leaderboard": "Leaderboard",
+      "inventory": "Inventory"
+    },
+    "federation": {
+      "title_line1": "Your server,",
+      "title_line2": "connected to the world",
+      "subtitle": "AllOne Garden servers discover each other over the network without a central registry.",
+      "nodes": {
+        "your_server": "Your Server",
+        "school_server": "School Server",
+        "community_hub": "Community Hub",
+        "any_server": "Any other server"
+      },
+      "cards": {
+        "chat": {
+          "title": "Cross-server chat",
+          "body": "Federated chat messages can be shown with source context."
+        },
+        "visits": {
+          "title": "Garden visits",
+          "body": "Visit gardens on other servers and help with crops."
+        },
+        "optin": {
+          "title": "Opt-in only",
+          "body": "Federation remains optional and under server-owner control."
+        }
+      }
+    },
+    "get_started": {
+      "title_line1": "Up and growing",
+      "title_line2": "in minutes",
+      "cards": {
+        "step1": {
+          "title": "1. Pick your server device",
+          "body": "Pi, spare laptop, Mac, Windows PC, or Android phone."
+        },
+        "step2": {
+          "title": "2. Run the installer",
+          "body": "One script setup for Node and related dependencies."
+        },
+        "step3": {
+          "title": "3. Invite your friends",
+          "body": "Share your URL and start planting together quickly."
+        },
+        "step4": {
+          "title": "4. Extend with plugins",
+          "body": "Community plugins can be added and managed safely."
+        }
+      }
+    },
+    "setup": {
+      "label": "Setup & Mobile",
+      "title": "Install once, play everywhere",
+      "subtitle": "Start your server on any platform, then join instantly from desktop or phone.",
+      "host_title": "Host your server",
+      "mobile_title": "Join from mobile",
+      "cards": {
+        "pi": {
+          "title": "Raspberry Pi / Linux",
+          "body": "Production-ready setup with HTTPS and reverse proxy support."
+        },
+        "macos": {
+          "title": "macOS",
+          "body": "Homebrew based local/server setup flow."
+        },
+        "android": {
+          "title": "Android (Termux)",
+          "body": "Run a full local multiplayer setup from your phone."
+        },
+        "docker": {
+          "title": "Docker",
+          "body": "Quickest cross-platform route for local or hosted setups."
+        }
+      },
+      "mobile_cards": {
+        "ios": {
+          "title": "iOS - Safari (PWA)",
+          "body": "Open in Safari, use Share, and choose Add to Home Screen."
+        },
+        "android": {
+          "title": "Android - Chrome (PWA)",
+          "body": "Use Add to Home screen or Install app from the browser menu."
+        },
+        "benefits": {
+          "title": "What you get",
+          "body": "Single setup flow, full-screen mobile UX, quick launch, and auto updates."
+        }
+      }
+    },
+    "community": {
+      "label": "Community & Creators",
+      "title": "Tools outside the in-game HUD",
+      "subtitle": "Gardendex and plugin tools live on the homepage, not in the in-game header.",
+      "plugins_title": "Plugins",
+      "plugins_body": "Build the online world together: create tools, plants, and features with drag-and-drop flows.",
+      "gradendex_title": "Gardendex",
+      "gradendex_body": "Contribute your plant knowledge and help expand the Gardendex.",
+      "docs_title": "Maker docs",
+      "docs_body": "Program along with clear guides to build plugins, extend gameplay, and contribute code."
+    },
+    "cta": {
+      "title": "Ready to start growing?",
+      "body": "Your server, your rules, your community. No subscriptions, no central authority.",
+      "primary": "Plant your server",
+      "secondary": "Read the docs",
+      "back_login": "← Back to Login"
+    },
+    "opensource": {
+      "title_line1": "Built in the open,",
+      "title_line2": "for everyone",
+      "cards": {
+        "frontend": {
+          "title": "React 18 Frontend",
+          "body": "Socket.IO and i18n powered UI."
+        },
+        "backend": {
+          "title": "Node.js Backend",
+          "body": "Express API with multiplayer services."
+        },
+        "plugin_api": {
+          "title": "Plugin API",
+          "body": "Sandboxed extension architecture."
+        },
+        "mobile": {
+          "title": "Mobile (PWA)",
+          "body": "Installable on iOS and Android."
+        },
+        "federation": {
+          "title": "P2P Federation",
+          "body": "Community networking across servers."
+        },
+        "security": {
+          "title": "Security hardened",
+          "body": "Rate limits, headers, and secure defaults."
+        }
+      }
+    },
+    "footer": {
+      "community_project": "© 2026 — Community project",
+      "github": "GitHub",
+      "docs": "Docs",
+      "code_of_conduct": "Code of Conduct",
+      "contributing": "Contributing",
+      "frontend_license": "Frontend: MIT",
+      "backend_license": "Backend: GPL-3.0"
+    }
+  },
+  "videoCall": {
+    "unsupported_title": "Video calling not available",
+    "unsupported_body": "Your browser does not support WebRTC video calls. Try Chrome 74+, Firefox 78+, Safari 14.5+, or Edge 79+.",
+    "close": "Close",
+    "status_incoming": "📞 Incoming call…",
+    "status_outgoing": "📡 Starting call…",
+    "status_ringing": "🔔 Ringing…",
+    "status_connecting": "🔄 Connecting…",
+    "status_active": "🟢 Connected",
+    "status_rejected": "❌ Call declined",
+    "status_error": "⚠️ Error",
+    "incoming_wants_video": "{{name}} wants to video call…",
+    "answer": "📞 Answer",
+    "decline": "🔴 Decline",
+    "peer_not_answering": "{{name}} is not answering.",
+    "err_permission": "Camera/microphone permission denied",
+    "err_start": "Could not start call: {{msg}}",
+    "err_answer": "Could not answer: {{msg}}",
+    "mic_unmute": "Unmute microphone",
+    "mic_mute": "Mute microphone",
+    "cam_on": "Turn camera on",
+    "cam_off": "Turn camera off",
+    "end_call_title": "End call",
+    "end_call": "📴 End"
+  },
+  "worldMap": {
+    "title": "🗺️ World Map",
+    "header_hint": "← → ↑ ↓ move · E to visit",
+    "hud_visit_hint": "🏡 {{name}} — press E to visit",
+    "hud_player_near": "💬 {{name}} is nearby!",
+    "legend_jump": "Jump to {{name}}'s garden",
+    "you": "You",
+    "online": "{{count}} online",
+    "tiles_away": "{{count}} tiles away",
+    "call_title": "Start video call",
+    "call": "📹 Call",
+    "close_panel": "Close panel",
+    "dm_empty": "Send a message to {{name}}…",
+    "dm_placeholder": "Type a message…",
+    "garden_loading": "Loading garden…",
+    "garden_unavailable": "Garden unavailable",
+    "back": "Back",
+    "day_badge": "📅 Day {{n}}",
+    "help_done": "✅ Helped!",
+    "help_button": "🤝 Help +15",
+    "help_thanks": "🤝 You helped {{name}}!",
+    "view_only": "👁 View only",
+    "stat_tilled": "Tilled",
+    "stat_planted": "Planted",
+    "stat_ready": "Ready 🌟",
+    "back_to_map": "← Back to map",
+    "garden_of": "{{name}}'s garden",
+    "press_visit": "Press E or Enter to visit",
+    "visit_garden": "👁 Visit garden",
+    "empty_walk_house": "Walk to a 🏡 to visit a garden",
+    "empty_walk_player": "Walk to another player to chat or call",
+    "no_other_players": "No other players online",
+    "mini_day": "{{plant}} · day {{d}}",
+    "mini_tilled": "Tilled",
+    "mini_untilled": "Untilled",
+    "own_garden_title": "🌿 My garden",
+    "own_garden_plot": "🌾 Plot {{n}}",
+    "own_garden_hint": "Choose an action for this plot.",
+    "seed_picker_label": "🌱 Choose crop",
+    "tool_till": "Till",
+    "tool_plant": "Plant",
+    "tool_water": "Water",
+    "tool_fertilize": "Fertilize",
+    "tool_spray": "Spray pests",
+    "tool_harvest": "Harvest",
+    "action_tilled": "🪓 Tilled",
+    "action_planted": "🌱 Planted",
+    "action_watered": "💧 Watered",
+    "action_fertilized": "🧪 Fertilized",
+    "action_sprayed": "🫧 Sprayed",
+    "action_harvested": "🧺 Harvested",
+    "action_seed_required": "🌱 Pick a crop first",
+    "action_no_pests": "✅ No pests on this plot",
+    "action_nothing_to_harvest": "🌾 Nothing to harvest",
+    "action_not_ready": "⏳ Crop is not ready yet"
+  },
+  "gardenConflict": {
+    "title": "Garden out of sync",
+    "body": "The server has a newer save than your device. Load the server garden, or keep your local changes and overwrite the server.",
+    "use_server": "Use server version",
+    "force_local": "Keep my garden & overwrite server",
+    "dismiss": "Decide later",
+    "applied_server": "Loaded server garden.",
+    "saved_local": "Your garden was saved to the server."
+  }
 }

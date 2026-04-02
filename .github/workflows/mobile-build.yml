@@ -1,0 +1,164 @@
+name: Mobile Build (Capacitor)
+
+# Builds the React frontend, syncs it into Capacitor native projects,
+# and produces a debug APK (Android) artifact.
+#
+# iOS builds require a macOS runner with Xcode and valid code-signing
+# certificates. The `build-ios` job below auto-runs only when all required
+# Apple secrets are configured.
+#
+# Required repository secrets for signed Android release build:
+#   ANDROID_KEYSTORE_BASE64  — base64-encoded .jks / .keystore file
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+#
+# Required for iOS:
+#   APPLE_CERTIFICATE         — base64-encoded .p12 distribution certificate
+#   APPLE_CERTIFICATE_PASSWORD
+#   APPLE_PROVISION_PROFILE   — base64-encoded .mobileprovision
+#   APPLE_TEAM_ID
+
+on:
+  push:
+    branches: [main]
+    tags:     ['v*.*.*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ── Android ──────────────────────────────────────────────────────────────────
+  build-android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Set up Java 17 (required by Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build React app
+        run: npm run build
+        env:
+          CI: false                          # treat warnings as warnings, not errors
+          REACT_APP_API_URL: ""              # relative URLs — backend is on the same host
+
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
+
+      - name: Add Android platform (if not already present)
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: packages/frontend/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allone-garden-debug-${{ github.sha }}
+          path: packages/frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+  # ── iOS (auto-runs only when Apple signing secrets are present) ──────────────
+  build-ios:
+    name: iOS IPA
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: packages/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check required Apple secrets
+        id: ios-secrets
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_PRIVATE_KEY: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE" ] && [ -n "$APPLE_CERTIFICATE_PASSWORD" ] && [ -n "$APPLE_ISSUER_ID" ] && [ -n "$APPLE_API_KEY_ID" ] && [ -n "$APPLE_API_PRIVATE_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Apple signing secrets ontbreken; iOS build wordt overgeslagen."
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.ios-secrets.outputs.ready == 'true'
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+        if: steps.ios-secrets.outputs.ready == 'true'
+      - run: npm run build
+        if: steps.ios-secrets.outputs.ready == 'true'
+        env:
+          CI: false
+      - run: npm install -g @capacitor/cli
+        if: steps.ios-secrets.outputs.ready == 'true'
+      - name: Add iOS platform (if not already present)
+        if: steps.ios-secrets.outputs.ready == 'true'
+        run: |
+          if [ ! -d ios ]; then
+            npx cap add ios
+          fi
+      - run: npx cap sync ios
+        if: steps.ios-secrets.outputs.ready == 'true'
+      - name: Import signing certificate
+        if: steps.ios-secrets.outputs.ready == 'true'
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      - name: Install provisioning profile
+        if: steps.ios-secrets.outputs.ready == 'true'
+        uses: apple-actions/download-provisioning-profiles@v3
+        with:
+          bundle-id: com.allonegarden.app
+          profile-type: IOS_APP_STORE
+          issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+      - name: Build IPA
+        if: steps.ios-secrets.outputs.ready == 'true'
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App -configuration Release \
+            -archivePath ios/App.xcarchive archive
+          xcodebuild -exportArchive -archivePath ios/App.xcarchive \
+            -exportPath ios/ipa -exportOptionsPlist ios/ExportOptions.plist
+      - uses: actions/upload-artifact@v4
+        if: steps.ios-secrets.outputs.ready == 'true'
+        with:
+          name: allone-garden-ios-${{ github.sha }}
+          path: packages/frontend/ios/ipa/*.ipa
+          retention-days: 14

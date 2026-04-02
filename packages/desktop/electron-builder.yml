@@ -1,0 +1,112 @@
+appId: com.allonegarden.app
+productName: AllOne Garden
+copyright: "GPL-3.0 — AllOne Garden Community"
+
+# ── Auto-update via GitHub Releases ────────────────────────────────────────────
+# electron-updater checks this on startup; releases are created by CI.
+publish:
+  provider: github
+  owner: nickvd7
+  repo: allone_garden
+
+# Default icon (PNG) — used by Linux directly; electron-builder converts to
+# .ico/.icns for Windows/macOS automatically when those formats are absent.
+# To produce a proper Windows installer, place a 256×256 icon.ico in assets/.
+# To produce a proper macOS DMG, place icon.icns in assets/ (generated via iconutil).
+icon: assets/icon.png
+
+# Directories
+directories:
+  output: build
+  buildResources: assets
+
+# Files included in the app bundle (asar)
+# Paths are relative to the desktop package root (packages/desktop/)
+files:
+  - "electron/**"
+  - "steam_appid.txt"
+  - "../../packages/backend/src/**"
+  - "../../packages/backend/package.json"
+  - "../../packages/frontend/build/**"
+  - "!**/*.test.js"
+  - "!**/tests/**"
+  - "!**/node_modules/.cache/**"
+  # Never bundle secrets or editor artefacts
+  - "!**/.env"
+  - "!**/.env.*"
+  - "!**/.env.local"
+  - "!**/.env.production"
+  - "!**/secrets/**"
+  - "!**/*.pem"
+  - "!**/*.key"
+  - "!**/*.p12"
+  - "!**/*.pfx"
+  - "!**/*.cer"
+  - "!**/.DS_Store"
+
+# Extra files/dirs copied alongside the app (not inside asar)
+# backend/node_modules must be pre-installed: cd packages/backend && npm install
+extraResources:
+  - from: "../../packages/backend/node_modules"
+    to: "backend/node_modules"
+    filter:
+      - "**/*"
+      - "!**/.cache/**"
+      # Exclude any .env files that may have crept into a package's repo
+      - "!**/.env"
+      - "!**/.env.*"
+      - "!**/secrets/**"
+      - "!**/*.pem"
+      - "!**/*.key"
+  - from: "../../packages/backend/src"
+    to: "backend/src"
+  - from: "../../packages/backend/package.json"
+    to: "backend/package.json"
+  - from: "../../packages/frontend/build"
+    to: "frontend/build"
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: AllOne Garden
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.games
+
+dmg:
+  background: null
+  window:
+    width: 540
+    height: 380
+
+# ── Linux ─────────────────────────────────────────────────────────────────────
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+  category: Game
+  synopsis: "Open-source multiplayer gardening game"
+  description: "Grow together, own your world. AllOne Garden is a community-hosted multiplayer gardening game designed to run on Raspberry Pis."
+  maintainer: "AllOne Garden Community"

@@ -1,0 +1,123 @@
+{
+  "radish": {
+    "name": "Rabanete",
+    "short_desc": "Cultivo mais rápido. Perfeito para principiantes.",
+    "long_desc": "O rabanete é o velocista do AllOne Garden — pronto em apenas **1 dia**. O valor modesto (🪙6) compensa-se com ciclos tão rápidos que acumulas XP e inventário depressa.\n\nCresce bem junto a alface e cenoura: ótimo preenchimento num jardim com culturas associadas.",
+    "tips": {
+      "0": "Planta rabanetes em parcelas vazias enquanto cultivos lentos amadurecem.",
+      "1": "Combina bem com alface e cenoura para pequenos bónus de associação.",
+      "2": "Ótimo para subir de nível depressa no início."
+    }
+  },
+  "carrot": {
+    "name": "Cenoura",
+    "short_desc": "Cultivo fiável em 2 dias. Grande sinergia em associação.",
+    "long_desc": "As cenouras estão entre as mais versáteis. Amadurecem em **2 dias** e combinam com quase tudo — beneficiam de tomates, alface e rabanetes próximos.\n\nA 🪙10 por colheita, são rendimento sólido a meio de jogo.",
+    "tips": {
+      "0": "Rodeia cenouras com tomates (+20 %) e alface (+15 %) para o maior bónus.",
+      "1": "Afasta do milho — não há sinergia.",
+      "2": "Boa escolha para a estratégia de pilha de compostagem com ciclos de 2 dias."
+    }
+  },
+  "lettuce": {
+    "name": "Alface",
+    "short_desc": "Cultivo barato de preenchimento. Boa companheira para a maioria.",
+    "long_desc": "A alface amadurece em **2 dias** por um modesto 🪙8. O valor real é em associação: ajuda vizinhas como cenouras e rabanetes e é potenciada por cenouras.\n\nNão plantes ao lado do milho — antagonismo (−15 % para a alface).",
+    "tips": {
+      "0": "A alface é um seguro barato: preenche espaços entre cultivos de alto valor.",
+      "1": "O trio cenoura/alface/rabanete beneficia a todos.",
+      "2": "Nunca ao lado do milho se o rendimento importa."
+    }
+  },
+  "sunflower": {
+    "name": "Girassol",
+    "short_desc": "Cultivo luminoso em 2 dias. Melhor amigo das abóboras.",
+    "long_desc": "Os girassóis são reis da associação. Amadurecem em **2 dias** por 🪙12 e dão +15 % às abóboras adjacentes — essenciais em qualquer setup de abóbora no fim de jogo.\n\nTambém beneficiam de mirtilos vizinhos (+10 %).",
+    "tips": {
+      "0": "Rodeia sempre parcelas de abóbora com girassóis.",
+      "1": "Girassol + mirtilo + abóbora: trio forte no fim de jogo.",
+      "2": "Ciclo curto: 2–3 colheitas por ciclo de abóbora."
+    }
+  },
+  "tomato": {
+    "name": "Tomate",
+    "short_desc": "Clássico de 3 dias. Bons ganhos com os vizinhos certos.",
+    "long_desc": "Os tomates demoram **3 dias** mas pagam 🪙15. Com bónus de cenoura (+20 %), o valor efetivo sobe para ~🪙18 — entre os melhores retornos a meio de jogo.\n\nAfasta das abóboras, que reduzem o rendimento do tomate em 10 %.",
+    "tips": {
+      "0": "Tomate + cenoura é um dos duos mais fortes no início (+20 %).",
+      "1": "Adiciona uma borda de alface para um extra pequeno.",
+      "2": "Rega todos os dias — os tomates punem o descuido."
+    }
+  },
+  "potato": {
+    "name": "Batata",
+    "short_desc": "Cultivo robusto em 3 dias. Gosta de milho, não gosta de abóboras.",
+    "long_desc": "As batatas amadurecem em **3 dias** por 🪙12. O destaque é a sinergia com o milho: +20 % quando lado a lado (recíproco), tornando o par milho/batata um dos arranjos mais eficientes.\n\nEvita abóboras ao lado.",
+    "tips": {
+      "0": "Alterna linhas de milho e batata para +20 % mútuo.",
+      "1": "Nunca plantes ao lado de abóboras.",
+      "2": "A estufa protege parcelas milho/batata valiosas de tempestades."
+    }
+  },
+  "blueberry": {
+    "name": "Mirtilo",
+    "short_desc": "Cultivo de alto valor em 4 dias. Combina lindamente com girassóis.",
+    "long_desc": "Os mirtilos demoram **4 dias** mas recompensam com 🪙22. Beneficiam de girassóis e cenouras vizinhas, encaixam num jardim misto.\n\nCom ciclo longo, fertiliza cada parcela de mirtilo para acelerar.",
+    "tips": {
+      "0": "Fertiliza sempre mirtilos — poupar meio dia importa a longo prazo.",
+      "1": "Um girassol vizinho dá +10 %.",
+      "2": "Usa o poço cedo no ciclo para regar tudo de uma vez."
+    }
+  },
+  "corn": {
+    "name": "Milho",
+    "short_desc": "Alto cultivo em 4 dias. Melhor amigo da batata, pior inimigo da abóbora.",
+    "long_desc": "O milho amadurece em **4 dias** por 🪙18. A ligação milho/batata (+20 % cada um) é a espinha dorsal de um jardim focado em produtividade.\n\nPrejudica alface (−15 %) e abóbora (−20 %): planeia as parcelas.",
+    "tips": {
+      "0": "Alterna colunas de milho e batata para o máximo bónus mútuo.",
+      "1": "Mantém o milho longe de alface e abóbora.",
+      "2": "Fertiliza para encurtar o ciclo de 4 dias com efeito."
+    }
+  },
+  "pumpkin": {
+    "name": "Abóbora",
+    "short_desc": "O cultivo mais valioso. Lenta mas compensa.",
+    "long_desc": "As abóboras demoram **5 dias** inteiros mas pagam 🪙28 — o maior valor base. Com girassol (+15 %), o rendimento efetivo sobe para ~🪙32.\n\nSão frágeis: milho, batata e tomate vizinhos reduzem rendimento. Reserva um canto dedicado ao bloco de abóboras.",
+    "tips": {
+      "0": "Rodeia cada abóbora de girassóis — +15 % sobre 🪙28 soma depressa.",
+      "1": "Constrói a estufa antes das abóboras: uma tempestade pode atrasar uma colheita madura um dia inteiro.",
+      "2": "Fertiliza + rega em cada ciclo. Nunca saltes um dia nas abóboras.",
+      "3": "Mantém abóboras num canto, longe de milho e batata."
+    }
+  },
+  "well": {
+    "name": "Poço de água",
+    "short_desc": "Rega todas as parcelas lavradas num clique. 3 cargas por dia.",
+    "long_desc": "O poço custa **50 🪙** e dá 3 cargas por dia (renovadas em cada « dia seguinte »). Cada uso aumenta a água de **todas** as parcelas lavradas em +2.\n\nIndispensável com mais de 10–12 parcelas ativas — poupa imenso tempo.",
+    "tips": {
+      "0": "Constrói o poço como segunda estrutura (depois da pilha de compostagem).",
+      "1": "As cargas reiniciam todos os dias — usa as 3, não as poupares.",
+      "2": "Combina fertilizante e água no mesmo dia para o máximo crescimento diário."
+    }
+  },
+  "compost_heap": {
+    "name": "Pilha de compostagem",
+    "short_desc": "Gera cargas de fertilizante automaticamente a cada 3 colheitas.",
+    "long_desc": "A pilha custa **30 🪙** e paga-se em poucas colheitas. A cada 3 colheitas gera 1 carga. « Fertilizar tudo » aplica essa carga a todas as parcelas plantadas não fertilizadas.\n\nA estrutura mais barata — constrói-a primeiro.",
+    "tips": {
+      "0": "Constrói primeiro — 30 🪙 consegue-se em 5–10 colheitas.",
+      "1": "Guarda a carga para quando tiveres muitas parcelas plantadas.",
+      "2": "Fertilizante + água no mesmo dia = crescimento o mais rápido possível."
+    }
+  },
+  "greenhouse": {
+    "name": "Estufa",
+    "short_desc": "Escudo passivo contra tempestades e seca.",
+    "long_desc": "A estufa custa **80 🪙** e funciona sem cargas nem cliques. Converte tempestade ⛈️ e seca 🏜️ em tempo nublado seguro, evita danos nas culturas e reduz o risco de pragas de seca de 15 % para 5 %.\n\nEssencial antes de um grande jardim de abóbora ou mirtilo em 24 parcelas.",
+    "tips": {
+      "0": "Constrói a estufa antes da primeira abóbora.",
+      "1": "Uma tempestade pode atrasar uma abóbora madura um dia inteiro — a estufa evita.",
+      "2": "Depois de construída, o tempo deixa de ser problema."
+    }
+  }
+}

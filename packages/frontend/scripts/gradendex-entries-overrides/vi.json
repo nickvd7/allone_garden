@@ -1,0 +1,123 @@
+{
+  "radish": {
+    "name": "Củ cải đỏ",
+    "short_desc": "Cây nhanh nhất. Phù hợp người mới.",
+    "long_desc": "Củ cải là vận động viên AllOne Garden — thu hoạch sau **1 ngày**. Giá 🪙6 khiêm tốn nhưng chu kỳ nhanh tích XP.\n\nCạnh xà lách và cà rốt tốt, lấp chỗ trống trong canh tác hỗn hợp.",
+    "tips": {
+      "0": "Trồng củ cải trên ô trống khi cây chậm đang lớn.",
+      "1": "Kết hợp xà lách và cà rốt để có bonus nhỏ.",
+      "2": "Tốt để lên cấp nhanh đầu game."
+    }
+  },
+  "carrot": {
+    "name": "Cà rốt",
+    "short_desc": "Cây 2 ngày đáng tin, kết hợp mạnh.",
+    "long_desc": "Cà rốt đa dụng: chín **2 ngày**, hưởng lợi từ cà chua, củ cải, xà lách gần.\n\n🪙10 mỗi lần thu — thu nhập giữa game ổn.",
+    "tips": {
+      "0": "Bao quanh cà rốt bằng cà chua (+20%) và xà lách (+15%).",
+      "1": "Tránh ngô — không có hiệp lực.",
+      "2": "Hợp chiến lược compost với chu kỳ 2 ngày cố định."
+    }
+  },
+  "lettuce": {
+    "name": "Xà lách",
+    "short_desc": "Lấp đầy rẻ. Hàng xóm tốt cho nhiều cây.",
+    "long_desc": "Xà lách chín **2 ngày** với 🪙8. Giá trị ở hỗ trợ — bonus từ cà rốt và củ cải.\n\nKhông trồng cạnh ngô (xà lách −15%).",
+    "tips": {
+      "0": "Xà lách lấp khoảng giữa cây giá trị cao.",
+      "1": "Bộ ba cà rốt/xà lách/củ cải cho mọi người bonus.",
+      "2": "Không cạnh ngô nếu cần năng suất."
+    }
+  },
+  "sunflower": {
+    "name": "Hướng dương",
+    "short_desc": "Cây 2 ngày. Bạn thân của bí.",
+    "long_desc": "Hướng dương chín **2 ngày** với 🪙12 và +15% cho bí cạnh nhau — cần cuối game.\n\nCũng lợi từ việt quất gần (+10%).",
+    "tips": {
+      "0": "Bao quanh ô bí bằng hướng dương.",
+      "1": "Hướng dương + việt quất + bí là bộ ba mạnh.",
+      "2": "Chu kỳ ngắn: 2–3 lần thu mỗi chu kỳ bí."
+    }
+  },
+  "tomato": {
+    "name": "Cà chua",
+    "short_desc": "Cây kinh điển 3 ngày. Thu cao với hàng xóm đúng.",
+    "long_desc": "Cà chua cần **3 ngày** và cho 🪙15. Với +20% từ cà rốt ~🪙18.\n\nTránh bí (cà chua −10%).",
+    "tips": {
+      "0": "Cà chua + cà rốt là một trong các cặp đầu game mạnh (+20%).",
+      "1": "Viền xà lách thêm bonus nhỏ.",
+      "2": "Tưới mỗi ngày — bỏ bê cà chua sẽ trừng phạt."
+    }
+  },
+  "potato": {
+    "name": "Khoai tây",
+    "short_desc": "Cây 3 ngày chắc. Thích ngô, không thích bí.",
+    "long_desc": "Khoai tây **3 ngày** 🪙12. Hiệp lực mạnh với ngô: +20% hai chiều — một trong các combo hiệu quả nhất.\n\nKhông trồng cạnh bí.",
+    "tips": {
+      "0": "Xen kẽ hàng ngô và khoai tây.",
+      "1": "Không cạnh bí.",
+      "2": "Nhà kính bảo vệ ô giá trị khỏi bão."
+    }
+  },
+  "blueberry": {
+    "name": "Việt quất",
+    "short_desc": "Cây 4 ngày giá trị cao. Rất hợp hướng dương.",
+    "long_desc": "Việt quất **4 ngày** nhưng trả 🪙22. Hưởng lợi từ hướng dương và cà rốt.\n\nBón phân mỗi ô — chu kỳ dài cần rút ngắn.",
+    "tips": {
+      "0": "Luôn bón phân — nửa ngày cũng tích lũy.",
+      "1": "Hàng xóm hướng dương: +10%.",
+      "2": "Dùng giếng đầu chu kỳ để tưới một lần."
+    }
+  },
+  "corn": {
+    "name": "Ngô",
+    "short_desc": "Cây cao 4 ngày. Bạn khoai tây, thù bí.",
+    "long_desc": "Ngô **4 ngày** 🪙18. Liên kết với khoai tây (+20%) là xương sống vườn năng suất.\n\nHại xà lách (−15%) và bí (−20%) — cần quy hoạch.",
+    "tips": {
+      "0": "Xen kẽ cột ngô và khoai tây.",
+      "1": "Ngô xa xà lách và bí.",
+      "2": "Bón phân để rút ngắn chu kỳ 4 ngày."
+    }
+  },
+  "pumpkin": {
+    "name": "Bí",
+    "short_desc": "Cây giá trị nhất. Chậm nhưng đáng.",
+    "long_desc": "Bí **đủ 5 ngày** 🪙28 — giá cơ sở cao nhất. Với hướng dương (+15%) ~🪙32.\n\nMong manh: ngô, khoai tây, cà chua cạnh làm giảm thu — tách khối.",
+    "tips": {
+      "0": "Bao mỗi quả bí bằng hướng dương.",
+      "1": "Xây nhà kính trước bí — bão có thể lùi thu một ngày.",
+      "2": "Bón và tưới mỗi chu kỳ — không bỏ ngày.",
+      "3": "Bí xa ngô và khoai tây."
+    }
+  },
+  "well": {
+    "name": "Giếng",
+    "short_desc": "Tưới mọi ô đã xới một cú nhấp. 3 lần mỗi ngày.",
+    "long_desc": "Giếng **50 🪙**, 3 lần mỗi ngày (làm mới khi «Ngày tiếp»). Mỗi lần +2 nước cho mọi ô đã xới.\n\nGần như cần từ ~10–12 ô trở lên.",
+    "tips": {
+      "0": "Xây thứ hai sau đống compost.",
+      "1": "Lần reset mỗi ngày — dùng cả 3.",
+      "2": "Kết hợp phân để tăng trưởng tối đa."
+    }
+  },
+  "compost_heap": {
+    "name": "Đống compost",
+    "short_desc": "Tự sinh lần phân mỗi 3 lần thu.",
+    "long_desc": "Compost **30 🪙** hoàn vốn nhanh. Mỗi 3 lần thu — 1 lần. «Phân tất cả» cho mọi ô đã trồng chưa phân.\n\nRẻ nhất — xây trước.",
+    "tips": {
+      "0": "Xây trước — 30 🪙 trong 5–10 lần thu.",
+      "1": "Giữ lần khi nhiều ô đã trồng.",
+      "2": "Phân + nước cùng ngày = tăng trưởng tối đa."
+    }
+  },
+  "greenhouse": {
+    "name": "Nhà kính",
+    "short_desc": "Bảo vệ thụ động khỏi bão và hạn.",
+    "long_desc": "Nhà kính **80 🪙** thụ động. Bão⛈️ và hạn🏜️ thành mây an toàn — không hại cây; sâu hạn 15%→5%.\n\nCần trước khi đủ 24 ô bí hoặc việt quất.",
+    "tips": {
+      "0": "Xây trước bí đầu tiên.",
+      "1": "Bão có thể lùi bí chín một ngày — nhà kính ngăn.",
+      "2": "Sau khi xây ít lo thời tiết hơn."
+    }
+  }
+}

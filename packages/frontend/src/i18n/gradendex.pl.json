@@ -1,0 +1,181 @@
+{
+  "gradendex": {
+    "ui": {
+      "loading": "Ładowanie Gradendex…",
+      "error_load": "Nie można załadować Gradendex. Serwer działa?",
+      "search_placeholder": "🔍 Szukaj roślin lub budowli…",
+      "no_results": "Brak wpisów dla „{{search}}”.",
+      "tab_all": "🌍 Wszystko",
+      "tab_plants": "🌱 Rośliny",
+      "tab_structures": "🏗️ Budowle",
+      "back_to_list": "← Wróć do listy",
+      "back": "← Wstecz",
+      "edit": "✏️ Edytuj",
+      "edit_title_suffix": "— Edycja",
+      "companion_planting": "Uprawa towarzysząca",
+      "tips": "Porady",
+      "last_edited": "Ostatnia edycja: {{user}} · {{date}}",
+      "admin_hint": "✏️ Tryb admina — kliknij wpis, by edytować",
+      "stats_days": "{{count}} dzień",
+      "stats_days_plural": "{{count}} dni",
+      "stats_coins": "{{count}} monet",
+      "aria_search": "Szukaj w Gradendex",
+      "aria_view": "Zobacz {{name}}",
+      "saving": "Zapisywanie…",
+      "save_changes": "💾 Zapisz zmiany",
+      "cancel": "Anuluj",
+      "load_error_detail": "Nie można zapisać",
+      "form_emoji": "Emoji",
+      "form_name": "Nazwa",
+      "form_category": "Kategoria",
+      "form_short": "Krótki opis (max 300 znaków)",
+      "form_long": "Długi opis (Markdown: **pogrubienie**, *kursywa*, nowe linie)",
+      "form_growth": "Dni wzrostu",
+      "form_coins": "Monety bazowe 🪙",
+      "form_tips": "Porady (jedna na linię)",
+      "cat_plant": "Roślina",
+      "cat_structure": "Budowla",
+      "cat_tool": "Narzędzie",
+      "cat_other": "Inne"
+    },
+    "entries": {
+      "radish": {
+        "name": "Rzodkiewka",
+        "short_desc": "Najszybsza uprawa. Idealna dla początkujących.",
+        "long_desc": "Rzodkiewka to sprinter AllOne Garden — zbiór już po **1 dniu**. Skromna wartość (🪙6) rekompensuje się szybkim cyklem i XP.\n\nDobrze rośnie obok sałaty i marchwi, wypełnia luki w mieszanych zacieniach.",
+        "tips": {
+          "0": "Sadź na wolnych działkach, gdy wolniejsze rośliny rosną.",
+          "1": "Łączy się z sałatą i marchewką dla małych bonusów sąsiedztwa.",
+          "2": "Świetna na szybki poziom na początku gry."
+        }
+      },
+      "carrot": {
+        "name": "Marchew",
+        "short_desc": "Niezawodna 2-dniowa uprawa z mocnymi kombinacjami.",
+        "long_desc": "Marchew jest wszechstronna: dojrzewa w **2 dni**, korzysta z pomidorów, sałaty i rzodkiewki obok.\n\n🪙10 za zbiór — solidny dochód w środku gry.",
+        "tips": {
+          "0": "Otaczaj marchew pomidorami (+20%) i sałatą (+15%) dla max bonusu.",
+          "1": "Trzymaj z dala od kukurydzy — brak synergii.",
+          "2": "Pasuje do strategii z kompostem dzięki stałemu 2-dniowemu cyklowi."
+        }
+      },
+      "lettuce": {
+        "name": "Sałata",
+        "short_desc": "Tania wypełniacz. Dobry sąsiad dla wielu roślin.",
+        "long_desc": "Sałata dojrzewa w **2 dni** za skromne 🪙8. Wartość w sąsiedztwie: bonusy od marchwi i rzodkiewki.\n\nNie sadź obok kukurydzy (−15% do sałaty).",
+        "tips": {
+          "0": "Sałata wypełnia luki między drogimi uprawami.",
+          "1": "Trio marchew/sałata/rzodkiewka daje bonus wszystkim.",
+          "2": "Nigdy obok kukurydzy, jeśli zależy Ci na plonie."
+        }
+      },
+      "sunflower": {
+        "name": "Słonecznik",
+        "short_desc": "Szybka 2-dniowa uprawa. Najlepszy przyjaciel dyni.",
+        "long_desc": "Słoneczniki dojrzewają w **2 dni** za 🪙12 i dają +15% sąsiednim dyniom — niezbędne późną grą.\n\nKorzystają też z jagód obok (+10%).",
+        "tips": {
+          "0": "Otaczaj działki z dyniami słonecznikami.",
+          "1": "Słonecznik + jagoda + dynia to silny zestaw.",
+          "2": "Krótki cykl: 2–3 zbiory na cykl dyni."
+        }
+      },
+      "tomato": {
+        "name": "Pomidor",
+        "short_desc": "Klasyczna 3-dniowa uprawa. Wysoki przychód z dobrymi sąsiadami.",
+        "long_desc": "Pomidory potrzebują **3 dni** i dają 🪙15. Z +20% od marchwi efektywnie ~🪙18.\n\nTrzymaj z dala od dyni (−10% do pomidorów).",
+        "tips": {
+          "0": "Pomidor + marchew to jedna z najsilniejszych par na start (+20%).",
+          "1": "Obramowanie sałaty daje mały dodatkowy bonus.",
+          "2": "Podlewaj codziennie — pomidory karzą zaniedbanie."
+        }
+      },
+      "potato": {
+        "name": "Ziemniak",
+        "short_desc": "Solidna 3-dniowa uprawa. Lubi kukurydzę, nie lubi dyni.",
+        "long_desc": "Ziemniaki **3 dni**, 🪙12. Silna synergia z kukurydzą: +20% wzajemnie — jedna z najwydajniejszych par.\n\nNie sadź obok dyni.",
+        "tips": {
+          "0": "Zamieniaj rzędy kukurydzy i ziemniaków dla +20% obu stron.",
+          "1": "Nigdy obok dyni.",
+          "2": "Szklarnia chroni drogie działki przed burzą."
+        }
+      },
+      "blueberry": {
+        "name": "Borówka",
+        "short_desc": "Cenna 4-dniowa uprawa. Świetnie z słonecznikami.",
+        "long_desc": "Borówka **4 dni**, ale nagradza cierpliwość 🪙22. Korzysta ze słonecznika i marchwi.\n\nNawoż każdą działkę — długi cykl wymaga przyspieszenia.",
+        "tips": {
+          "0": "Zawsze nawoż — nawet pół dnia na dłuższą metę się liczy.",
+          "1": "Sąsiad słonecznik: +10%.",
+          "2": "Użyj studni wcześnie w cyklu, by podlać wszystko naraz."
+        }
+      },
+      "corn": {
+        "name": "Kukurydza",
+        "short_desc": "Wysoka 4-dniowa uprawa. Przyjaciel ziemniaka, wróg dyni.",
+        "long_desc": "Kukurydza **4 dni**, 🪙18. Wzajemna więź z ziemniakiem (+20%) to kręgosłup produktywnego ogrodu.\n\nSzkodzi sałacie (−15%) i dyni (−20%) — planuj działki.",
+        "tips": {
+          "0": "Zamieniaj kolumny kukurydzy i ziemniaków.",
+          "1": "Trzymaj kukurydzę z dala od sałaty i dyni.",
+          "2": "Nawoż, by skrócić 4-dniowy cykl."
+        }
+      },
+      "pumpkin": {
+        "name": "Dynia",
+        "short_desc": "Najcenniejsza uprawa. Wolna, ale się opłaca.",
+        "long_desc": "Dynia **5 pełnych dni**, 🪙28 — najwyższa baza. Ze słonecznikiem (+15%) ~🪙32.\n\nWrażliwa: kukurydza, ziemniak i pomidor obniżają plon. Zarezerwuj osobny blok.",
+        "tips": {
+          "0": "Otaczaj każdą dynię słonecznikami.",
+          "1": "Zbuduj szklarnię przed dyniami: burza może cofnąć zbiór o dzień.",
+          "2": "Nawoż i podlewaj każdy cykl — nie pomijaj dni.",
+          "3": "Trzymaj dynie z dala od kukurydzy i ziemniaków."
+        }
+      },
+      "well": {
+        "name": "Studnia",
+        "short_desc": "Podlewa wszystkie zaorane działki jednym kliknięciem. 3 ładunki dziennie.",
+        "long_desc": "Studnia kosztuje **50 🪙** i daje 3 ładunki dziennie (odnawia się przy „Następny dzień”). Każde użycie +2 wody na wszystkich zaoranych działkach.\n\nNiezbędna od ~10–12 aktywnych działek.",
+        "tips": {
+          "0": "Buduj drugą po kompoście.",
+          "1": "Ładunki resetują się codziennie — użyj wszystkich 3.",
+          "2": "Łącz z nawozem dla maksymalnego wzrostu."
+        }
+      },
+      "compost_heap": {
+        "name": "Kompostownik",
+        "short_desc": "Automatycznie daje ładunki nawozu co 3 zbiory.",
+        "long_desc": "Kompost kosztuje **30 🪙** i zwraca się szybko. Co 3 zbiory — 1 ładunek. „Nawieź wszystko” stosuje do wszystkich zasadzonych bez nawozu.\n\nNajtańszy budynek — buduj pierwszy.",
+        "tips": {
+          "0": "Buduj pierwszy — 30 🪙 w 5–10 zbiorach.",
+          "1": "Oszczędzaj ładunek, gdy masz wiele zasadzonych działek.",
+          "2": "Nawóz + woda tego samego dnia = maksymalny wzrost."
+        }
+      },
+      "greenhouse": {
+        "name": "Szklarnia",
+        "short_desc": "Pasywna ochrona przed burzą i suszą.",
+        "long_desc": "Szklarnia **80 🪙**, działa pasywnie. Burza ⛈️ i susza 🏜️ stają się bezpieczną pogodą bez szkód; szkodniki przy suszy z 15% do 5%.\n\nPotrzebna przed pełną siatką 24 pól z dynią lub borówką.",
+        "tips": {
+          "0": "Buduj przed pierwszymi dyniami.",
+          "1": "Burza może cofnąć dojrzałą dynię o dzień — szklarnia zapobiega.",
+          "2": "Po budowie pogoda mniej przeszkadza."
+        }
+      }
+    },
+    "page": {
+      "title": "📖 Gradendex",
+      "subtitle": "— uprawy i budowle",
+      "brand": "🌱 AllOne Garden",
+      "back_game": "🎮 Wróć do gry",
+      "intro": "Społecznościowy przewodnik po uprawach i budowlach w AllOne Garden.",
+      "intro_logged_in": "Jesteś zalogowany — admini mogą edytować wpisy.",
+      "intro_guest_before": "",
+      "log_in": "Zaloguj się",
+      "intro_guest_after": "aby pomóc jako admin.",
+      "footer": "AllOne Garden · Gradendex · Dane z",
+      "open_full": "↗ Pełna strona",
+      "open_full_title": "Otwórz Gradendex na pełnej stronie",
+      "close": "Zamknij Gradendex",
+      "aria_dialog": "Gradendex"
+    }
+  }
+}

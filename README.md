@@ -21,7 +21,7 @@ No central server. No subscriptions. Just community, plants, and good soil.
 - **P2P federation** — opt-in federation with other servers via Hyperswarm DHT
 - **PWA** — install directly to iOS / Android home screen, no app store needed
 - **GDPR** — data export and account deletion built in
-- **i18n** — English and Dutch out of the box
+- **i18n** — 18 UI languages (see `packages/frontend/src/i18n/locales`); English default
 
 ---
 
@@ -62,6 +62,14 @@ The game icon appears on your home screen and runs in full-screen mode.
 
 ---
 
+## Player guide (how to play)
+
+Clear **English + Dutch** instructions for the world map, controls, your garden, other players, and menus:
+
+**[docs/PLAYERS_GUIDE.md](docs/PLAYERS_GUIDE.md)**
+
+---
+
 ## Architecture
 
 ```
@@ -80,7 +88,7 @@ allone_garden/
 │       ├── src/
 │       │   ├── components/ Garden, Chat, Trade, Leaderboard, Plugins, Account, ...
 │       │   ├── hooks/      useApi, useNetwork
-│       │   └── i18n/       en, nl
+│       │   └── i18n/       locales (18 languages) + Gradendex JSON bundles
 │       └── public/
 │           ├── manifest.json
 │           └── sw.js       (service worker — offline + PWA install)
@@ -136,6 +144,48 @@ cd packages/frontend && npm start
 ```
 
 Tests run fully offline in in-memory mode — no PostgreSQL or Redis required.
+
+### Local verification (CI parity)
+
+From the **repository root**, these scripts bundle the same kinds of checks you get in CI (without secrets):
+
+| Command | What it runs |
+|--------|----------------|
+| `npm run verify:quick` | Validates `docker-compose.yml` (needs Docker Compose if available), then runs tests for **core**, **backend**, **frontend** (CI mode + `--runInBand`), and **desktop**. |
+| `npm run verify:local` | Compose, backend **lint** + tests (CI-style env), frontend **lint**, `gradendex:extra` + **git diff** on `packages/frontend/src/i18n/gradendex.*.json`, frontend **test** (CI + `--runInBand`) + **production build** (`REACT_APP_API_URL=http://localhost:5000`), then **core** and **desktop** tests. |
+| `npm run validate:compose` | Only compose config (uses a dummy `JWT_SECRET` if unset). |
+| `npm run test:frontend:ci` | Frontend Jest only: `CI=true`, non-watch, `--runInBand` (avoids flaky mocks across parallel workers). |
+
+Root `npm test` still runs all package tests with the default frontend test runner (interactive when not in CI).
+
+**Playwright E2E** (`e2e/`): `cd e2e && npm install && npx playwright install chromium`, then `CI=true npx playwright test`. Override ports if defaults are busy: `E2E_BACKEND_PORT` / `E2E_FRONTEND_PORT` (see [`e2e/playwright.config.js`](e2e/playwright.config.js) and [SETUP_CHECKLIST.md](SETUP_CHECKLIST.md)).
+
+**npm audit:** CI runs `npm audit --audit-level=high` in `packages/backend` and `packages/frontend` only. The repo root [`package.json`](package.json) defines **`overrides`** for transitive fixes (`tar`, `nth-check`, `postcss`, `serialize-javascript`, `@tootallnate/once`, `underscore`, and `webpack-dev-server@4.15.2` for Create React App compatibility). A plain `npm audit` without `--audit-level=high` may still list **moderate** dev-only findings (e.g. `webpack-dev-server`); upgrading that safely needs moving off `react-scripts` or a CRA patch.
+
+**Not** included locally: full Playwright runs in every contributor setup, Trivy, Docker image build — see [GitHub Actions](.github/workflows/ci.yml).
+
+---
+
+## Release QA (Localization)
+
+Quick i18n QA pass before release:
+
+- Switch through every language in the in-app selector and verify Header labels (`More`, `World`, dropdown items, logout) show translated text (no raw i18n keys).
+- Check one desktop and one mobile viewport for each script family:
+  - Latin (`en`/`nl`)
+  - Cyrillic (`ru`/`uk`)
+  - CJK (`ja`/`ko`/`zh`)
+  - RTL (`ar`)
+- In Header + `More` dropdown, verify no clipped text, no badge overlap, and no horizontal scroll.
+- In Arabic, verify RTL menu behavior (dropdown anchoring, text alignment, badge position).
+- Run a fallback guard to catch accidental English labels outside `en.json`:
+
+```bash
+rg "\"header_more\": \"More\"" packages/frontend/src/i18n/locales
+rg "\"header_world_map_title\": \"World Map - visit other players\"" packages/frontend/src/i18n/locales
+```
+
+For full pre-release checks, see [RELEASE_READY_CHECKLIST.md](RELEASE_READY_CHECKLIST.md).
 
 ---
 

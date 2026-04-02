@@ -1,0 +1,123 @@
+{
+  "radish": {
+    "name": "Lobak",
+    "short_desc": "Tanaman tercepat. Cocok untuk pemula.",
+    "long_desc": "Lobak adalah pelari cepat AllOne Garden — siap panen hanya **1 hari**. Nilai 🪙6 rendah tetapi siklus cepat menumpuk XP.\n\nTumbuh baik di samping selada dan wortel, mengisi celah dalam tumpangsari.",
+    "tips": {
+      "0": "Tanam lobak di petak kosong saat tanaman lebih lambat matang.",
+      "1": "Berpasangan dengan selada dan wortel untuk bonus kecil.",
+      "2": "Bagus untuk naik level cepat di awal."
+    }
+  },
+  "carrot": {
+    "name": "Wortel",
+    "short_desc": "Tanaman 2 hari yang andal, kombinasi kuat.",
+    "long_desc": "Wortel serba guna: matang **2 hari**, mendapat manfaat dari tomat, lobak, dan selada di dekatnya.\n\n🪙10 per panen — pendapatan menengah yang solid.",
+    "tips": {
+      "0": "Kelilingi wortel dengan tomat (+20%) dan selada (+15%).",
+      "1": "Jauhkan dari jagung — tidak ada sinergi.",
+      "2": "Cocok untuk strategi kompos dengan siklus 2 hari tetap."
+    }
+  },
+  "lettuce": {
+    "name": "Selada",
+    "short_desc": "Pengisi murah. Tetangga baik untuk banyak tanaman.",
+    "long_desc": "Selada matang **2 hari** dengan 🪙8. Nilainya dalam tumpangsari — bonus dari wortel dan lobak.\n\nJangan tanam di samping jagung (−15% untuk selada).",
+    "tips": {
+      "0": "Selada mengisi celah antara tanaman bernilai tinggi.",
+      "1": "Trio wortel/selada/lobak memberi bonus ke semua.",
+      "2": "Jangan di samping jagung jika peduli hasil."
+    }
+  },
+  "sunflower": {
+    "name": "Bunga matahari",
+    "short_desc": "Tanaman 2 hari. Teman terbaik labu.",
+    "long_desc": "Bunga matahari matang **2 hari** dengan 🪙12 dan memberi +15% ke labu di sebelahnya — penting di akhir permainan.\n\nJuga mendapat manfaat dari bluberi tetangga (+10%).",
+    "tips": {
+      "0": "Kelilingi petak labu dengan bunga matahari.",
+      "1": "Matahari + bluberi + labu adalah trio kuat.",
+      "2": "Siklus pendek: 2–3 panen per siklus labu."
+    }
+  },
+  "tomato": {
+    "name": "Tomat",
+    "short_desc": "Tanaman klasik 3 hari. Pendapatan tinggi dengan tetangga tepat.",
+    "long_desc": "Tomat butuh **3 hari** dan memberi 🪙15. Dengan +20% dari wortel nilai efektif ~🪙18.\n\nJauhkan dari labu (−10% untuk tomat).",
+    "tips": {
+      "0": "Tomat + wortel adalah salah satu pasangan awal terkuat (+20%).",
+      "1": "Tepi selada menambah sedikit bonus.",
+      "2": "Siram setiap hari — tomat menghukum kelalaian."
+    }
+  },
+  "potato": {
+    "name": "Kentang",
+    "short_desc": "Tanaman 3 hari yang mengenyangkan. Suka jagung, tidak suka labu.",
+    "long_desc": "Kentang **3 hari** 🪙12. Sinergi kuat dengan jagung: +20% timbal balik — salah satu kombinasi paling efisien.\n\nJangan tanam di samping labu.",
+    "tips": {
+      "0": "Selang-seling baris jagung dan kentang.",
+      "1": "Jangan di samping labu.",
+      "2": "Rumah kaca melindungi petak dari badai."
+    }
+  },
+  "blueberry": {
+    "name": "Bluberi",
+    "short_desc": "Tanaman 4 hari bernilai tinggi. Bagus dengan bunga matahari.",
+    "long_desc": "Bluberi **4 hari** tetapi membayar 🪙22. Mendapat manfaat dari matahari dan wortel.\n\nPupuk setiap petak — siklus panjang perlu dipercepat.",
+    "tips": {
+      "0": "Selalu pupuk — setengah hari pun terakumulasi.",
+      "1": "Tetangga matahari: +10%.",
+      "2": "Gunakan sumur di awal siklus untuk menyiram sekaligus."
+    }
+  },
+  "corn": {
+    "name": "Jagung",
+    "short_desc": "Tanaman tinggi 4 hari. Teman kentang, musuh labu.",
+    "long_desc": "Jagung **4 hari** 🪙18. Ikatan dengan kentang (+20%) adalah tulang punggung kebun produktif.\n\nMerugikan selada (−15%) dan labu (−20%) — rencanakan petak.",
+    "tips": {
+      "0": "Selang-seling kolom jagung dan kentang.",
+      "1": "Jangan dekat petak selada dan labu.",
+      "2": "Pupuk untuk memperpendek siklus 4 hari."
+    }
+  },
+  "pumpkin": {
+    "name": "Labu",
+    "short_desc": "Tanaman paling berharga. Lambat tetapi menguntungkan.",
+    "long_desc": "Labu **5 hari penuh** 🪙28 — nilai dasar tertinggi. Dengan matahari (+15%) ~🪙32.\n\nRentan: jagung, kentang, musuh tomat. Sisihkan blok khusus.",
+    "tips": {
+      "0": "Kelilingi setiap labu dengan bunga matahari.",
+      "1": "Bangun rumah kaca sebelum labu — badai bisa menunda panen satu hari.",
+      "2": "Pupuk dan siram setiap siklus — jangan lewat hari.",
+      "3": "Jauhkan labu dari jagung dan kentang."
+    }
+  },
+  "well": {
+    "name": "Sumur",
+    "short_desc": "Menyiram semua petak digarap satu klik. 3 muatan per hari.",
+    "long_desc": "Sumur **50 🪙** dan memberi 3 muatan per hari (diperbarui saat «Hari berikutnya»). Setiap pakai +2 air ke semua petak digarap.\n\nHampir wajib dari ~10–12 petak aktif ke atas.",
+    "tips": {
+      "0": "Bangun kedua setelah tumpukan kompos.",
+      "1": "Muatan reset harian — gunakan ketiganya.",
+      "2": "Gabung dengan pupuk untuk pertumbuhan maksimal."
+    }
+  },
+  "compost_heap": {
+    "name": "Tumpukan kompos",
+    "short_desc": "Menghasilkan muatan pupuk setiap 3 panen.",
+    "long_desc": "Kompos **30 🪙** cepat balik modal. Setiap 3 panen — 1 muatan. «Pupuk semua» ke semua petak tertanam yang belum dipupuk.\n\nBangunan termurah — bangun pertama.",
+    "tips": {
+      "0": "Bangun dulu — 30 🪙 dalam 5–10 panen.",
+      "1": "Simpan muatan saat banyak petak tertanam.",
+      "2": "Pupuk + air di hari yang sama = pertumbuhan tercepat."
+    }
+  },
+  "greenhouse": {
+    "name": "Rumah kaca",
+    "short_desc": "Perlindungan pasif dari badai dan kekeringan.",
+    "long_desc": "Rumah kaca **80 🪙** pasif. Badai⛈️ dan kekeringan🏜️ menjadi awan aman tanpa kerusakan; hama kekeringan 15%→5%.\n\nPenting sebelum grid 24 petak penuh labu atau bluberi.",
+    "tips": {
+      "0": "Bangun sebelum labu pertama.",
+      "1": "Badai bisa menunda labu matang satu hari — rumah kaca mencegah.",
+      "2": "Setelah dibangun cuaca kurang mengkhawatirkan."
+    }
+  }
+}

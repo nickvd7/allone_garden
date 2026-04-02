@@ -40,6 +40,21 @@
   "visit": "Bezoek",
   "help": "Help",
   "trade": "Ruil",
+  "header_more": "Meer",
+  "header_world_short": "Wereld",
+  "header_world_map_title": "Wereldkaart — bezoek andere spelers",
+  "header_menu_plugins": "Plugins",
+  "header_menu_badges": "Badges",
+  "header_menu_gradendex": "Gradendex",
+  "header_menu_content_wiki": "Content-wiki",
+  "header_menu_scores": "Scores",
+  "header_menu_admin": "Admin",
+  "header_profile_title": "Profiel",
+  "header_gradendex_title": "Gradendex — gewassen en gebouwen",
+  "header_content_wiki_title": "Content-wiki — voorstellen en bekijken",
+  "header_leaderboard_title": "Ranglijst",
+  "header_logout_short": "Uitloggen",
+  "header_next_day": "Volgende dag",
   "send": "Verstuur",
 
   "marketplace": "Marktplaats",
@@ -58,7 +73,7 @@
 
   "plugins": "Plugins",
   "installed_plugins": "Geïnstalleerd",
-  "community_plugins": "Community",
+  "community_plugins": "Gemeenschap",
   "no_plugins": "Nog geen plugins geïnstalleerd op deze server.",
   "install_instructions": "Plaats de plugin-map in plugins/community/ op je server en herstart.",
 
@@ -68,5 +83,339 @@
   "play_as_guest": "Speel als Gast (offline)",
   "email": "E-mail",
   "username": "Gebruikersnaam",
-  "password": "Wachtwoord"
+  "password": "Wachtwoord",
+
+  "leaderboard": {
+    "title": "🏆 Leaderboard",
+    "loading": "Laden…",
+    "empty": "Nog geen spelers.",
+    "you": "jij",
+    "sort_xp": "⭐ XP",
+    "sort_coins": "🪙 Munten",
+    "sort_plants": "🌱 Gewassen",
+    "season_all": "🌍 Alle",
+    "season_spring": "🌸 Lente",
+    "season_summer": "☀️ Zomer",
+    "season_autumn": "🍂 Herfst",
+    "season_winter": "❄️ Winter",
+    "mode_live": "Live",
+    "mode_history": "Archief",
+    "history_cycle": "Jaarcyclus",
+    "history_empty": "Nog geen gearchiveerde scores voor dit seizoen. Speel door een seizoenswissel om geschiedenis op te bouwen."
+  },
+  "auth": {
+    "tagline": "Open-source multiplayer tuiniergame",
+    "forgot_heading": "Wachtwoord vergeten",
+    "new_password_heading": "Nieuw wachtwoord",
+    "placeholder_reset_token": "Reset token (from email)",
+    "placeholder_new_password": "Nieuw wachtwoord",
+    "btn_login_submit": "🚪 Login",
+    "btn_create_account": "🌱 Create account",
+    "btn_send_reset": "📧 Stuur resetlink",
+    "btn_save_password": "🔐 Wachtwoord opslaan",
+    "forgot_link": "Wachtwoord vergeten?",
+    "back_to_login": "← Terug naar inloggen",
+    "divider_or": "of",
+    "guest_note": "Geen account nodig om offline te spelen. Maak er een aan om voortgang op te slaan en andere tuinen te bezoeken.",
+    "forgot_success": "Als dit adres bekend is, ontvang je een e-mail met een resetlink.",
+    "reset_success": "Wachtwoord succesvol gewijzigd! Je kunt nu inloggen.",
+    "error_generic": "Er ging iets mis"
+  },
+  "home": {
+    "nav": {
+      "features": "Functies",
+      "preview": "Voorbeeld",
+      "federation": "Federatie",
+      "community": "Gemeenschap",
+      "content_wiki": "Content Wiki",
+      "plugins": "Plugins",
+      "setup": "Setup",
+      "open_source": "Open source",
+      "get_started": "Inloggen / Registreren"
+    },
+    "hero": {
+      "badge": "Open source · Gedecentraliseerd · Van de community",
+      "title_line1": "Samen groeien,",
+      "title_line2": "jouw wereld beheren",
+      "body": "AllOne Garden is een multiplayer tuiniergame die je zelf kunt hosten op elk apparaat - Raspberry Pi, Mac, Windows-pc, Linux-server of Android-telefoon. Geen centrale server, geen abonnementen. Alleen gemeenschap, planten en goede grond.",
+      "login_primary": "Inloggen / Registreren",
+      "cta_primary": "Start je server",
+      "cta_secondary": "Bekijk op GitHub"
+    },
+    "features": {
+      "title_line1": "Alles wat je nodig hebt,",
+      "title_line2": "zonder overbodige ruis",
+      "subtitle": "Gebouwd voor community-servers: snel, privé en volledig onder jouw controle.",
+      "cards": {
+        "decentralized": {
+          "title": "Gedecentraliseerd ontwerp",
+          "body": "Elke server is zelfstandig. Verbind tuinen via P2P-federatie."
+        },
+        "privacy": {
+          "title": "Privacy eerst",
+          "body": "Je data staat op je eigen hardware zonder cloud lock-in."
+        },
+        "plugins": {
+          "title": "Plugin-systeem",
+          "body": "Breid de game uit met community-plugins in een veilige sandbox."
+        },
+        "mobile": {
+          "title": "Mobiel klaar",
+          "body": "Speel op iOS en Android als Progressive Web App."
+        },
+        "seasons": {
+          "title": "Echte seizoenen",
+          "body": "Het weer verandert dagelijks en beinvloedt groei en strategie."
+        },
+        "multiplayer": {
+          "title": "Echte multiplayer",
+          "body": "Bezoek buren, ruil gewassen en help met dagelijkse taken."
+        }
+      }
+    },
+    "preview": {
+      "title_line1": "Makkelijk om te spelen,",
+      "title_line2": "diep genoeg om te blijven",
+      "subtitle": "Een schone web-UI die goed werkt in browser, mobiel of community-kiosk.",
+      "window_title": "AllOne Garden - Alice's Server · 12 spelers online",
+      "day_weather": "☁️ Dag 14 - Bewolkt",
+      "garden_area": "Tuinweergave met plots en tools",
+      "chat": "Chat",
+      "leaderboard": "Ranglijst",
+      "inventory": "Inventaris"
+    },
+    "federation": {
+      "title_line1": "Jouw server,",
+      "title_line2": "verbonden met de wereld",
+      "subtitle": "AllOne Garden-servers vinden elkaar zonder centrale registry.",
+      "nodes": {
+        "your_server": "Jouw server",
+        "school_server": "Schoolserver",
+        "community_hub": "Community-hub",
+        "any_server": "Elke andere server"
+      },
+      "cards": {
+        "chat": {
+          "title": "Cross-server chat",
+          "body": "Gefedereerde chats kunnen met broncontext worden getoond."
+        },
+        "visits": {
+          "title": "Tuinbezoeken",
+          "body": "Bezoek tuinen op andere servers en help met gewassen."
+        },
+        "optin": {
+          "title": "Alleen opt-in",
+          "body": "Federatie blijft optioneel en onder controle van de serverbeheerder."
+        }
+      }
+    },
+    "get_started": {
+      "title_line1": "Snel starten",
+      "title_line2": "binnen enkele minuten",
+      "cards": {
+        "step1": {
+          "title": "1. Kies je serverapparaat",
+          "body": "Pi, reserve-laptop, Mac, Windows-pc of Android-telefoon."
+        },
+        "step2": {
+          "title": "2. Draai de installer",
+          "body": "Een script regelt de basissetup van Node en dependencies."
+        },
+        "step3": {
+          "title": "3. Nodig vrienden uit",
+          "body": "Deel je URL en begin direct samen te planten."
+        },
+        "step4": {
+          "title": "4. Breid uit met plugins",
+          "body": "Community-plugins kun je veilig toevoegen en beheren."
+        }
+      }
+    },
+    "setup": {
+      "label": "Setup & Mobiel",
+      "title": "Eenmalig installeren, overal spelen",
+      "subtitle": "Start je server op elk platform en speel daarna direct vanaf desktop of telefoon.",
+      "host_title": "Host je server",
+      "mobile_title": "Doe mee vanaf mobiel",
+      "cards": {
+        "pi": {
+          "title": "Raspberry Pi / Linux",
+          "body": "Productieklare setup met HTTPS en reverse proxy-ondersteuning."
+        },
+        "macos": {
+          "title": "macOS",
+          "body": "Homebrew-gebaseerde lokale/server setup-flow."
+        },
+        "android": {
+          "title": "Android (Termux)",
+          "body": "Draai een complete lokale multiplayer-setup vanaf je telefoon."
+        },
+        "docker": {
+          "title": "Docker",
+          "body": "Snelste cross-platform route voor lokaal of gehost gebruik."
+        }
+      },
+      "mobile_cards": {
+        "ios": {
+          "title": "iOS - Safari (PWA)",
+          "body": "Open in Safari, gebruik Deel en kies Zet op beginscherm."
+        },
+        "android": {
+          "title": "Android - Chrome (PWA)",
+          "body": "Gebruik Toevoegen aan beginscherm of App installeren in het menu."
+        },
+        "benefits": {
+          "title": "Wat je krijgt",
+          "body": "Een setup-flow, fullscreen mobiele UX, snelle start en automatische updates."
+        }
+      }
+    },
+    "community": {
+      "label": "Gemeenschap & Makers",
+      "title": "Tools buiten de game-HUD",
+      "subtitle": "Gardendex en plugin-tools staan op de homepage, niet in de in-game header.",
+      "plugins_title": "Plugins",
+      "plugins_body": "Bouw mee aan de online wereld: maak tools, planten en features met drag-and-drop flows.",
+      "gradendex_title": "Gardendex",
+      "gradendex_body": "Draag bij met je kennis over planten en vul de Gardendex aan.",
+      "docs_title": "Makersdocumentatie",
+      "docs_body": "Programmeer mee met duidelijke handleidingen om plugins te bouwen, gameplay uit te breiden en code bij te dragen."
+    },
+    "cta": {
+      "title": "Klaar om te starten?",
+      "body": "Jouw server, jouw regels, jouw community. Geen abonnementen, geen centrale partij.",
+      "primary": "Start je server",
+      "secondary": "Lees de docs",
+      "back_login": "← Terug naar inloggen"
+    },
+    "opensource": {
+      "title_line1": "Open gebouwd,",
+      "title_line2": "voor iedereen",
+      "cards": {
+        "frontend": {
+          "title": "React 18 Frontend",
+          "body": "UI op basis van Socket.IO en i18n."
+        },
+        "backend": {
+          "title": "Node.js Backend",
+          "body": "Express API met multiplayer-services."
+        },
+        "plugin_api": {
+          "title": "Plugin API",
+          "body": "Sandboxed architectuur voor extensies."
+        },
+        "mobile": {
+          "title": "Mobiel (PWA)",
+          "body": "Installeerbaar op iOS en Android."
+        },
+        "federation": {
+          "title": "P2P Federatie",
+          "body": "Community-netwerk tussen servers."
+        },
+        "security": {
+          "title": "Extra beveiligd",
+          "body": "Rate limits, security headers en veilige standaardinstellingen."
+        }
+      }
+    },
+    "footer": {
+      "community_project": "© 2026 — Communityproject",
+      "github": "GitHub",
+      "docs": "Docs",
+      "code_of_conduct": "Gedragscode",
+      "contributing": "Bijdragen",
+      "frontend_license": "Frontend: MIT",
+      "backend_license": "Backend: GPL-3.0"
+    }
+  },
+  "videoCall": {
+    "unsupported_title": "Videobellen niet beschikbaar",
+    "unsupported_body": "Jouw browser ondersteunt geen WebRTC videogesprekken. Probeer Chrome 74+, Firefox 78+, Safari 14.5+, of Edge 79+.",
+    "close": "Sluiten",
+    "status_incoming": "📞 Inkomend gesprek…",
+    "status_outgoing": "📡 Gesprek starten…",
+    "status_ringing": "🔔 Gaat over…",
+    "status_connecting": "🔄 Verbinden…",
+    "status_active": "🟢 Verbonden",
+    "status_rejected": "❌ Gesprek geweigerd",
+    "status_error": "⚠️ Fout",
+    "incoming_wants_video": "{{name}} wil videobellen…",
+    "answer": "📞 Opnemen",
+    "decline": "🔴 Weigeren",
+    "peer_not_answering": "{{name}} neemt niet op.",
+    "err_permission": "Camera/microfoon toegang geweigerd",
+    "err_start": "Kon gesprek niet starten: {{msg}}",
+    "err_answer": "Kon niet opnemen: {{msg}}",
+    "mic_unmute": "Mic aan",
+    "mic_mute": "Mic uit",
+    "cam_on": "Camera aan",
+    "cam_off": "Camera uit",
+    "end_call_title": "Gesprek beëindigen",
+    "end_call": "📴 Beëindigen"
+  },
+  "worldMap": {
+    "title": "🗺️ World Map",
+    "header_hint": "← → ↑ ↓ bewegen · E bezoeken",
+    "hud_visit_hint": "🏡 {{name}} — druk E om te bezoeken",
+    "hud_player_near": "💬 {{name}} is dichtbij!",
+    "legend_jump": "Spring naar {{name}}'s tuin",
+    "you": "Jij",
+    "online": "{{count}} online",
+    "tiles_away": "{{count}} tegels dichtbij",
+    "call_title": "Start videogesprek",
+    "call": "📹 Bellen",
+    "close_panel": "Paneel sluiten",
+    "dm_empty": "Stuur een bericht naar {{name}}…",
+    "dm_placeholder": "Typ bericht…",
+    "garden_loading": "Tuin laden…",
+    "garden_unavailable": "Tuin niet beschikbaar",
+    "back": "Terug",
+    "day_badge": "📅 Dag {{n}}",
+    "help_done": "✅ Geholpen!",
+    "help_button": "🤝 Help +15",
+    "help_thanks": "🤝 Je hebt {{name}} geholpen!",
+    "view_only": "👁 Alleen weergave",
+    "stat_tilled": "Omgespade",
+    "stat_planted": "Geplant",
+    "stat_ready": "Klaar 🌟",
+    "back_to_map": "← Terug naar kaart",
+    "garden_of": "{{name}}'s tuin",
+    "press_visit": "Druk E of Enter om te bezoeken",
+    "visit_garden": "👁 Bezoek tuin",
+    "empty_walk_house": "Loop naar een 🏡 om een tuin te bezoeken",
+    "empty_walk_player": "Loop naar een andere speler om te chatten of te bellen",
+    "no_other_players": "Geen andere spelers online",
+    "mini_day": "{{plant}} · dag {{d}}",
+    "mini_tilled": "Omgespit",
+    "mini_untilled": "Onbewerkt",
+    "own_garden_title": "🌿 Mijn moestuin",
+    "own_garden_plot": "🌾 Vak {{n}}",
+    "own_garden_hint": "Kies een actie voor dit vak.",
+    "seed_picker_label": "🌱 Kies gewas",
+    "tool_till": "Omspitten",
+    "tool_plant": "Planten",
+    "tool_water": "Water geven",
+    "tool_fertilize": "Bemesten",
+    "tool_spray": "Spuiten tegen plagen",
+    "tool_harvest": "Oogsten",
+    "action_tilled": "🪓 Omgespit",
+    "action_planted": "🌱 Geplant",
+    "action_watered": "💧 Water gegeven",
+    "action_fertilized": "🧪 Bemest",
+    "action_sprayed": "🫧 Gesproeid",
+    "action_harvested": "🧺 Geoogst",
+    "action_seed_required": "🌱 Kies eerst een gewas",
+    "action_no_pests": "✅ Geen plagen op dit vak",
+    "action_nothing_to_harvest": "🌾 Niets om te oogsten",
+    "action_not_ready": "⏳ Nog niet klaar om te oogsten"
+  },
+  "gardenConflict": {
+    "title": "Tuin niet synchroon",
+    "body": "De server heeft een nieuwere opslag dan dit apparaat. Laad de server-tuin, of behoud jouw wijzigingen en overschrijf de server.",
+    "use_server": "Serverversie gebruiken",
+    "force_local": "Mijn tuin behouden en server overschrijven",
+    "dismiss": "Later beslissen",
+    "applied_server": "Server-tuin geladen.",
+    "saved_local": "Je tuin is op de server opgeslagen."
+  }
 }

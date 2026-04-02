@@ -1,0 +1,22 @@
+{
+  "name": "@allone-garden/core",
+  "version": "1.0.0",
+  "description": "Pure game logic for AllOne Garden — MIT licensed, framework-agnostic",
+  "license": "MIT",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": ["garden", "game", "farming", "simulation"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickvd7/allone_garden"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.js"]
+  }
+}

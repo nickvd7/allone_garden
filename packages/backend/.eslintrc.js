@@ -43,6 +43,13 @@ module.exports = {
       },
     },
     {
+      // better-sqlite3 is optionalDependencies — loaded only when SQLITE_PATH is set.
+      files: ['src/db-sqlite.js'],
+      rules: {
+        'node/no-missing-require': 'off',
+      },
+    },
+    {
       // Test files — relax some rules
       files: ['**/tests/**/*.test.js'],
       env: { jest: true },

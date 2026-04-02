@@ -9,12 +9,15 @@
  * Guest connections (no token) are allowed but get userId = null.
  * Routes that need a real user must check socket.userId explicitly.
  *
+ * When Redis is available, revoked tokens (post password-change) are rejected.
+ *
  * Usage in index.js:
  *   io.use(socketAuthMiddleware);
  */
-const jwt = require('jsonwebtoken');
+const jwt              = require('jsonwebtoken');
+const { isTokenRevoked } = require('../redis');
 
-function socketAuthMiddleware(socket, next) {
+async function socketAuthMiddleware(socket, next) {
   const token = socket.handshake.auth?.token;
 
   if (!token) {
@@ -24,33 +27,45 @@ function socketAuthMiddleware(socket, next) {
     return next();
   }
 
+  let payload;
   try {
-    const payload   = jwt.verify(token, process.env.JWT_SECRET);
-    socket.userId   = payload.userId;
-    socket.username = payload.username;
-    return next();
-  } catch (err) {
-    // Reject connections with invalid / expired tokens
+    payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+  } catch {
     return next(new Error('Authentication failed: invalid or expired token'));
   }
+
+  // Check revocation list (non-blocking — fails open when Redis is down)
+  if (await isTokenRevoked(payload.userId, payload.iat)) {
+    return next(new Error('Authentication failed: token has been revoked'));
+  }
+
+  socket.userId   = payload.userId;
+  socket.username = payload.username;
+  return next();
 }
 
 /**
  * Stricter version — rejects unauthenticated sockets entirely.
  * Use for namespaces or rooms that require login.
  */
-function requireSocketAuth(socket, next) {
+async function requireSocketAuth(socket, next) {
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error('Authentication required'));
 
+  let payload;
   try {
-    const payload   = jwt.verify(token, process.env.JWT_SECRET);
-    socket.userId   = payload.userId;
-    socket.username = payload.username;
-    return next();
+    payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
   } catch {
     return next(new Error('Authentication failed'));
   }
+
+  if (await isTokenRevoked(payload.userId, payload.iat)) {
+    return next(new Error('Authentication failed: token has been revoked'));
+  }
+
+  socket.userId   = payload.userId;
+  socket.username = payload.username;
+  return next();
 }
 
 module.exports = { socketAuthMiddleware, requireSocketAuth };

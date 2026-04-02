@@ -7,28 +7,27 @@ describe('ToolsPanel', () => {
 
   it('renders all 6 tool buttons', () => {
     render(<ToolsPanel selectedTool={null} selectedSeed="tomato" onToolSelect={noop} onSeedSelect={noop} />);
-    // Each button has title={t(labelKey)} — the mock returns the key itself
-    ['tool_till', 'tool_plant', 'tool_water', 'tool_fertilize', 'tool_spray', 'tool_harvest']
-      .forEach((key) => expect(screen.getByTitle(key)).toBeInTheDocument());
+    ['Till Ground', 'Plant', 'Water', 'Fertilize', 'Spray Pests', 'Harvest']
+      .forEach((title) => expect(screen.getByTitle(title)).toBeInTheDocument());
   });
 
   it('marks the active tool with the "active" class', () => {
     render(<ToolsPanel selectedTool="water" selectedSeed="tomato" onToolSelect={noop} onSeedSelect={noop} />);
-    expect(screen.getByTitle('tool_water')).toHaveClass('active');
-    expect(screen.getByTitle('tool_till')).not.toHaveClass('active');
+    expect(screen.getByTitle('Water')).toHaveClass('active');
+    expect(screen.getByTitle('Till Ground')).not.toHaveClass('active');
   });
 
   it('calls onToolSelect when a tool is clicked', () => {
     const onToolSelect = jest.fn();
     render(<ToolsPanel selectedTool={null} selectedSeed="tomato" onToolSelect={onToolSelect} onSeedSelect={noop} />);
-    fireEvent.click(screen.getByTitle('tool_harvest'));
+    fireEvent.click(screen.getByTitle('Harvest'));
     expect(onToolSelect).toHaveBeenCalledWith('harvest');
   });
 
   it('clicking the active tool deselects it (passes null)', () => {
     const onToolSelect = jest.fn();
     render(<ToolsPanel selectedTool="water" selectedSeed="tomato" onToolSelect={onToolSelect} onSeedSelect={noop} />);
-    fireEvent.click(screen.getByTitle('tool_water'));
+    fireEvent.click(screen.getByTitle('Water'));
     expect(onToolSelect).toHaveBeenCalledWith(null);
   });
 
@@ -51,11 +50,9 @@ describe('ToolsPanel', () => {
 
   it('renders all 9 seed options', () => {
     render(<ToolsPanel selectedTool="plant" selectedSeed="tomato" onToolSelect={noop} onSeedSelect={noop} />);
-    // Options render as "{emoji} {labelKey} ({days}d)" — match by key via regex
-    ['plant_tomato','plant_carrot','plant_lettuce','plant_radish','plant_corn',
-     'plant_potato','plant_pumpkin','plant_sunflower','plant_blueberry']
-      .forEach((key) =>
-        expect(screen.getByText(new RegExp(key), { selector: 'option' })).toBeInTheDocument()
+    ['Tomato', 'Carrot', 'Lettuce', 'Radish', 'Corn', 'Potato', 'Pumpkin', 'Sunflower', 'Blueberry']
+      .forEach((name) =>
+        expect(screen.getByText(new RegExp(name), { selector: 'option' })).toBeInTheDocument()
       );
   });
 });

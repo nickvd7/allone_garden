@@ -17,6 +17,15 @@ export class RateLimitError extends Error {
   }
 }
 
+/** 409 — garden was saved elsewhere; `detail` contains server garden + serverUpdatedAt */
+export class ConflictError extends Error {
+  constructor(detail) {
+    super('Garden conflict');
+    this.name = 'ConflictError';
+    this.detail = detail;
+  }
+}
+
 async function apiFetch(path, options = {}) {
   const token = getToken();
   const headers = {
@@ -32,6 +41,12 @@ async function apiFetch(path, options = {}) {
     throw new RateLimitError(retryAfter ? parseInt(retryAfter, 10) : undefined);
   }
 
+  if (response.status === 409) {
+    const body = await response.json().catch(() => ({}));
+    if (body.error === 'conflict') throw new ConflictError(body);
+    throw new Error(body.error || body.message || 'HTTP 409');
+  }
+
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error || `HTTP ${response.status}`);
@@ -43,6 +58,7 @@ async function apiFetch(path, options = {}) {
 export const api = {
   get:    (path)         => apiFetch(path),
   post:   (path, body)   => apiFetch(path, { method: 'POST',   body: JSON.stringify(body) }),
+  put:    (path, body)   => apiFetch(path, { method: 'PUT',    body: JSON.stringify(body) }),
   patch:  (path, body)   => apiFetch(path, { method: 'PATCH',  body: JSON.stringify(body) }),
   delete: (path, body)   => apiFetch(path, { method: 'DELETE', body: JSON.stringify(body) }),
 };

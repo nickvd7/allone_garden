@@ -92,6 +92,34 @@ describe('POST /api/garden', () => {
       .send({ currentDay: 1 });
     expect(res.status).toBe(400);
   });
+
+  it('updates world garden preview after save', async () => {
+    const plots = [
+      { tilled: true, planted: true, plantType: 'tomato', waterLevel: 1, fertilized: false, daysPlanted: 3 },
+      { tilled: true, planted: true, plantType: 'carrot', waterLevel: 0, fertilized: false, daysPlanted: 1 },
+      ...Array(22).fill(null).map(() => ({
+        tilled: false, planted: false, plantType: null,
+        waterLevel: 0, fertilized: false, daysPlanted: 0,
+      })),
+    ];
+    const saveRes = await request(app)
+      .post('/api/garden')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ plots, currentDay: 8, weather: 'sunny' });
+    expect(saveRes.status).toBe(200);
+
+    const projectionRes = await request(app)
+      .get('/api/world/gardens')
+      .set('Authorization', `Bearer ${token}`);
+    expect(projectionRes.status).toBe(200);
+    const me = projectionRes.body.occupants.find((o) => Number(o.userId) > 0);
+    expect(me).toBeTruthy();
+    const preview = projectionRes.body.gardenPreviewByUserId[String(me.userId)];
+    expect(preview).toBeTruthy();
+    expect(typeof preview.planted).toBe('number');
+    expect(typeof preview.ready).toBe('number');
+    expect(Array.isArray(preview.tiles)).toBe(true);
+  });
 });
 
 // ── Garden actions ────────────────────────────────────────────────────────────
@@ -144,6 +172,26 @@ describe('POST /api/garden/action', () => {
   });
 
   it('harvests a plot and resets its state', async () => {
+    // Tomato requires 3 daysPlanted before it can be harvested.
+    // Save the garden with the tomato already ripe so the harvest succeeds.
+    await request(app)
+      .post('/api/garden')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        plots: [
+          {
+            tilled: true, planted: true, plantType: 'tomato',
+            waterLevel: 1, fertilized: false, daysPlanted: 3,
+          },
+          ...Array(23).fill({
+            tilled: false, planted: false, plantType: null,
+            waterLevel: 0, fertilized: false, daysPlanted: 0,
+          }),
+        ],
+        currentDay: 1,
+        weather: 'sunny',
+      });
+
     const res = await request(app)
       .post('/api/garden/action')
       .set('Authorization', `Bearer ${token}`)

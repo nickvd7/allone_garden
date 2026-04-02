@@ -1,0 +1,30 @@
+## AllOne Garden — itch.io butler configuration
+## https://itch.io/docs/butler/pushing.html
+##
+## Deploy with:
+##   npx butler push build/AllOne\ Garden-win-x64.exe  nickvd7/allone-garden:windows-x64
+##   npx butler push build/AllOne\ Garden.dmg           nickvd7/allone-garden:mac-universal
+##   npx butler push build/AllOne\ Garden.AppImage      nickvd7/allone-garden:linux-x64
+##
+## Or use the npm script from this directory:
+##   npm run deploy:itch:win   (after npm run dist:win)
+##   npm run deploy:itch:mac   (after npm run dist:mac)
+##   npm run deploy:itch:linux (after npm run dist:linux)
+##
+## Setup: install butler → https://itch.io/docs/butler/
+## Then: butler login
+
+[[targets]]
+  game    = "nickvd7/allone-garden"
+  channel = "windows-x64"
+  path    = "build"
+
+[[targets]]
+  game    = "nickvd7/allone-garden"
+  channel = "mac-universal"
+  path    = "build"
+
+[[targets]]
+  game    = "nickvd7/allone-garden"
+  channel = "linux-x64"
+  path    = "build"

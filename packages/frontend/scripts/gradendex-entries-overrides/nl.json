@@ -1,0 +1,123 @@
+{
+  "radish": {
+    "name": "Radijs",
+    "short_desc": "Snelste gewas. Ideaal voor beginners.",
+    "long_desc": "De radijs is de snelheidsduivel van AllOne Garden — na slechts **1 dag** oogstrijp. De bescheiden muntwaarde (🪙6) wordt goedgemaakt door hoe snel je oogsten kunt herhalen, met XP en voorraad.\n\nRadijs doet het goed naast sla en wortel en vult lege plekken in een tuin met beplantingscombinaties.",
+    "tips": {
+      "0": "Plant radijs op lege percelen terwijl langzamere gewassen groeien.",
+      "1": "Combineer met sla en wortel voor kleine bonuspercentages.",
+      "2": "Perfect om vroeg in het spel snel levels te maken."
+    }
+  },
+  "carrot": {
+    "name": "Wortel",
+    "short_desc": "Betrouwbaar 2-dagens gewas met sterke combinaties.",
+    "long_desc": "Wortels zijn erg veelzijdig in AllOne Garden. Ze zijn rijp in **2 dagen** en combineren goed met bijna elk ander gewas — voordeel van tomaat, sla en radijs in de buurt.\n\nMet 🪙10 per oogst solide inkomsten in het midden van het spel.",
+    "tips": {
+      "0": "Zet wortels tussen tomaten (+20%) en sla (+15%) voor de grootste bonus.",
+      "1": "Houd afstand van maïs — daar is geen synergie mee.",
+      "2": "Past goed bij een compoststrategie door de vaste 2-dagens cyclus."
+    }
+  },
+  "lettuce": {
+    "name": "Sla",
+    "short_desc": "Goedkoop vulgewas. Sterke buur voor veel planten.",
+    "long_desc": "Sla is rijp in **2 dagen** voor een bescheiden 🪙8. De echte waarde zit in combinaties: buurt van wortel en radijs geeft bonus, en wortel helpt sla terug.\n\nNiet naast maïs planten — die trekken elkaar omlaag (−15% voor sla).",
+    "tips": {
+      "0": "Sla vult gaten tussen waardevolle gewassen.",
+      "1": "Het trio wortel/sla/radijs geeft iedereen bonus.",
+      "2": "Nooit naast maïs als je op opbrengst mikt."
+    }
+  },
+  "sunflower": {
+    "name": "Zonnebloem",
+    "short_desc": "Snel 2-dagens gewas. De beste vriend van de pompoen.",
+    "long_desc": "Zonnebloemen zijn koningen van combinaties. Ze zijn rijp in **2 dagen** voor 🪙12 en geven +15% aan pompoenen ernaast — onmisbaar in een late-game pompoenopzet.\n\nOok voordeel van bosbesburen (+10%).",
+    "tips": {
+      "0": "Omring pompoenpercelen met zonnebloemen.",
+      "1": "Zonnebloem + bosbes + pompoen is een sterk trio eindspel.",
+      "2": "Korte cyclus: je kunt 2–3 keer oogsten per pompoencyclus."
+    }
+  },
+  "tomato": {
+    "name": "Tomaat",
+    "short_desc": "Klassiek 3-dagens gewas. Hoge opbrengst met goede buren.",
+    "long_desc": "Tomaten hebben **3 dagen** nodig maar leveren 🪙15. Met 20% wortelbonus stijgt de effectieve waarde naar 🪙18 — top midden in het spel.\n\nHoud ze uit de buurt van pompoenen (−10% opbrengst voor tomaat).",
+    "tips": {
+      "0": "Tomaat + wortel is een van de sterkste vroege duo's (+20%).",
+      "1": "Een rand van sla geeft nog een kleine extra boost.",
+      "2": "Dagelijks water — tomaten straffen verwaarloosde percelen."
+    }
+  },
+  "potato": {
+    "name": "Aardappel",
+    "short_desc": "Stevig 3-dagens gewas. Houdt van maïs, niet van pompoen.",
+    "long_desc": "Aardappels duren **3 dagen** en leveren 🪙12. Sterk punt: synergie met maïs — aardappel naast maïs geeft +20% (en omgekeerd ook). Het maïs/aardappel-paar is een van de efficiëntste opstellingen.",
+    "tips": {
+      "0": "Wissel rijen maïs en aardappel af voor wederzijdse +20%.",
+      "1": "Nooit naast pompoenen planten.",
+      "2": "De kas beschermt waardevolle maïs/aardappelpercelen tegen storm."
+    }
+  },
+  "blueberry": {
+    "name": "Bosbes",
+    "short_desc": "Hoogwaardig 4-dagens gewas. Mooi met zonnebloemen.",
+    "long_desc": "Bessen hebben **4 dagen** nodig maar belonen geduld met 🪙22. Ze profiteren van zonnebloem en wortel als buren en passen in een gemengde tuin.\n\nBemest elke bosbesperceel — langere cyclus vraagt versnelling.",
+    "tips": {
+      "0": "Altijd bemesten — zelfs een halve dag scheelt op lange termijn.",
+      "1": "Zonnebloem als buur: +10%.",
+      "2": "Gebruik de put vroeg in de cyclus om alles in één keer te wateren."
+    }
+  },
+  "corn": {
+    "name": "Maïs",
+    "short_desc": "Hoog 4-dagens gewas. Beste vriend van aardappel, vijand van pompoen.",
+    "long_desc": "Maïs is rijp in **4 dagen** voor 🪙18. De wederzijdse band met aardappel (+20% voor beiden) is het ruggengraat van een productiviteitstuin.\n\nMaïs raakt sla (−15%) en pompoen (−20%) — plan percelen zorgvuldig.",
+    "tips": {
+      "0": "Wissel maïs- en aardappelkolommen voor maximale bonus.",
+      "1": "Houd maïs uit de buurt van sla- en pompoenpercelen.",
+      "2": "Bemest maïs om de 4-dagens cyclus effectief te verkorten."
+    }
+  },
+  "pumpkin": {
+    "name": "Pompoen",
+    "short_desc": "Het waardevolste gewas. Traag maar de moeite waard.",
+    "long_desc": "Pompoenen hebben **5 volle dagen** nodig maar betalen 🪙28 — hoogste basispremie. Met zonnebloembonus (+15%) stijgt de effectieve opbrengst naar 🪙32.\n\nPompoenen zijn kwetsbaar: maïs, aardappel en tomaat als buren verlagen opbrengst. Plan een apart pompoenblok.",
+    "tips": {
+      "0": "Omring elke pompoen met zonnebloemen — +15% op 🪙28 telt snel op.",
+      "1": "Bouw de kas vóór pompoenen: storm kan rijp gewas een dag terugzetten.",
+      "2": "Bemest én water elke cyclus. Sla geen dag over.",
+      "3": "Houd pompoenen uit de buurt van maïs en aardappel."
+    }
+  },
+  "well": {
+    "name": "Waterput",
+    "short_desc": "Watert alle omgespitte percelen in één klik. 3 ladingen per dag.",
+    "long_desc": "De waterput kost **50 🪙** en geeft dagelijks 3 ladingen (vernieuwd bij Volgende dag). Elke gebruik verhoogt het waterpeil op alle omgespitte percelen met +2.\n\nOnmisbaar vanaf ~10–12 actieve percelen — enorme tijdsbesparing.",
+    "tips": {
+      "0": "Bouw de put als tweede gebouw (na de composthoop).",
+      "1": "Ladingen resetten elke dag — gebruik alle 3, niet sparen.",
+      "2": "Combineer met bemesting voor maximale groei per dag."
+    }
+  },
+  "compost_heap": {
+    "name": "Composthoop",
+    "short_desc": "Genereert automatisch bemestingsladingen om de 3 oogsten.",
+    "long_desc": "De composthoop kost **30 🪙** en verdient zich snel terug. Elke 3 oogsten krijg je 1 bemestingslading. \"Alles bemesten\" past die direct toe op alle beplant, onbemeste percelen.\n\nGoedkoopste gebouw — bouw dit als eerste.",
+    "tips": {
+      "0": "Bouw dit eerst — 30 🪙 haal je binnen 5–10 oogsten.",
+      "1": "Bewaar de lading tot je veel beplant percelen hebt.",
+      "2": "Bemesting + water op dezelfde dag = snelst mogelijke groei."
+    }
+  },
+  "greenhouse": {
+    "name": "Kas",
+    "short_desc": "Passieve bescherming tegen storm en droogte.",
+    "long_desc": "De kas kost **80 🪙** en werkt passief — geen ladingen, geen klikken. Storm ⛈️ en droogte 🏜️ worden omgezet in veilige bewolking, zonder schade aan gewassen; kans op plagen bij droogte daalt van 15% naar 5%.\n\nEssentieel vóór een volledige 24-percelen pompoen- of bosbestuin.",
+    "tips": {
+      "0": "Bouw de kas vóór je eerste pompoenen.",
+      "1": "Storm kan rijpe pompoen een dag terugzetten — de kas voorkomt dat.",
+      "2": "Daarna hoef je weinig meer op weer te letten."
+    }
+  }
+}

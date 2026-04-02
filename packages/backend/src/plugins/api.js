@@ -4,25 +4,52 @@
  * Every plugin receives an instance of PluginAPI in its init(api) function.
  * Plugins may ONLY interact with the game through this object — they never
  * get direct access to the Express app, database pool, or Node internals.
+ *
+ * Capability groups (declared in plugin manifest under `capabilities`):
+ *   'db'        — dbQuery, dbCreateTable
+ *   'broadcast' — broadcast, sendTo
+ *   'events'    — on, emit
+ *
+ * log() is always available regardless of declared capabilities.
+ * If a plugin calls a method it did not declare, a descriptive Error is thrown.
  */
+
+/** All recognised capability tokens. */
+const KNOWN_CAPABILITIES = new Set(['db', 'broadcast', 'events']);
 
 class PluginAPI {
   /**
-   * @param {object} opts
-   * @param {string}   opts.pluginName   - Plugin's registered name
-   * @param {object}   opts.db           - The db module (query/getClient)
-   * @param {object}   opts.io           - Socket.IO server instance
-   * @param {object}   opts.eventBus     - Internal EventEmitter for game events
-   * @param {Function} opts.log          - Scoped logger
+   * @param {object}   opts
+   * @param {string}   opts.pluginName    - Plugin's registered name
+   * @param {object}   opts.db            - The db module (query/getClient)
+   * @param {object}   opts.io            - Socket.IO server instance
+   * @param {object}   opts.eventBus      - Internal EventEmitter for game events
+   * @param {Function} opts.log           - Scoped logger
+   * @param {string[]} opts.capabilities  - Declared capability list
    */
-  constructor({ pluginName, db, io, eventBus, log }) {
-    this._pluginName = pluginName;
-    this._db = db;
-    this._io = io;
-    this._eventBus = eventBus;
-    this._log = log;
-    this._listeners = [];   // track so we can clean up on unload
-    this._routes = [];
+  constructor({ pluginName, db, io, eventBus, log, capabilities = [] }) {
+    this._pluginName  = pluginName;
+    this._db          = db;
+    this._io          = io;
+    this._eventBus    = eventBus;
+    this._log         = log;
+    this._capabilities = new Set(capabilities);
+    this._listeners   = [];   // track so we can clean up on unload
+    this._routes      = [];
+  }
+
+  /**
+   * Throw if the plugin did not declare the required capability.
+   * @param {'db'|'broadcast'|'events'} cap
+   */
+  _requireCapability(cap) {
+    if (!this._capabilities.has(cap)) {
+      throw new Error(
+        `[PluginAPI] Plugin "${this._pluginName}" called a "${cap}" method ` +
+        `without declaring the "${cap}" capability. ` +
+        `Add "${cap}" to the capabilities array in your plugin manifest.`
+      );
+    }
   }
 
   // ── Logging ─────────────────────────────────────────────────────────────────
@@ -57,6 +84,7 @@ class PluginAPI {
   static _ALLOWED_SQL = /^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+/i;
 
   async dbQuery(tableSuffix, sql, params) {
+    this._requireCapability('db');
     PluginAPI._validateSuffix(tableSuffix);
 
     if (typeof sql !== 'string' || !sql.trim()) {
@@ -98,6 +126,7 @@ class PluginAPI {
    * @param {string} columnDefs  e.g. 'id SERIAL PRIMARY KEY, value TEXT'
    */
   async dbCreateTable(tableSuffix, columnDefs) {
+    this._requireCapability('db');
     PluginAPI._validateSuffix(tableSuffix);
 
     // Guard against SQL injection in columnDefs: reject statement terminators and comments.
@@ -123,6 +152,7 @@ class PluginAPI {
    * @param {Function} handler
    */
   on(eventName, handler) {
+    this._requireCapability('events');
     this._eventBus.on(eventName, handler);
     this._listeners.push({ event: eventName, handler });
   }
@@ -132,6 +162,7 @@ class PluginAPI {
    * Event name is automatically namespaced: plugin:{pluginName}:{event}
    */
   emit(eventName, data) {
+    this._requireCapability('events');
     this._eventBus.emit(`plugin:${this._pluginName}:${eventName}`, data);
   }
 
@@ -143,6 +174,7 @@ class PluginAPI {
    * @param {*}      data
    */
   broadcast(channel, data) {
+    this._requireCapability('broadcast');
     this._io.emit(`plugin:${channel}`, data);
   }
 
@@ -153,6 +185,7 @@ class PluginAPI {
    * @param {*}      data
    */
   sendTo(userId, channel, data) {
+    this._requireCapability('broadcast');
     this._io.to(userId).emit(`plugin:${channel}`, data);
   }
 
@@ -168,3 +201,4 @@ class PluginAPI {
 }
 
 module.exports = PluginAPI;
+module.exports.KNOWN_CAPABILITIES = KNOWN_CAPABILITIES;

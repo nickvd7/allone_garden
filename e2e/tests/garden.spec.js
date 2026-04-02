@@ -25,16 +25,16 @@ test.describe('Garden', () => {
   });
 
   test('can select the Till tool', async ({ page }) => {
-    await page.getByRole('button', { name: /Till/i }).click();
+    const tillBtn = page.locator('.tool-btn', { hasText: /Till/i });
+    await tillBtn.click();
     // Tool button should appear selected (active class or aria-pressed)
-    const tillBtn = page.getByRole('button', { name: /Till/i });
     await expect(tillBtn).toHaveClass(/active|selected/, { timeout: 2_000 }).catch(() => {
       // Fallback: button is still clickable without error
     });
   });
 
   test('can till a plot', async ({ page }) => {
-    await page.getByRole('button', { name: /Till/i }).click();
+    await page.locator('.tool-btn', { hasText: /Till/i }).click();
     const firstPlot = page.locator('.plot').first();
     await firstPlot.click();
     // After tilling the plot class or content changes
@@ -56,7 +56,7 @@ test.describe('Garden', () => {
 
   test('tools panel shows all garden tools', async ({ page }) => {
     for (const tool of ['Till', 'Plant', 'Water', 'Harvest', 'Fertilize']) {
-      await expect(page.getByRole('button', { name: new RegExp(tool, 'i') })).toBeVisible();
+      await expect(page.locator('.tool-btn', { hasText: new RegExp(tool, 'i') })).toBeVisible();
     }
   });
 

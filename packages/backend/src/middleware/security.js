@@ -112,6 +112,23 @@ const leaderboardLimiter = rateLimit({
 });
 
 /**
+ * Plant recognition limiter: 15 requests per 5 minutes per IP.
+ *
+ * Each request proxies an external paid vision API call (OpenAI / Anthropic /
+ * Gemini). A tight cap prevents billing abuse and API quota exhaustion caused
+ * by a single misbehaving client. Intentionally stricter than the global 200/min.
+ */
+const recognitionLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,   // 5-minute window
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many recognition requests. Please wait a few minutes before trying again.' },
+  skip: (_req) => process.env.NODE_ENV === 'test',
+  store: makeStore('recognition'),
+});
+
+/**
  * Account / sensitive action limiter: 5 requests per 15 minutes per IP.
  * Protects password-change and account-delete from abuse.
  */
@@ -162,6 +179,7 @@ module.exports = {
   tradeLimiter,
   accountLimiter,
   leaderboardLimiter,
+  recognitionLimiter,
   bodyLimitLarge,
   bodyLimitSmall,
   requestId,

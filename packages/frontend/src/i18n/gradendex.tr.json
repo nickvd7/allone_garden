@@ -1,0 +1,181 @@
+{
+  "gradendex": {
+    "ui": {
+      "loading": "Gradendex yükleniyor…",
+      "error_load": "Gradendex yüklenemedi. Sunucu çalışıyor mu?",
+      "search_placeholder": "🔍 Bitki veya yapı ara…",
+      "no_results": "“{{search}}” için sonuç yok.",
+      "tab_all": "🌍 Tümü",
+      "tab_plants": "🌱 Bitkiler",
+      "tab_structures": "🏗️ Yapılar",
+      "back_to_list": "← Listeye dön",
+      "back": "← Geri",
+      "edit": "✏️ Düzenle",
+      "edit_title_suffix": "— Düzenle",
+      "companion_planting": "Karşılıklı ekim",
+      "tips": "İpuçları",
+      "last_edited": "Son düzenleyen {{user}} · {{date}}",
+      "admin_hint": "✏️ Yönetici modu — düzenlemek için girişe tıklayın",
+      "stats_days": "{{count}} gün",
+      "stats_days_plural": "{{count}} gün",
+      "stats_coins": "{{count}} jeton",
+      "aria_search": "Gradendex’te ara",
+      "aria_view": "{{name}} aç",
+      "saving": "Kaydediliyor…",
+      "save_changes": "💾 Kaydet",
+      "cancel": "İptal",
+      "load_error_detail": "Kaydedilemedi",
+      "form_emoji": "Emoji",
+      "form_name": "Ad",
+      "form_category": "Kategori",
+      "form_short": "Kısa açıklama (en fazla 300 karakter)",
+      "form_long": "Uzun açıklama (Markdown: **kalın**, *italik*, satır sonları)",
+      "form_growth": "Büyüme günleri",
+      "form_coins": "Temel jeton 🪙",
+      "form_tips": "İpuçları (satır başına bir)",
+      "cat_plant": "Bitki",
+      "cat_structure": "Yapı",
+      "cat_tool": "Alet",
+      "cat_other": "Diğer"
+    },
+    "entries": {
+      "radish": {
+        "name": "Turp",
+        "short_desc": "En hızlı ürün. Yeni başlayanlar için ideal.",
+        "long_desc": "Turp AllOne Garden’ın sprinterıdır — **1 gün** sonra hasat. Mütevazı 🪙6 değeri hızlı döngülerle ve XP ile telafi edilir.\n\nMarul ve havuç yanında iyi büyür, karışık bahçede boşlukları doldurur.",
+        "tips": {
+          "0": "Yavaş ürünler olgunlaşırken boş parsellere turp ek.",
+          "1": "Marul ve havuçla küçük komşuluk bonusları verir.",
+          "2": "Oyuna başlarken hızlı seviye için harika."
+        }
+      },
+      "carrot": {
+        "name": "Havuç",
+        "short_desc": "Güvenilir 2 günlük ürün, güçlü kombinasyonlar.",
+        "long_desc": "Havuçlar çok yönlüdür: **2 günde** olgunlaşır; domates, marul ve turp yakınından faydalanır.\n\nHasat başına 🪙10 — oyun ortasında sağlam gelir.",
+        "tips": {
+          "0": "Havuçları domates (+20%) ve marul (+15%) ile çevrele.",
+          "1": "Mısırdan uzak tut — sinerji yok.",
+          "2": "Sabit 2 günlük döngüyle kompost stratejisine uyar."
+        }
+      },
+      "lettuce": {
+        "name": "Marul",
+        "short_desc": "Ucuz dolgu. Birçok bitki için iyi komşu.",
+        "long_desc": "Marul **2 günde** mütevazı 🪙8 ile olgunlaşır. Değer komşuluktadır: havuç ve turptan bonus.\n\nMısırın yanına ekme (−15% marula).",
+        "tips": {
+          "0": "Marul değerli ürünler arasındaki boşlukları doldurur.",
+          "1": "Havuç/marul/turp üçlüsü herkese bonus verir.",
+          "2": "Verim için asla mısırın yanına."
+        }
+      },
+      "sunflower": {
+        "name": "Ayçiçeği",
+        "short_desc": "Hızlı 2 günlük ürün. Kabak’ın en iyi arkadaşı.",
+        "long_desc": "Ayçiçekleri **2 günde** 🪙12 verir ve yanındaki kabaklara +15% — geç oyunda kritik.\n\nYaban mersini komşusundan da (+10%) yararlanır.",
+        "tips": {
+          "0": "Kabak parsellerini ayçiçeğiyle çevrele.",
+          "1": "Ayçiçeği + yaban mersini + kabak güçlü üçlü.",
+          "2": "Kısa döngü: kabak döngüsü başına 2–3 hasat."
+        }
+      },
+      "tomato": {
+        "name": "Domates",
+        "short_desc": "Klasik 3 günlük ürün. İyi komşularla yüksek gelir.",
+        "long_desc": "Domates **3 gün** ister ve 🪙15 verir. Havuçtan +20% ile etkin değer ~🪙18.\n\nKabaklardan uzak tut (−10% domates).",
+        "tips": {
+          "0": "Domates + havuç erken oyunun en güçlü ikililerinden (+20%).",
+          "1": "Marul kenarı küçük ek bonus verir.",
+          "2": "Her gün sulayın — ihmal cezalandırır."
+        }
+      },
+      "potato": {
+        "name": "Patates",
+        "short_desc": "Doyurucu 3 günlük ürün. Mısırı sever, kabak’ı sevmez.",
+        "long_desc": "Patates **3 gün**, 🪙12. Mısırla güçlü sinerji: karşılıklı +20% — en verimli düzenlerden.\n\nKabak yanına ekme.",
+        "tips": {
+          "0": "Mısır ve patates sıralarını değiştir.",
+          "1": "Kabak yanına asla.",
+          "2": "Sera değerli parselleri fırtınadan korur."
+        }
+      },
+      "blueberry": {
+        "name": "Yaban mersini",
+        "short_desc": "Değerli 4 günlük ürün. Ayçiçeğiyle harika.",
+        "long_desc": "Yaban mersini **4 gün** ama 🪙22 ödüllendirir. Ayçiçeği ve havuçtan yararlanır.\n\nHer parsele gübre — uzun döngü hızlanır.",
+        "tips": {
+          "0": "Her zaman gübrele — yarım gün bile uzunda önemli.",
+          "1": "Ayçiçeği komşusu: +10%.",
+          "2": "Döngü başında kuyuyu kullan, hepsini bir sulamada."
+        }
+      },
+      "corn": {
+        "name": "Mısır",
+        "short_desc": "Uzun 4 günlük ürün. Patatesin dostu, kabak’ın düşmanı.",
+        "long_desc": "Mısır **4 gün**, 🪙18. Patatesle karşılıklı (+20%) bağ verimli bahçenin omurgası.\n\nMarula (−15%) ve kabak’a (−20%) zarar verir — planla.",
+        "tips": {
+          "0": "Mısır ve patates sütunlarını değiştir.",
+          "1": "Mısırı marul ve kabak parsellerinden uzak tut.",
+          "2": "4 günlük döngüyü kısaltmak için gübrele."
+        }
+      },
+      "pumpkin": {
+        "name": "Kabak",
+        "short_desc": "En değerli ürün. Yavaş ama buna değer.",
+        "long_desc": "Kabak **tam 5 gün**, 🪙28 — en yüksek taban. Ayçiçeği (+15%) ile ~🪙32.\n\nHassas: mısır, patates ve domates komşusu verimi düşürür. Ayrı blok ayır.",
+        "tips": {
+          "0": "Her kabakı ayçiçekleriyle çevrele.",
+          "1": "Kabaklardan önce sera kur: fırtına hasadı erteler.",
+          "2": "Her döngüde gübrele ve sulayın — gün atlama.",
+          "3": "Kabakları mısır ve patatesten uzak tut."
+        }
+      },
+      "well": {
+        "name": "Kuyu",
+        "short_desc": "Tüm işlenmiş parselleri tek tıklamada sular. Günde 3 yük.",
+        "long_desc": "Kuyu **50 🪙**; günde 3 yük («Sonraki gün» ile yenilenir). Her kullanım tüm işlenmiş parsellere +2 su.\n\n~10–12+ aktif parselde şart.",
+        "tips": {
+          "0": "Komposttan sonra ikinci yap.",
+          "1": "Yükler her gün sıfırlanır — üçünü de kullan.",
+          "2": "Gübreyle birleştir, maksimum büyüme."
+        }
+      },
+      "compost_heap": {
+        "name": "Kompost yığını",
+        "short_desc": "Her 3 hasatta gübre yükü üretir.",
+        "long_desc": "Kompost **30 🪙** — hızlı geri ödenir. Her 3 hasatta 1 yük. «Hepsini gübrele» ekili gübresiz parsellere uygular.\n\nEn ucuz bina — önce bunu yap.",
+        "tips": {
+          "0": "Önce bunu yap — 30 🪙 5–10 hasatta.",
+          "1": "Çok ekili parselin olduğunda yükle.",
+          "2": "Gübre + su aynı gün = maksimum büyüme."
+        }
+      },
+      "greenhouse": {
+        "name": "Sera",
+        "short_desc": "Fırtına ve kuraklığa pasif koruma.",
+        "long_desc": "Sera **80 🪙**, pasif. Fırtına ⛈️ ve kuraklık 🏜️ güvenli buluta; zarar yok; kuraklıkta zararlı şansı %15’ten %5’e.\n\nTam kabak veya yaban mersini ızgarasından önce şart.",
+        "tips": {
+          "0": "İlk kabaklardan önce kur.",
+          "1": "Fırtına olgun kabakı bir gün geri alabilir — sera önler.",
+          "2": "Sonra hava endişesi azalır."
+        }
+      }
+    },
+    "page": {
+      "title": "📖 Gradendex",
+      "subtitle": "— ürün ve yapı rehberi",
+      "brand": "🌱 AllOne Garden",
+      "back_game": "🎮 Oyuna dön",
+      "intro": "AllOne Garden’daki ürün ve yapılar için topluluk rehberi.",
+      "intro_logged_in": "Giriş yaptınız — yöneticiler girdileri düzenleyebilir.",
+      "intro_guest_before": "",
+      "log_in": "Giriş yap",
+      "intro_guest_after": "yönetici olarak katkı için.",
+      "footer": "AllOne Garden · Gradendex · Veri kaynağı",
+      "open_full": "↗ Tam sayfa",
+      "open_full_title": "Gradendex’i tam sayfada aç",
+      "close": "Gradendex’i kapat",
+      "aria_dialog": "Gradendex"
+    }
+  }
+}

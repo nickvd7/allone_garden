@@ -1,5 +1,7 @@
 import React from 'react';
+import { useGameContent } from '../context/GameContentContext';
 
+// Static built-in structure definitions — exported for backward compatibility
 export const STRUCTURE_DEFS = [
   {
     id: 'well',
@@ -28,17 +30,74 @@ export const STRUCTURE_DEFS = [
     chargesPerDay: null,
     usageLabel: null,
   },
+  // ── Farm tier ─────────────────────────────────────────────────────────────
+  {
+    id: 'barn',
+    name: 'Barn',
+    emoji: '🏚️',
+    description: 'Unlocks animals. Required before building a Chicken Coop or Stable.',
+    buildCost: 120,
+    chargesPerDay: null,
+    usageLabel: null,
+  },
+  {
+    id: 'chickenCoop',
+    name: 'Chicken Coop',
+    emoji: '🐔',
+    description: 'Your chickens lay 1 egg every 2 days. Collect to earn 🪙8.',
+    buildCost: 60,
+    chargesPerDay: null,
+    usageLabel: 'Collect Eggs',
+    requires: 'barn',
+  },
+  {
+    id: 'stable',
+    name: 'Stable',
+    emoji: '🐄',
+    description: 'Your cow produces 1 milk every 3 days. Collect to earn 🪙12.',
+    buildCost: 100,
+    chargesPerDay: null,
+    usageLabel: 'Collect Milk',
+    requires: 'barn',
+  },
+  {
+    id: 'silo',
+    name: 'Silo',
+    emoji: '🌾',
+    description: 'Passive: all crop sales earn +20% coins.',
+    buildCost: 90,
+    chargesPerDay: null,
+    usageLabel: null,
+  },
 ];
 
-function StructuresPanel({ structures = {}, coins = 0, onBuild, onUseWell, onUseCompost }) {
+function StructuresPanel({
+  structures = {},
+  coins = 0,
+  onBuild,
+  onUseWell,
+  onUseCompost,
+  onCollectEggs,
+  onCollectMilk,
+  hideTitle = false,
+}) {
+  const { structures: contentStructures } = useGameContent();
+  // Keep the built-in STRUCTURE_DEFS as the base; append any custom structures from context
+  // (those whose id isn't in the built-in list) so admins can add new structure types.
+  const builtInIds    = new Set(STRUCTURE_DEFS.map((d) => d.id));
+  const customExtras  = contentStructures.filter((s) => !builtInIds.has(s.id));
+  const allDefs       = [...STRUCTURE_DEFS, ...customExtras];
+
   return (
     <div className="card structures-panel">
-      <h3>🏗️ Structures</h3>
+      {!hideTitle && <h3>🏗️ Structures</h3>}
       <div className="structures-list">
-        {STRUCTURE_DEFS.map((def) => {
+        {allDefs.map((def) => {
           const state   = structures[def.id] || {};
           const isBuilt = !!state.built;
-          const canBuild = coins >= def.buildCost;
+          // Check prerequisite structure (e.g. barn required for coop/stable)
+          const prereqMet = !def.requires || !!structures[def.requires]?.built;
+          const canBuild = coins >= def.buildCost && prereqMet;
 
           return (
             <div key={def.id} className={`structure-item${isBuilt ? ' structure-item--built' : ''}`}>
@@ -55,7 +114,13 @@ function StructuresPanel({ structures = {}, coins = 0, onBuild, onUseWell, onUse
                     className="btn btn-primary structure-build-btn"
                     disabled={!canBuild}
                     onClick={() => onBuild(def.id)}
-                    title={canBuild ? `Build for 🪙${def.buildCost}` : `Need 🪙${def.buildCost}`}
+                    title={
+                      !prereqMet
+                        ? `Requires ${def.requires} first`
+                        : canBuild
+                          ? `Build for 🪙${def.buildCost}`
+                          : `Need 🪙${def.buildCost}`
+                    }
                   >
                     🔨 {def.buildCost}🪙
                   </button>
@@ -102,6 +167,48 @@ function StructuresPanel({ structures = {}, coins = 0, onBuild, onUseWell, onUse
               {isBuilt && def.id === 'greenhouse' && (
                 <div className="structure-action-row">
                   <span className="structure-active">🌡️ Active — protecting against storms &amp; drought</span>
+                </div>
+              )}
+
+              {isBuilt && def.id === 'barn' && (
+                <div className="structure-action-row">
+                  <span className="structure-active">🏚️ Animals unlocked — build Coop &amp; Stable</span>
+                </div>
+              )}
+
+              {isBuilt && def.id === 'chickenCoop' && (
+                <div className="structure-action-row">
+                  <span className="structure-charges">
+                    🥚 {state.eggReady ? 'Egg ready!' : `${2 - (state.daysSinceEgg || 0)} day(s) until next egg`}
+                  </span>
+                  <button
+                    className="btn btn-secondary structure-use-btn"
+                    disabled={!state.eggReady}
+                    onClick={onCollectEggs}
+                  >
+                    🥚 Collect Eggs
+                  </button>
+                </div>
+              )}
+
+              {isBuilt && def.id === 'stable' && (
+                <div className="structure-action-row">
+                  <span className="structure-charges">
+                    🥛 {state.milkReady ? 'Milk ready!' : `${3 - (state.daysSinceMilk || 0)} day(s) until next milk`}
+                  </span>
+                  <button
+                    className="btn btn-secondary structure-use-btn"
+                    disabled={!state.milkReady}
+                    onClick={onCollectMilk}
+                  >
+                    🥛 Collect Milk
+                  </button>
+                </div>
+              )}
+
+              {isBuilt && def.id === 'silo' && (
+                <div className="structure-action-row">
+                  <span className="structure-active">🌾 Active — +20% coins on all crop sales</span>
                 </div>
               )}
             </div>

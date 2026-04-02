@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../hooks/useApi';
 
 /**
@@ -110,6 +111,7 @@ function TagBadge({ tag }) {
 // ── Plugin card ───────────────────────────────────────────────────────────────
 
 function PluginCard({ plugin, isInstalled, isAdmin, busy, onInstall, onUnload, error }) {
+  const { t } = useTranslation();
   const tags    = plugin.tags || [];
   const canInstall = isAdmin && !isInstalled && !!plugin.downloadUrl;
   const canUnload  = isAdmin && isInstalled;
@@ -127,8 +129,8 @@ function PluginCard({ plugin, isInstalled, isAdmin, busy, onInstall, onUnload, e
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {isInstalled && <span style={styles.badgeInstalled}>✓ Installed</span>}
-          {!isInstalled && <span style={styles.badgeFree}>Free</span>}
+          {isInstalled && <span style={styles.badgeInstalled}>{t('marketplace.badge_installed', { defaultValue: '✓ Installed' })}</span>}
+          {!isInstalled && <span style={styles.badgeFree}>{t('marketplace.badge_free', { defaultValue: 'Free' })}</span>}
 
           {canInstall && (
             <button
@@ -136,7 +138,7 @@ function PluginCard({ plugin, isInstalled, isAdmin, busy, onInstall, onUnload, e
               onClick={() => onInstall(plugin.name)}
               disabled={busy}
             >
-              {busy ? '⏳ Installing…' : '⬇ Install'}
+              {busy ? t('marketplace.installing', { defaultValue: '⏳ Installing…' }) : t('marketplace.install', { defaultValue: '⬇ Install' })}
             </button>
           )}
           {canUnload && (
@@ -145,7 +147,7 @@ function PluginCard({ plugin, isInstalled, isAdmin, busy, onInstall, onUnload, e
               onClick={() => onUnload(plugin.name)}
               disabled={busy}
             >
-              {busy ? '⏳ Unloading…' : '✕ Unload'}
+              {busy ? t('marketplace.unloading', { defaultValue: '⏳ Unloading…' }) : t('marketplace.unload', { defaultValue: '✕ Unload' })}
             </button>
           )}
         </div>
@@ -165,7 +167,8 @@ function PluginCard({ plugin, isInstalled, isAdmin, busy, onInstall, onUnload, e
         </div>
         {plugin.author && (
           <span style={{ fontSize: '0.75rem', color: '#aaa' }}>
-            by {plugin.author}{plugin.license ? ` · ${plugin.license}` : ''}
+            {t('marketplace.by_author', { author: plugin.author, defaultValue: 'by {{author}}' })}
+            {plugin.license ? ` · ${plugin.license}` : ''}
           </span>
         )}
       </div>
@@ -175,7 +178,8 @@ function PluginCard({ plugin, isInstalled, isAdmin, busy, onInstall, onUnload, e
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-function PluginMarketplace({ user, onClose }) {
+function PluginMarketplace({ user, onClose, embedded = false }) {
+  const { t } = useTranslation();
   const isAdmin = user?.isAdmin || false;
 
   const [tab,       setTab]       = useState('installed');
@@ -246,24 +250,30 @@ function PluginMarketplace({ user, onClose }) {
     (p.tags || []).some((t) => t.toLowerCase().includes(filter.toLowerCase()))
   );
 
+  const shellStyle = embedded ? styles.pageShell : styles.overlay;
+  const containerStyle = embedded ? styles.pageContainer : styles.modal;
+  const handleShellClick = embedded ? undefined : (e) => e.target === e.currentTarget && onClose();
+
   return (
-    <div style={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={styles.modal}>
+    <div style={shellStyle} onClick={handleShellClick}>
+      <div style={containerStyle}>
         {/* Header */}
         <div style={styles.modalHeader}>
-          <h2 style={styles.modalTitle}>🔌 Plugin Marketplace</h2>
-          <button style={styles.closeBtn} onClick={onClose}>✕</button>
+          <h2 style={styles.modalTitle}>{t('marketplace.modal_title', { defaultValue: '🔌 Plugin Marketplace' })}</h2>
+          {!embedded && <button style={styles.closeBtn} onClick={onClose}>✕</button>}
         </div>
 
         {/* Tabs */}
         <div style={styles.tabs}>
-          {['installed', 'community'].map((t) => (
+          {['installed', 'community'].map((tabKey) => (
             <button
-              key={t}
-              style={{ ...styles.tab, ...(tab === t ? styles.tabActive : {}) }}
-              onClick={() => setTab(t)}
+              key={tabKey}
+              style={{ ...styles.tab, ...(tab === tabKey ? styles.tabActive : {}) }}
+              onClick={() => setTab(tabKey)}
             >
-              {t === 'installed' ? `✓ Installed (${installed.length})` : '🌐 Community'}
+              {tabKey === 'installed'
+                ? t('marketplace.tab_installed', { count: installed.length, defaultValue: '✓ Installed ({{count}})' })
+                : t('marketplace.tab_community', { defaultValue: '🌐 Community' })}
             </button>
           ))}
         </div>
@@ -274,16 +284,16 @@ function PluginMarketplace({ user, onClose }) {
           {/* Installed tab */}
           {tab === 'installed' && (
             loading ? (
-              <div style={styles.empty}>Loading…</div>
+              <div style={styles.empty}>{t('marketplace.loading', { defaultValue: 'Loading…' })}</div>
             ) : installed.length === 0 ? (
               <div style={styles.empty}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔌</div>
-                No plugins installed on this server yet.
+                {t('marketplace.empty_installed', { defaultValue: 'No plugins installed on this server yet.' })}
                 <br />
                 <span style={{ fontSize: '0.85rem', color: '#aaa' }}>
                   {isAdmin
-                    ? 'Browse the Community tab to install plugins.'
-                    : 'Ask your server admin to install plugins from the Community tab.'}
+                    ? t('marketplace.empty_installed_admin', { defaultValue: 'Browse the Community tab to install plugins.' })
+                    : t('marketplace.empty_installed_user', { defaultValue: 'Ask your server admin to install plugins from the Community tab.' })}
                 </span>
               </div>
             ) : (
@@ -310,12 +320,12 @@ function PluginMarketplace({ user, onClose }) {
               <input
                 style={styles.search}
                 type="text"
-                placeholder="Search plugins…"
+                placeholder={t('marketplace.search_placeholder', { defaultValue: 'Search plugins…' })}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
               {loading ? (
-                <div style={styles.empty}>Loading registry…</div>
+                <div style={styles.empty}>{t('marketplace.loading_registry', { defaultValue: 'Loading registry…' })}</div>
               ) : (
                 <div style={styles.grid}>
                   {filteredCatalogue.map((p) => (
@@ -333,10 +343,10 @@ function PluginMarketplace({ user, onClose }) {
                 </div>
               )}
               <div style={styles.helpNote}>
-                <strong>How to install:</strong> Admins can click Install above (requires{' '}
-                <code>downloadUrl</code> in registry), or manually place a plugin folder in{' '}
-                <code>plugins/community/</code> and restart the server.
-                All plugins run in a sandboxed VM with limited API access.
+                {t('marketplace.help_note', {
+                  defaultValue:
+                    'How to install: Admins can click Install above (requires downloadUrl in registry), or manually place a plugin folder in plugins/community/ and restart the server. All plugins run in a sandboxed VM with limited API access.',
+                })}
               </div>
             </>
           )}
@@ -360,6 +370,22 @@ const styles = {
     width: '100%', maxWidth: '700px', maxHeight: '85vh',
     display: 'flex', flexDirection: 'column',
     boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+  },
+  pageShell: {
+    minHeight: 'calc(100vh - 58px)',
+    padding: '1rem',
+    display: 'block',
+  },
+  pageContainer: {
+    background: 'white',
+    borderRadius: '14px',
+    width: '100%',
+    maxWidth: '980px',
+    margin: '0 auto',
+    minHeight: 'calc(100vh - 110px)',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 10px 32px rgba(0,0,0,0.12)',
   },
   modalHeader: {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',

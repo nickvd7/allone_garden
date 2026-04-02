@@ -1,6 +1,12 @@
 // @ts-check
 const { defineConfig, devices } = require('@playwright/test');
 
+/** Avoid macOS AirPlay / other daemons on 5000 — override with E2E_BACKEND_PORT / E2E_FRONTEND_PORT */
+const backendPort = Number(process.env.E2E_BACKEND_PORT || 5000);
+const frontendPort = Number(process.env.E2E_FRONTEND_PORT || 3000);
+const backendOrigin = `http://127.0.0.1:${backendPort}`;
+const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
+
 module.exports = defineConfig({
   testDir: './tests',
   timeout: 40_000,
@@ -11,7 +17,7 @@ module.exports = defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: frontendOrigin,
     headless: true,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -26,28 +32,32 @@ module.exports = defineConfig({
       // Backend in in-memory mode
       command: 'node src/index.js',
       cwd: '../packages/backend',
-      port: 5000,
+      port: backendPort,
       reuseExistingServer: !process.env.CI,
       env: {
         NODE_ENV: 'test',
         DATABASE_URL: '',
         JWT_SECRET: 'e2e-test-secret-do-not-use-in-production',
         P2P_ENABLED: 'false',
-        PORT: '5000',
-        FRONTEND_URL: 'http://localhost:3000',
+        PORT: String(backendPort),
+        FRONTEND_URL: frontendOrigin,
         ADMIN_USERS: 'admin_e2e',
       },
     },
     {
-      // Frontend dev server
+      // Frontend dev server (CRA respects PORT)
       command: 'npm start',
       cwd: '../packages/frontend',
-      port: 3000,
+      port: frontendPort,
       reuseExistingServer: !process.env.CI,
       env: {
         BROWSER: 'none',
         CI: 'false',
-        REACT_APP_API_URL: 'http://localhost:5000',
+        PORT: String(frontendPort),
+        REACT_APP_API_URL: backendOrigin,
+        // Minder kans op webpack overlay die Playwright-clicks blokkeert
+        ESLINT_NO_DEV_ERRORS: 'true',
+        TSC_COMPILE_ON_ERROR: 'true',
       },
     },
   ],

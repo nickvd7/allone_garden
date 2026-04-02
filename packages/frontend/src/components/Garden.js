@@ -1,53 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { SEEDS } from './ToolsPanel';
-
-// Growth stages per plant type (days to reach each stage)
-const GROWTH_STAGES = {
-  tomato:    [0, 1, 2, 3],
-  carrot:    [0, 1, 2],
-  lettuce:   [0, 1, 2],
-  radish:    [0, 1],
-  corn:      [0, 1, 2, 3, 4],
-  potato:    [0, 1, 2, 3],
-  pumpkin:   [0, 1, 2, 3, 4, 5],
-  sunflower: [0, 1, 2],
-  blueberry: [0, 1, 2, 3, 4],
-};
-
-// Harvest coin value per crop
-const CROP_COINS = {
-  tomato: 15, carrot: 10, lettuce: 8, radish: 6, corn: 18, potato: 12,
-  pumpkin: 28, sunflower: 12, blueberry: 22,
-};
-
-// Emoji to show for each growth stage
-const PLANT_EMOJIS = {
-  tomato:    ['🌱', '🌿', '🍅', '🍅'],
-  carrot:    ['🌱', '🌿', '🥕'],
-  lettuce:   ['🌱', '🌿', '🥬'],
-  radish:    ['🌱', '🌸'],
-  corn:      ['🌱', '🌿', '🌾', '🌽', '🌽'],
-  potato:    ['🌱', '🌿', '🌿', '🥔'],
-  pumpkin:   ['🌱', '🌿', '🌿', '🟠', '🎃', '🎃'],
-  sunflower: ['🌱', '🌿', '🌻'],
-  blueberry: ['🌱', '🌿', '🌿', '🫐', '🫐'],
-};
-
-// ─── Companion Planting ───────────────────────────────────────────────────────
-// Positive modifier = these neighbors boost this plant's yield
-// Negative modifier = these neighbors reduce this plant's yield
-const COMPANIONS = {
-  tomato:    { carrot: +0.20, lettuce: +0.10, pumpkin: -0.10 },
-  carrot:    { tomato: +0.20, lettuce: +0.15, radish: +0.10 },
-  lettuce:   { carrot: +0.15, radish: +0.10, corn: -0.15 },
-  radish:    { lettuce: +0.10, carrot: +0.10 },
-  corn:      { potato: +0.20, lettuce: -0.15, pumpkin: -0.20 },
-  potato:    { corn: +0.20, pumpkin: -0.10 },
-  pumpkin:   { sunflower: +0.15, corn: -0.20, potato: -0.10 },
-  sunflower: { pumpkin: +0.15, blueberry: +0.10 },
-  blueberry: { sunflower: +0.10, carrot: +0.05 },
-};
+import { useGameContent } from '../context/GameContentContext';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { useSteamAchievements } from '../hooks/useSteamAchievements';
 
 const GRID_W = 6;
 
@@ -55,12 +11,15 @@ const GRID_W = 6;
  * Returns { modifier, icon } for a plot based on its planted neighbors.
  * modifier > 1 = beneficial companions nearby
  * modifier < 1 = harmful companions nearby
+ * @param {object[]} plots
+ * @param {number}   index
+ * @param {object}   companions  — slug → { neighborSlug: modifier } map from context
  */
-function getCompanionEffect(plots, index) {
+function getCompanionEffect(plots, index, companions = {}) {
   const plot = plots[index];
   if (!plot.planted || !plot.plantType) return { modifier: 1, icon: null };
 
-  const companions = COMPANIONS[plot.plantType] || {};
+  const companionRow = companions[plot.plantType] || {};
   const neighbors = [
     index - GRID_W,                                           // above
     index + GRID_W,                                           // below
@@ -72,7 +31,7 @@ function getCompanionEffect(plots, index) {
   for (const ni of neighbors) {
     const nb = plots[ni];
     if (!nb.planted || !nb.plantType) continue;
-    const effect = companions[nb.plantType];
+    const effect = companionRow[nb.plantType];
     if (effect) delta += effect;
   }
 
@@ -85,9 +44,14 @@ function getCompanionEffect(plots, index) {
   return { modifier, icon };
 }
 
-// Determine growth stage index based on days planted
-function getGrowthStage(plantType, daysPlanted) {
-  const stages   = GROWTH_STAGES[plantType] || [0];
+/**
+ * Determine growth stage index based on days planted.
+ * @param {string}   plantType
+ * @param {number}   daysPlanted
+ * @param {object}   growthStages — slug → [0,1,…,growthDays] from context
+ */
+function getGrowthStage(plantType, daysPlanted, growthStages = {}) {
+  const stages    = growthStages[plantType] || [0];
   const totalDays = stages[stages.length - 1];
   let stage = 0;
   for (let i = 0; i < stages.length; i++) {
@@ -96,9 +60,9 @@ function getGrowthStage(plantType, daysPlanted) {
   return { stage, totalDays, isReady: daysPlanted >= totalDays };
 }
 
-// Progress (0–100) toward next stage
-function getGrowthProgress(plantType, daysPlanted) {
-  const stages    = GROWTH_STAGES[plantType] || [0];
+/** Progress (0–100) toward next stage */
+function getGrowthProgress(plantType, daysPlanted, growthStages = {}) {
+  const stages    = growthStages[plantType] || [0];
   const totalDays = stages[stages.length - 1];
   return totalDays > 0 ? Math.min((daysPlanted / totalDays) * 100, 100) : 100;
 }
@@ -113,14 +77,76 @@ const WEATHER_ICONS = {
   drought: '🏜️',
 };
 
+// ── Season system ─────────────────────────────────────────────────────────────
+const SEASON_LENGTH = 30; // in-game days per season
+
+const SEASONS = [
+  { id: 'spring', emoji: '🌸', label: 'Spring' },
+  { id: 'summer', emoji: '☀️', label: 'Summer' },
+  { id: 'autumn', emoji: '🍂', label: 'Autumn' },
+  { id: 'winter', emoji: '❄️', label: 'Winter' },
+];
+
+/**
+ * Derive current season from the in-game day number.
+ * Day 1–30 = spring, 31–60 = summer, 61–90 = autumn, 91–120 = winter, then repeat.
+ */
+function getSeasonFromDay(day) {
+  const index = Math.floor(((day - 1) % (SEASON_LENGTH * 4)) / SEASON_LENGTH);
+  return SEASONS[index] ?? SEASONS[0];
+}
+
+/**
+ * Per-season weather probability table.
+ * Returns a roll → weather function.
+ */
+function rollWeather(season, roll) {
+  switch (season.id) {
+    case 'spring': // mild: lots of rain, low drought
+      return roll < 0.05 ? 'storm'   :
+             roll < 0.08 ? 'drought' :
+             ['sunny', 'cloudy', 'rainy', 'rainy', 'windy'][Math.floor(Math.random() * 5)];
+    case 'summer': // hot: more drought + sunny, rare storm
+      return roll < 0.06 ? 'storm'   :
+             roll < 0.25 ? 'drought' :
+             ['sunny', 'sunny', 'cloudy', 'windy'][Math.floor(Math.random() * 4)];
+    case 'autumn': // mixed: balanced
+      return roll < 0.10 ? 'storm'   :
+             roll < 0.15 ? 'drought' :
+             ['sunny', 'cloudy', 'rainy', 'windy'][Math.floor(Math.random() * 4)];
+    case 'winter': // harsh: more storms, less drought
+      return roll < 0.20 ? 'storm'   :
+             roll < 0.22 ? 'drought' :
+             ['cloudy', 'cloudy', 'rainy', 'windy'][Math.floor(Math.random() * 4)];
+    default:
+      return ['sunny', 'cloudy', 'rainy', 'windy'][Math.floor(Math.random() * 4)];
+  }
+}
+
+/**
+ * Per-season growth bonus for a given plant type.
+ * Tomatoes + corn love summer; root vegetables love autumn; all slow in winter.
+ */
+function getSeasonalGrowthBonus(plantType, seasonId) {
+  const SUMMER_CROPS  = new Set(['tomato', 'corn', 'sunflower', 'blueberry']);
+  const AUTUMN_CROPS  = new Set(['potato', 'carrot', 'pumpkin', 'radish']);
+  const SPRING_CROPS  = new Set(['lettuce', 'radish', 'carrot']);
+
+  if (seasonId === 'summer' && SUMMER_CROPS.has(plantType))  return 1;  // +1 day/turn
+  if (seasonId === 'autumn' && AUTUMN_CROPS.has(plantType))  return 1;
+  if (seasonId === 'spring' && SPRING_CROPS.has(plantType))  return 1;
+  if (seasonId === 'winter')                                  return -1; // –1 day/turn (slow)
+  return 0;
+}
+
 // ─── Plot component ───────────────────────────────────────────────────────────
-function Plot({ plot, index, companionIcon, onPlotClick }) {
+function Plot({ plot, index, companionIcon, onPlotClick, growthStages, plantEmojis }) {
   const { tilled, planted, plantType, waterLevel, fertilized, daysPlanted, pest } = plot;
   const { stage, isReady } = planted
-    ? getGrowthStage(plantType, daysPlanted)
+    ? getGrowthStage(plantType, daysPlanted, growthStages)
     : { stage: 0, isReady: false };
-  const progress    = planted ? getGrowthProgress(plantType, daysPlanted) : 0;
-  const plantEmoji  = planted ? (PLANT_EMOJIS[plantType]?.[stage] || '🌱') : null;
+  const progress    = planted ? getGrowthProgress(plantType, daysPlanted, growthStages) : 0;
+  const plantEmoji  = planted ? (plantEmojis[plantType]?.[stage] || '🌱') : null;
 
   const stageClass  = !planted
     ? ''
@@ -186,14 +212,31 @@ function Plot({ plot, index, companionIcon, onPlotClick }) {
 }
 
 // ─── Garden component ─────────────────────────────────────────────────────────
-function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, structures, onUpdateGame }) {
+function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, currentSeason, structures, onUpdateGame }) {
   const { t } = useTranslation();
+  // Dynamic game content (plants, structures, tools) — updates when admin saves custom content
+  const { plants: contentPlants, growthStages, cropCoins, plantEmojis, companions } = useGameContent();
+  const { track }  = useAnalytics();
+  const { unlock } = useSteamAchievements();
 
   // Pre-compute companion icons for all plots
-  const companionIcons = plots.map((_, i) => getCompanionEffect(plots, i).icon);
+  const companionIcons = plots.map((_, i) => getCompanionEffect(plots, i, companions).icon);
 
   const handlePlotClick = (index) => {
     if (!selectedTool) return;
+
+    // Track intent before state update (optimistic — check preconditions on current plots)
+    const clickedPlot = plots[index];
+    if (selectedTool === 'plant' && clickedPlot?.tilled && !clickedPlot?.planted && selectedSeed) {
+      track('crop_planted', { cropType: selectedSeed, season: weather });
+    } else if (selectedTool === 'harvest' && clickedPlot?.planted) {
+      const { isReady } = getGrowthStage(clickedPlot.plantType, clickedPlot.daysPlanted || 0, growthStages);
+      if (isReady) {
+        track('crop_harvested', { cropType: clickedPlot.plantType });
+        // Steam: first-ever harvest
+        unlock('FIRST_HARVEST');
+      }
+    }
 
     onUpdateGame((prev) => {
       const updatedPlots = [...prev.plots];
@@ -246,16 +289,22 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, struct
 
         case 'harvest': {
           if (plot.planted) {
-            const { isReady } = getGrowthStage(plot.plantType, plot.daysPlanted || 0);
+            const { isReady } = getGrowthStage(plot.plantType, plot.daysPlanted || 0, growthStages);
             if (isReady) {
               // Apply companion planting modifier to coins
-              const companionResult = getCompanionEffect(updatedPlots, index);
+              const companionResult = getCompanionEffect(updatedPlots, index, companions);
               const crop   = plot.plantType;
-              const base   = CROP_COINS[crop] || 15;
+              const base   = cropCoins[crop] || 15;
               coinsGained  = Math.round(base * companionResult.modifier);
 
               inventory = { ...inventory, [crop]: (inventory[crop] || 0) + 1 };
               stats     = { ...stats, plantsGrown: stats.plantsGrown + 1 };
+
+              // Steam milestone achievements (idempotent — Steam ignores re-unlocks)
+              const newTotal = stats.plantsGrown; // already incremented above
+              if (newTotal >= 10)  unlock('GREEN_THUMB');
+              if (newTotal >= 50)  unlock('SEASONED_FARMER');
+              if (newTotal >= 100) unlock('MASTER_GARDENER');
 
               // Track compost progress
               if (updatedStructures?.compost?.built) {
@@ -294,6 +343,10 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, struct
       const newXp    = stats.xp + xpGained;
       const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
 
+      // Steam level achievements
+      if (newLevel >= 5  && stats.level < 5)  unlock('LEVEL_5');
+      if (newLevel >= 10 && stats.level < 10) unlock('LEVEL_10');
+
       return {
         ...prev,
         plots: updatedPlots,
@@ -313,19 +366,21 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, struct
   const handleNextDay = () => {
     const hasGreenhouse = structures?.greenhouse?.built;
 
-    const roll = Math.random();
-    const weatherPool =
-      roll < 0.10 ? ['storm']   :
-      roll < 0.20 ? ['drought'] :
-      ['sunny', 'cloudy', 'rainy', 'windy'];
-    const nextWeather = weatherPool[Math.floor(Math.random() * weatherPool.length)];
+    // Determine the next day's season (based on current day + 1)
+    const nextDay    = (currentDay || 1) + 1;
+    const nextSeason = getSeasonFromDay(nextDay);
+
+    const nextWeather = rollWeather(nextSeason, Math.random());
 
     // Greenhouse nullifies storm / drought effects on crops
     const effectiveWeather = hasGreenhouse && (nextWeather === 'storm' || nextWeather === 'drought')
       ? 'cloudy'
       : nextWeather;
 
-    const pestChance = nextWeather === 'drought' ? 0.15 : 0.05;
+    // Drought pest chance is higher; winter also raises it slightly
+    const pestChance =
+      nextWeather === 'drought' ? 0.15 :
+      nextSeason.id === 'winter' ? 0.08 : 0.05;
 
     onUpdateGame((prev) => {
       const updatedPlots = prev.plots.map((plot) => {
@@ -336,19 +391,24 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, struct
         let days = plot.daysPlanted || 0;
         // Storm damage only if no greenhouse
         if (effectiveWeather === 'storm') {
-          const { isReady } = getGrowthStage(plot.plantType, days);
+          const { isReady } = getGrowthStage(plot.plantType, days, growthStages);
           if (isReady) days = Math.max(0, days - 1);
         }
 
-        const extra      = plot.fertilized ? 1 : 0;
-        const waterBonus = (plot.waterLevel > 0 || effectiveWeather === 'rainy' || effectiveWeather === 'storm') ? 1 : 0;
-        const growthDays = hasPest ? days : days + waterBonus + extra;
+        const extra          = plot.fertilized ? 1 : 0;
+        const waterBonus     = (plot.waterLevel > 0 || effectiveWeather === 'rainy' || effectiveWeather === 'storm') ? 1 : 0;
+        const seasonalBonus  = getSeasonalGrowthBonus(plot.plantType, nextSeason.id);
+        const rawGrowth      = waterBonus + extra + seasonalBonus;
+        // Growth cannot go negative in a single turn (minimum 0 progress added)
+        const growthDays     = hasPest ? days : Math.max(days, days + rawGrowth);
 
         let newWaterLevel = plot.waterLevel || 0;
         if (effectiveWeather === 'rainy' || effectiveWeather === 'storm') {
           newWaterLevel = 3;
         } else if (effectiveWeather === 'drought') {
           newWaterLevel = Math.max(0, newWaterLevel - 2);
+        } else if (nextSeason.id === 'winter') {
+          newWaterLevel = Math.max(0, newWaterLevel - 1); // snow keeps some moisture
         } else {
           newWaterLevel = Math.max(0, newWaterLevel - 1);
         }
@@ -356,34 +416,74 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, struct
         return { ...plot, daysPlanted: growthDays, waterLevel: newWaterLevel, pest: hasPest };
       });
 
-      // Refresh well charges daily
-      let updatedStructures = prev.structures;
-      if (prev.structures?.well?.built) {
-        updatedStructures = {
-          ...prev.structures,
-          well: { ...prev.structures.well, charges: 3 },
+      // Refresh well charges daily + advance farm animal timers
+      const updatedStructures = { ...prev.structures };
+
+      if (updatedStructures.well?.built) {
+        updatedStructures.well = { ...updatedStructures.well, charges: 3 };
+      }
+
+      // Chicken Coop: produce an egg every 2 days
+      if (updatedStructures.chickenCoop?.built) {
+        const coop          = updatedStructures.chickenCoop;
+        const newDays       = (coop.daysSinceEgg || 0) + 1;
+        const eggNowReady   = newDays >= 2;
+        updatedStructures.chickenCoop = {
+          ...coop,
+          daysSinceEgg: eggNowReady ? 0 : newDays,
+          eggReady:     coop.eggReady || eggNowReady,
+        };
+      }
+
+      // Stable: produce milk every 3 days
+      if (updatedStructures.stable?.built) {
+        const stable         = updatedStructures.stable;
+        const newDays        = (stable.daysSinceMilk || 0) + 1;
+        const milkNowReady   = newDays >= 3;
+        updatedStructures.stable = {
+          ...stable,
+          daysSinceMilk: milkNowReady ? 0 : newDays,
+          milkReady:     stable.milkReady || milkNowReady,
         };
       }
 
       return {
         ...prev,
-        currentDay:  prev.currentDay + 1,
-        weather:     nextWeather,            // show actual weather in UI
-        plots:       updatedPlots,
-        structures:  updatedStructures,
+        currentDay:    nextDay,
+        currentSeason: nextSeason.id,
+        weather:       nextWeather,
+        plots:         updatedPlots,
+        structures:    updatedStructures,
       };
     });
   };
 
   const weatherIcon = WEATHER_ICONS[weather] || '🌤️';
-  const seedInfo    = SEEDS.find((s) => s.id === selectedSeed);
+  // Find seed display info — static SEEDS has i18n keys; fall back to context for custom plants
+  const contextSeedPlant = contentPlants.find((p) => p.slug === selectedSeed);
+  const seedInfo = SEEDS.find((s) => s.id === selectedSeed)
+    || (contextSeedPlant ? { emoji: contextSeedPlant.harvestEmoji } : null);
   const hasGreenhouse = structures?.greenhouse?.built;
 
+  // Derive current season from the day counter (fall back to prop if set)
+  const season     = currentSeason
+    ? SEASONS.find((s) => s.id === currentSeason) ?? getSeasonFromDay(currentDay)
+    : getSeasonFromDay(currentDay);
+  const dayInSeason = ((currentDay - 1) % SEASON_LENGTH) + 1;
+
   return (
-    <div className="garden-section">
+    <div className="card garden-section">
       <div className="garden-header">
         <div className="garden-meta">
-          <div className="day-display">📅 {t('day')} {currentDay}</div>
+          <div className="day-display">
+            📅 {t('day')} {currentDay}
+            <span
+              className={`season-badge season-badge--${season.id}`}
+              title={`${season.label} — day ${dayInSeason} of ${SEASON_LENGTH}`}
+            >
+              {season.emoji} {season.label}
+            </span>
+          </div>
           <div className="weather-display">
             {weatherIcon} {t(`weather_${weather}`) || weather}
             {hasGreenhouse && (weather === 'storm' || weather === 'drought') && (
@@ -391,13 +491,13 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, struct
             )}
           </div>
           {selectedTool && (
-            <div className="weather-display" style={{ color: '#888', fontWeight: 400 }}>
+            <div className="weather-display weather-display--muted">
               Tool: {selectedTool}{selectedTool === 'plant' && seedInfo ? ` · ${seedInfo.emoji}` : ''}
             </div>
           )}
         </div>
 
-        <button className="btn btn-primary" onClick={handleNextDay}>
+        <button type="button" className="btn btn-primary" onClick={handleNextDay}>
           ⏭ Next Day
         </button>
       </div>
@@ -411,6 +511,8 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, struct
             selectedTool={selectedTool}
             companionIcon={companionIcons[i]}
             onPlotClick={handlePlotClick}
+            growthStages={growthStages}
+            plantEmojis={plantEmojis}
           />
         ))}
       </div>

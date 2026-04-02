@@ -1,6 +1,43 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../hooks/useApi';
 
+/** Lokale markt voor spelen zonder account (geen JWT). Alleen op dit apparaat opgeslagen. */
+const GUEST_MARKET_KEY = 'garden_guest_market_v1';
+
+function defaultGuestSeedListings() {
+  return [
+    { id: 1, crop_id: 'tomato', quantity: 4, price_per_unit: 9, seller_name: 'Reizende handelaar', seller_id: -1 },
+    { id: 2, crop_id: 'lettuce', quantity: 6, price_per_unit: 8, seller_name: 'Reizende handelaar', seller_id: -1 },
+    { id: 3, crop_id: 'corn', quantity: 3, price_per_unit: 6, seller_name: 'Vallei-boerderij', seller_id: -2 },
+    { id: 4, crop_id: 'carrot', quantity: 10, price_per_unit: 4, seller_name: 'Vallei-boerderij', seller_id: -2 },
+  ];
+}
+
+function loadGuestListings() {
+  try {
+    const raw = localStorage.getItem(GUEST_MARKET_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length) return arr;
+    }
+  } catch {
+    /* ignore */
+  }
+  return defaultGuestSeedListings();
+}
+
+function saveGuestListings(arr) {
+  try {
+    localStorage.setItem(GUEST_MARKET_KEY, JSON.stringify(arr));
+  } catch {
+    /* ignore */
+  }
+}
+
+function nextGuestListingId(listings) {
+  return 1 + Math.max(0, ...listings.map((l) => Number(l.id) || 0));
+}
+
 const PLANT_INFO = {
   tomato:    { emoji: '🍅', name: 'Tomato'    },
   carrot:    { emoji: '🥕', name: 'Carrot'    },
@@ -114,17 +151,19 @@ function ListingRow({ listing, onBuy, ownUserId }) {
         {isOwn ? (
           <span style={{ color: '#aaa', fontSize: '0.8rem' }}>Your listing</span>
         ) : (
-          <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+          <div style={styles.buyActionRow}>
             <input
               type="number"
               min={1}
               max={available}
               value={qty}
               onChange={(e) => setQty(Math.min(available, Math.max(1, parseInt(e.target.value) || 1)))}
-              style={{ width: '52px', padding: '0.3rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              onFocus={(e) => e.target.select()}
+              inputMode="numeric"
+              style={styles.buyQtyInput}
             />
             <button
-              style={{ ...styles.btnBuy, opacity: busy ? 0.6 : 1 }}
+              style={{ ...styles.btnBuy, opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap' }}
               onClick={handleBuy}
               disabled={busy}
             >
@@ -139,7 +178,8 @@ function ListingRow({ listing, onBuy, ownUserId }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
+function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDeduct, onGuestSale }) {
+  const hasAuth = !!localStorage.getItem('garden_token');
   const [tab, setTab]         = useState('browse'); // 'browse' | 'sell' | 'prices'
   const [listings, setListings] = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -150,6 +190,16 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
   const [selling, setSelling]   = useState(false);
 
   const fetchListings = useCallback(async () => {
+    if (!hasAuth) {
+      setLoading(true);
+      setError('');
+      try {
+        setListings(loadGuestListings());
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
     setLoading(true);
     try {
       const data = await api.get('/api/trade/listings');
@@ -159,13 +209,40 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasAuth]);
 
   useEffect(() => {
     if (tab === 'browse') fetchListings();
   }, [tab, fetchListings]);
 
+  const handleGuestBuy = useCallback((listingId, qty, totalCost) => {
+    if (coins < totalCost) { setError(`Not enough coins (need 🪙${totalCost})`); return; }
+    const all = loadGuestListings();
+    const idx = all.findIndex((l) => l.id === listingId);
+    if (idx < 0) { setError('Aanbod niet gevonden.'); return; }
+    const listing = all[idx];
+    const sid = listing.seller_id ?? listing.sellerId;
+    if (sid === userId) { setError('Je kunt je eigen aanbod niet kopen.'); return; }
+    if (qty > listing.quantity) { setError(`Er zijn maar ${listing.quantity} beschikbaar.`); return; }
+    const cropId = listing.crop_id || listing.cropId;
+    const newQty = listing.quantity - qty;
+    let updated;
+    if (newQty <= 0) updated = all.filter((l) => l.id !== listingId);
+    else {
+      updated = [...all];
+      updated[idx] = { ...listing, quantity: newQty };
+    }
+    saveGuestListings(updated);
+    setListings(updated);
+    onBuy(cropId, qty, totalCost);
+    setError('');
+  }, [coins, userId, onBuy]);
+
   const handleBuy = async (listingId, qty, totalCost) => {
+    if (!hasAuth) {
+      handleGuestBuy(listingId, qty, totalCost);
+      return;
+    }
     if (coins < totalCost) { setError(`Not enough coins (need 🪙${totalCost})`); return; }
     try {
       await api.post(`/api/trade/buy/${listingId}`, { quantity: qty });
@@ -180,6 +257,39 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
 
   const handleSell = async (e) => {
     e.preventDefault();
+    if (!hasAuth) {
+      if (typeof onSellDeduct !== 'function') {
+        setError('Verkopen is niet beschikbaar.');
+        return;
+      }
+      const { cropId, quantity, pricePerUnit } = sellForm;
+      if ((inventory[cropId] || 0) < quantity) {
+        setError('Niet genoeg oogst in je inventaris.');
+        return;
+      }
+      setSelling(true);
+      setError('');
+      try {
+        onSellDeduct(cropId, quantity);
+        const base = loadGuestListings();
+        const newListing = {
+          id: nextGuestListingId(base),
+          crop_id: cropId,
+          quantity,
+          price_per_unit: pricePerUnit,
+          seller_name: 'Jij',
+          seller_id: userId,
+        };
+        const merged = [...base, newListing];
+        saveGuestListings(merged);
+        setListings(merged);
+        setSellForm({ cropId: 'tomato', quantity: 1, pricePerUnit: 10 });
+        setTab('browse');
+      } finally {
+        setSelling(false);
+      }
+      return;
+    }
     setSelling(true);
     setError('');
     try {
@@ -192,6 +302,38 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
       setSelling(false);
     }
   };
+
+  useEffect(() => {
+    if (hasAuth) return undefined;
+    const timer = setInterval(() => {
+      const all = loadGuestListings();
+      const own = all.filter((l) => (l.seller_id ?? l.sellerId) === userId && Number(l.quantity) > 0);
+      if (!own.length) return;
+      // About 65% of ticks trigger one virtual purchase.
+      if (Math.random() < 0.35) return;
+      const picked = own[Math.floor(Math.random() * own.length)];
+      const maxQty = Math.max(1, Number(picked.quantity) || 1);
+      const buyQty = Math.min(maxQty, Math.max(1, Math.floor(Math.random() * 3) + 1));
+      const price = Number(picked.price_per_unit || picked.pricePerUnit || 0);
+      const total = buyQty * price;
+
+      const updated = all
+        .map((l) => {
+          if (l.id !== picked.id) return l;
+          return { ...l, quantity: Math.max(0, (Number(l.quantity) || 0) - buyQty) };
+        })
+        .filter((l) => (Number(l.quantity) || 0) > 0);
+
+      saveGuestListings(updated);
+      setListings(updated);
+      if (typeof onGuestSale === 'function' && total > 0) {
+        const cropId = picked.crop_id || picked.cropId;
+        onGuestSale(cropId, buyQty, total);
+      }
+    }, 9000);
+
+    return () => clearInterval(timer);
+  }, [hasAuth, userId, onGuestSale]);
 
   const ownedCrops = Object.entries(inventory).filter(([, qty]) => qty > 0);
 
@@ -226,10 +368,15 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
         {/* Browse tab */}
         {tab === 'browse' && (
           <div style={styles.tabContent}>
+            {!hasAuth && (
+              <div style={styles.guestBanner}>
+                <strong>Lokale markt</strong> — alleen op dit apparaat. Maak een account om met echte spelers te handelen.
+              </div>
+            )}
             {loading ? (
               <div style={styles.empty}>Loading listings…</div>
             ) : listings.length === 0 ? (
-              <div style={styles.empty}>No listings yet. Be the first to sell!</div>
+              <div style={styles.empty}>Nog geen aanbod. Verkoop iets op het tabblad Sell!</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
                 <table style={styles.table}>
@@ -267,6 +414,11 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
         {/* Sell tab */}
         {tab === 'sell' && (
           <div style={styles.tabContent}>
+            {!hasAuth && (
+              <div style={styles.guestBanner}>
+                Verkoop gaat naar je <strong>lokale markt</strong> (zelfde apparaat). Voor de online markt: registreer en log in.
+              </div>
+            )}
             {ownedCrops.length === 0 ? (
               <div style={styles.empty}>You have no crops to sell. Harvest some first!</div>
             ) : (
@@ -294,6 +446,8 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
                   min={1}
                   max={inventory[sellForm.cropId] || 1}
                   value={sellForm.quantity}
+                  onFocus={(e) => e.target.select()}
+                  inputMode="numeric"
                   onChange={(e) =>
                     setSellForm((p) => ({
                       ...p,
@@ -308,6 +462,8 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
                   type="number"
                   min={1}
                   value={sellForm.pricePerUnit}
+                  onFocus={(e) => e.target.select()}
+                  inputMode="numeric"
                   onChange={(e) =>
                     setSellForm((p) => ({
                       ...p,
@@ -316,7 +472,7 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose }) {
                   }
                 />
 
-                <div style={{ color: '#888', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                <div style={styles.totalValueNote}>
                   Total listing value: 🪙{sellForm.quantity * sellForm.pricePerUnit}
                 </div>
 
@@ -375,6 +531,15 @@ const styles = {
     background: '#ffebee', color: '#c62828',
     padding: '0.6rem 1rem', borderRadius: '6px', fontSize: '0.9rem',
   },
+  guestBanner: {
+    background: '#e8f5e9',
+    color: '#33691e',
+    padding: '0.65rem 0.85rem',
+    borderRadius: '8px',
+    fontSize: '0.85rem',
+    marginBottom: '0.85rem',
+    lineHeight: 1.4,
+  },
   empty: { color: '#aaa', textAlign: 'center', padding: '2rem 0', fontSize: '0.95rem' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' },
   th: {
@@ -389,6 +554,20 @@ const styles = {
     border: 'none', borderRadius: '6px', cursor: 'pointer',
     fontWeight: '600', fontSize: '0.85rem',
   },
+  buyActionRow: {
+    display: 'flex',
+    gap: '0.4rem',
+    alignItems: 'center',
+    minWidth: '174px',
+  },
+  buyQtyInput: {
+    width: '64px',
+    minWidth: '64px',
+    padding: '0.35rem',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    fontSize: '0.9rem',
+  },
   btnRefresh: {
     marginTop: '0.75rem', padding: '0.4rem 0.9rem',
     border: '1.5px solid #ccc', background: 'white',
@@ -402,7 +581,15 @@ const styles = {
   },
   input: {
     padding: '0.6rem', border: '1.5px solid #ddd',
-    borderRadius: '6px', fontSize: '0.95rem',
+    borderRadius: '6px', fontSize: '0.95rem', width: '100%',
+    minHeight: '40px',
+    boxSizing: 'border-box',
+  },
+  totalValueNote: {
+    color: '#888',
+    fontSize: '0.85rem',
+    marginTop: '0.25rem',
+    whiteSpace: 'nowrap',
   },
   btnPrimary: {
     padding: '0.75rem', background: '#4caf50', color: 'white',

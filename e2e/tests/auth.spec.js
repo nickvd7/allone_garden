@@ -1,13 +1,14 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register, login, logout } = require('./helpers');
+const { uniqueUser, register, login, logout, dismissWebpackOverlay } = require('./helpers');
 
 test.describe('Authentication', () => {
   test('shows login screen on first visit', async ({ page }) => {
     await page.goto('/');
+    await dismissWebpackOverlay(page);
     await expect(page.getByText('🌱 AllOne Garden')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Login', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Register', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Login' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Register' })).toBeVisible();
   });
 
   test('can register a new account', async ({ page }) => {
@@ -22,8 +23,9 @@ test.describe('Authentication', () => {
     await register(page, user);
     await logout(page);
 
+    await dismissWebpackOverlay(page);
     // Try to register again with same username
-    await page.getByRole('button', { name: 'Register' }).click();
+    await page.getByRole('tab', { name: 'Register' }).click();
     await page.getByPlaceholder('Username').fill(user.username);
     await page.getByPlaceholder('Email').fill('other_' + user.email);
     await page.getByPlaceholder('Password').fill(user.password);
@@ -37,7 +39,7 @@ test.describe('Authentication', () => {
     await logout(page);
 
     // Should be back at auth screen
-    await expect(page.getByRole('button', { name: 'Login', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Login' })).toBeVisible();
 
     await login(page, user);
     await expect(page.getByRole('button', { name: new RegExp(user.username, 'i') })).toBeVisible();
@@ -56,6 +58,7 @@ test.describe('Authentication', () => {
 
   test('can play as guest without an account', async ({ page }) => {
     await page.goto('/');
+    await dismissWebpackOverlay(page);
     await page.getByRole('button', { name: /Play as Guest/i }).click();
     await page.waitForSelector('.header', { timeout: 10_000 });
     await expect(page.getByRole('button', { name: /Guest/i })).toBeVisible();

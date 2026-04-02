@@ -11,9 +11,10 @@ const router  = express.Router();
 const bcrypt  = require('bcrypt');
 const { body } = require('express-validator');
 const db      = require('../db');
-const { requireAuth }        = require('../middleware/auth');
+const { requireAuth }            = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validate');
 const { auditLog, accountLimiter } = require('../middleware/security');
+const { revokeUserTokens }       = require('../redis');
 
 const BCRYPT_ROUNDS = 12;
 
@@ -47,6 +48,9 @@ router.patch('/password', accountLimiter, requireAuth, validateChangePassword, a
 
     const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, userId]);
+
+    // Revoke all existing tokens so the user must log in again on other devices
+    await revokeUserTokens(userId);
 
     auditLog('password_change', req);
     res.json({ success: true });
@@ -144,6 +148,9 @@ router.delete('/', accountLimiter, requireAuth, validateDeleteAccount, async (re
     await client.query('DELETE FROM users          WHERE id = $1',        [userId]);
 
     await client.query('COMMIT');
+
+    // Revoke all tokens for this user (belt-and-suspenders — account is gone anyway)
+    await revokeUserTokens(userId);
 
     auditLog('gdpr_delete', req);
     res.json({ success: true, message: 'Account and all associated data have been permanently deleted.' });

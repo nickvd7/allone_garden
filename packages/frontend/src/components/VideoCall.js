@@ -12,11 +12,36 @@
  *   Both:     call:end / call:reject to tear down
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
-const ICE_SERVERS = [
+const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+// Default fallback ICE servers (Google STUN, public / no credentials).
+// The real list is fetched from /api/world/ice-servers on mount so that the
+// server operator can add TURN credentials without rebuilding the frontend.
+const DEFAULT_ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
+
+// Module-level cache so every concurrent VideoCall instance shares the same
+// fetched config within the same page load.
+let iceServersCache = null;
+async function fetchIceServers() {
+  if (iceServersCache) return iceServersCache;
+  try {
+    const res = await fetch(`${BASE}/api/world/ice-servers`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.iceServers) && data.iceServers.length) {
+        iceServersCache = data.iceServers;
+        return iceServersCache;
+      }
+    }
+  } catch { /* fall through to default */ }
+  iceServersCache = DEFAULT_ICE_SERVERS;
+  return iceServersCache;
+}
 
 // Detect WebRTC support at module load time (avoids repeated checks)
 const WEBRTC_SUPPORTED =
@@ -29,6 +54,7 @@ const WEBRTC_SUPPORTED =
  * all lack full WebRTC support.
  */
 function WebRTCUnsupported({ peerUsername, onEnd, socket, peerId }) {
+  const { t } = useTranslation();
   // Notify the remote peer that the call cannot proceed
   React.useEffect(() => {
     socket.emit('call:reject', { to: peerId });
@@ -43,13 +69,12 @@ function WebRTCUnsupported({ peerUsername, onEnd, socket, peerId }) {
         <div className="vc-error">
           <div style={{ fontSize: '2rem' }}>📵</div>
           <div style={{ fontWeight: 700, marginBottom: '0.4rem' }}>
-            Videobellen niet beschikbaar
+            {t('videoCall.unsupported_title')}
           </div>
           <div style={{ fontSize: '0.88rem', color: '#888', marginBottom: '0.75rem' }}>
-            Jouw browser ondersteunt geen WebRTC videogesprekken.<br />
-            Probeer Chrome 74+, Firefox 78+, Safari 14.5+, of Edge 79+.
+            {t('videoCall.unsupported_body')}
           </div>
-          <button className="btn btn-secondary" onClick={onEnd}>Sluiten</button>
+          <button className="btn btn-secondary" onClick={onEnd}>{t('videoCall.close')}</button>
         </div>
       </div>
     </div>
@@ -59,9 +84,11 @@ function WebRTCUnsupported({ peerUsername, onEnd, socket, peerId }) {
 /**
  * Public wrapper — swaps in the fallback component when WebRTC is unavailable
  * so that hooks in VideoCallInner are always called unconditionally.
+ *
+ * _webrtcSupported: optional override for testing (defaults to module constant).
  */
-function VideoCall({ socket, callState, onEnd }) {
-  if (!WEBRTC_SUPPORTED) {
+function VideoCall({ socket, callState, onEnd, _webrtcSupported = WEBRTC_SUPPORTED }) {
+  if (!_webrtcSupported) {
     return (
       <WebRTCUnsupported
         peerUsername={callState.peerUsername}
@@ -75,6 +102,7 @@ function VideoCall({ socket, callState, onEnd }) {
 }
 
 function VideoCallInner({ socket, callState, onEnd }) {
+  const { t } = useTranslation();
   const localVideoRef  = useRef(null);
   const remoteVideoRef = useRef(null);
   const pcRef          = useRef(null);
@@ -85,9 +113,15 @@ function VideoCallInner({ socket, callState, onEnd }) {
   const [mutedVideo, setMutedVideo] = useState(false);
   const [errorMsg,   setErrorMsg]   = useState('');
 
+  // ICE servers fetched from backend (includes TURN if configured server-side)
+  const [iceServers, setIceServers] = useState(DEFAULT_ICE_SERVERS);
+  useEffect(() => {
+    fetchIceServers().then(setIceServers).catch(() => {});
+  }, []);
+
   // ── Create RTCPeerConnection ───────────────────────────────────────────────
   const createPC = useCallback(() => {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers });
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
@@ -109,7 +143,7 @@ function VideoCallInner({ socket, callState, onEnd }) {
 
     pcRef.current = pc;
     return pc;
-  }, [socket, callState.peerId]); // eslint-disable-line
+  }, [socket, callState.peerId, iceServers]); // eslint-disable-line
 
   // ── Get local camera + mic ─────────────────────────────────────────────────
   const getLocalStream = useCallback(async () => {
@@ -152,8 +186,8 @@ function VideoCallInner({ socket, callState, onEnd }) {
       } catch (err) {
         if (!cancelled) {
           setErrorMsg(err.name === 'NotAllowedError'
-            ? 'Camera/mic permission denied'
-            : `Could not start call: ${err.message}`);
+            ? t('videoCall.err_permission')
+            : t('videoCall.err_start', { msg: err.message }));
           setStatus('error');
         }
       }
@@ -175,11 +209,11 @@ function VideoCallInner({ socket, callState, onEnd }) {
       socket.emit('call:answer', { to: callState.peerId, answer });
     } catch (err) {
       setErrorMsg(err.name === 'NotAllowedError'
-        ? 'Camera/mic permission denied'
-        : `Could not answer: ${err.message}`);
+        ? t('videoCall.err_permission')
+        : t('videoCall.err_answer', { msg: err.message }));
       setStatus('error');
     }
-  }, [callState, createPC, getLocalStream, socket]);
+  }, [callState, createPC, getLocalStream, socket, t]);
 
   // ── Socket event listeners ─────────────────────────────────────────────────
   useEffect(() => {
@@ -231,13 +265,13 @@ function VideoCallInner({ socket, callState, onEnd }) {
 
   // ── Status label ──────────────────────────────────────────────────────────
   const statusLabel = {
-    incoming:   '📞 Incoming call…',
-    outgoing:   '📡 Starting call…',
-    ringing:    '🔔 Ringing…',
-    connecting: '🔄 Connecting…',
-    active:     '🟢 Connected',
-    rejected:   '❌ Call declined',
-    error:      '⚠️ Error',
+    incoming:   t('videoCall.status_incoming'),
+    outgoing:   t('videoCall.status_outgoing'),
+    ringing:    t('videoCall.status_ringing'),
+    connecting: t('videoCall.status_connecting'),
+    active:     t('videoCall.status_active'),
+    rejected:   t('videoCall.status_rejected'),
+    error:      t('videoCall.status_error'),
   }[status] || '';
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -255,10 +289,10 @@ function VideoCallInner({ socket, callState, onEnd }) {
         {status === 'incoming' && (
           <div className="vc-incoming">
             <div className="vc-avatar">{callState.peerUsername?.[0]?.toUpperCase() ?? '?'}</div>
-            <div className="vc-incoming-name">{callState.peerUsername} wil videobellen…</div>
+            <div className="vc-incoming-name">{t('videoCall.incoming_wants_video', { name: callState.peerUsername })}</div>
             <div className="vc-incoming-btns">
-              <button className="btn vc-accept-btn" onClick={answerCall}>📞 Opnemen</button>
-              <button className="btn vc-reject-btn" onClick={rejectCall}>🔴 Weigeren</button>
+              <button className="btn vc-accept-btn" onClick={answerCall}>{t('videoCall.answer')}</button>
+              <button className="btn vc-reject-btn" onClick={rejectCall}>{t('videoCall.decline')}</button>
             </div>
           </div>
         )}
@@ -269,7 +303,7 @@ function VideoCallInner({ socket, callState, onEnd }) {
             <div style={{ fontSize: '1.8rem' }}>⚠️</div>
             <div>{errorMsg}</div>
             <button className="btn btn-secondary" style={{ marginTop: '0.5rem' }} onClick={onEnd}>
-              Sluiten
+              {t('videoCall.close')}
             </button>
           </div>
         )}
@@ -278,7 +312,7 @@ function VideoCallInner({ socket, callState, onEnd }) {
         {status === 'rejected' && (
           <div className="vc-error">
             <div style={{ fontSize: '1.8rem' }}>📵</div>
-            <div>{callState.peerUsername} neemt niet op.</div>
+            <div>{t('videoCall.peer_not_answering', { name: callState.peerUsername })}</div>
           </div>
         )}
 
@@ -317,19 +351,19 @@ function VideoCallInner({ socket, callState, onEnd }) {
             <button
               className={`vc-ctrl${mutedAudio ? ' vc-ctrl--muted' : ''}`}
               onClick={toggleAudio}
-              title={mutedAudio ? 'Mic aan' : 'Mic uit'}
+              title={mutedAudio ? t('videoCall.mic_unmute') : t('videoCall.mic_mute')}
             >
               {mutedAudio ? '🔇' : '🎤'}
             </button>
             <button
               className={`vc-ctrl${mutedVideo ? ' vc-ctrl--muted' : ''}`}
               onClick={toggleVideo}
-              title={mutedVideo ? 'Camera aan' : 'Camera uit'}
+              title={mutedVideo ? t('videoCall.cam_on') : t('videoCall.cam_off')}
             >
               {mutedVideo ? '📵' : '📷'}
             </button>
-            <button className="vc-ctrl vc-ctrl--end" onClick={safeEnd} title="Gesprek beëindigen">
-              📴 Beëindigen
+            <button className="vc-ctrl vc-ctrl--end" onClick={safeEnd} title={t('videoCall.end_call_title')}>
+              {t('videoCall.end_call')}
             </button>
           </div>
         )}

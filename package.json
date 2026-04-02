@@ -8,6 +8,15 @@
     "workspaces": [
       "packages/*"
     ],
+    "overrides": {
+      "tar": "^7.5.13",
+      "nth-check": "^2.1.1",
+      "postcss": "^8.4.49",
+      "serialize-javascript": "7.0.5",
+      "@tootallnate/once": "^3.0.1",
+      "underscore": "^1.13.8",
+      "webpack-dev-server": "4.15.2"
+    },
     "scripts": {
       "dev": "npm run dev:frontend",
       "dev:frontend": "cd packages/frontend && npm start",
@@ -16,15 +25,30 @@
       "build": "npm run build:frontend && npm run build:backend",
       "build:frontend": "cd packages/frontend && npm run build",
       "build:backend": "cd packages/backend && npm run build",
-      "test": "npm run test:frontend && npm run test:backend",
-      "test:frontend": "cd packages/frontend && npm test",
-      "test:backend": "cd packages/backend && npm test",
+        "test": "npm run test:core && npm run test:frontend && npm run test:backend && npm run test:desktop",
+        "verify:quick": "npm run validate:compose && npm run test:core && npm run test:backend && npm run test:frontend:ci && npm run test:desktop",
+        "verify:local": "npm run validate:compose && cd packages/backend && npm run lint && NODE_ENV=test DATABASE_URL= JWT_SECRET=test-secret-for-ci-only-at-least-32-chars npm test && cd ../frontend && npm run lint && npm run gradendex:extra && cd ../.. && git diff --exit-code -- packages/frontend/src/i18n/gradendex.*.json && cd packages/frontend && CI=true npm test -- --watchAll=false --runInBand && REACT_APP_API_URL=http://localhost:5000 CI=false npm run build && cd ../.. && npm run test:core && npm run test:desktop",
+        "validate:compose": "node scripts/validate-compose.mjs",
+        "test:core": "cd packages/core && npm test",
+        "test:frontend": "cd packages/frontend && npm test",
+        "test:frontend:ci": "cd packages/frontend && CI=true npm test -- --watchAll=false --runInBand",
+        "test:backend": "cd packages/backend && npm test",
+      "test:desktop": "cd packages/desktop && npm test",
       "install:all": "npm install && cd packages/frontend && npm install && cd ../backend && npm install",
       "start": "npm run start:backend",
       "start:backend": "cd packages/backend && npm start",
       "db:setup": "cd packages/backend && npm run db:setup",
       "db:migrate": "cd packages/backend && npm run db:migrate",
-      "db:seed": "cd packages/backend && npm run db:seed"
+      "db:seed": "cd packages/backend && npm run db:seed",
+      "dev:desktop": "cd packages/desktop && npm start",
+      "build:desktop": "npm run build:frontend && cd packages/desktop && npm run build",
+      "dist:win": "npm run build:frontend && cd packages/desktop && npm run dist:win",
+      "dist:mac": "npm run build:frontend && cd packages/desktop && npm run dist:mac",
+      "dist:linux": "npm run build:frontend && cd packages/desktop && npm run dist:linux",
+      "mobile:android": "cd packages/frontend && npm run mobile:android",
+      "mobile:ios": "cd packages/frontend && npm run mobile:ios",
+      "mobile:setup": "cd packages/frontend && npx cap add android && npx cap add ios",
+      "mobile:sync": "cd packages/frontend && npm run build && npx cap sync"
     },
     "devDependencies": {
       "concurrently": "^8.2.2"

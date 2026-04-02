@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register } = require('./helpers');
+const { uniqueUser, register, dismissWebpackOverlay } = require('./helpers');
 
 test.describe('World Map', () => {
   test.beforeEach(async ({ page }) => {
@@ -94,5 +94,21 @@ test.describe('World Map', () => {
 
     // Either way garden should be back
     await expect(page.locator('.garden-grid, .garden-section').first()).toBeVisible();
+  });
+});
+
+test.describe('World Map (Guest)', () => {
+  test('guest can open world map and see online world UI', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('garden_tour_done', 'true');
+    });
+    await page.goto('/');
+    await dismissWebpackOverlay(page);
+    await page.locator('.auth-btn-guest').click();
+    await page.waitForSelector('.header', { timeout: 10_000 });
+
+    await page.locator('.header-icon-btn').filter({ hasText: '🗺' }).first().click({ force: true });
+    await expect(page.locator('.walk-viewport').first()).toBeVisible({ timeout: 8_000 });
+    await expect(page.locator('.walk-hud, .walk-legend').first()).toBeVisible({ timeout: 8_000 });
   });
 });

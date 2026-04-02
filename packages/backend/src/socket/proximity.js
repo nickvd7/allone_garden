@@ -25,8 +25,8 @@ const XSS_OPTS = {
 const MAX_DM_LEN = 300;
 
 // World map tile bounds (must match frontend MAP_W / MAP_H in WorldMap.js)
-const MAP_W = 22;
-const MAP_H = 14;
+const MAP_W = 32;
+const MAP_H = 20;
 
 // Max serialized size (bytes) for WebRTC payloads (SDP offers can be ~4 KB; 64 KB is generous)
 const MAX_WEBRTC_BYTES = 64 * 1024;

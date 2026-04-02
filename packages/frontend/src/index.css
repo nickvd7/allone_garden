@@ -1,4 +1,4 @@
-/* Global resets — App.css handles all component-specific styling */
+/* Global baseline — design tokens live in App.css (:root + dark overrides) */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -14,11 +14,11 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f0f8e8;
+  background-color: var(--background, #f0f8e8);
 }
 
 a {
-  color: #4caf50;
+  color: var(--primary, #4caf50);
   text-decoration: none;
 }
 
@@ -32,4 +32,10 @@ button {
 
 input, select, textarea {
   font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

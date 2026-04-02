@@ -26,21 +26,30 @@ describe('Header', () => {
 
   it('renders the h1 heading', () => {
     render(<Header {...defaultProps} />);
-    // t('app_title') returns the key 'app_title' via our mock
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading).toBeInTheDocument();
-    expect(heading).toHaveTextContent('app_title');
+    expect(screen.getByAltText('AllOne Garden')).toBeInTheDocument();
   });
 
   // ── Language selector ───────────────────────────────────────────────────────
 
-  it('renders the language selector with EN, NL, DE options', () => {
+  it('renders the language selector with the extended language set', () => {
     render(<Header {...defaultProps} />);
     const select = screen.getByRole('combobox', { name: /language/i });
     expect(select).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /EN/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /NL/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /DE/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /FR/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /ES/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /TR/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /ZH/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /KO/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /HI/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /ID/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /VI/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /UK/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /AR/i })).toBeInTheDocument();
   });
 
   it('shows the currently active language', () => {
@@ -94,10 +103,9 @@ describe('Header', () => {
 
   // ── Server badge ─────────────────────────────────────────────────────────────
 
-  it('shows server badge with name and player count when serverInfo is provided', () => {
+  it('shows server badge with name when serverInfo is provided', () => {
     render(<Header {...defaultProps} serverInfo={{ name: 'My Garden', players: 5 }} />);
-    // The badge div's exact text is "My Garden · 5 online" (span.dot has no text)
-    const badge = screen.getByText('My Garden · 5 online');
+    const badge = screen.getByText('My Garden');
     expect(badge).toBeInTheDocument();
   });
 
@@ -125,18 +133,18 @@ describe('Header', () => {
   it('shows World Map button and calls onOpenWorldMap on click', () => {
     const onOpenWorldMap = jest.fn();
     render(<Header {...defaultProps} onOpenWorldMap={onOpenWorldMap} />);
-    const btn = screen.getByTitle('World Map — visit other players');
+    const btn = screen.getByTitle(/World Map/i);
     expect(btn).toBeInTheDocument();
     fireEvent.click(btn);
     expect(onOpenWorldMap).toHaveBeenCalledTimes(1);
   });
 
-  it('shows Leaderboard button when onOpenLeaderboard is provided', () => {
+  it('opens More menu and calls onOpenLeaderboard from Scores', () => {
     const onOpenLeaderboard = jest.fn();
     render(<Header {...defaultProps} onOpenLeaderboard={onOpenLeaderboard} />);
-    const btn = screen.getByTitle('Leaderboard');
-    expect(btn).toBeInTheDocument();
-    fireEvent.click(btn);
+    fireEvent.click(screen.getByRole('button', { name: /More/i }));
+    const item = screen.getByRole('menuitem', { name: /Scores/i });
+    fireEvent.click(item);
     expect(onOpenLeaderboard).toHaveBeenCalledTimes(1);
   });
 

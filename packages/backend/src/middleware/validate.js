@@ -129,6 +129,11 @@ const validateGardenSave = [
     .isIn(VALID_WEATHERS)
     .withMessage(`weather must be one of: ${VALID_WEATHERS.join(', ')}`),
 
+  body('ifUnmodifiedSince')
+    .optional()
+    .isISO8601()
+    .withMessage('ifUnmodifiedSince must be a valid ISO-8601 date'),
+
   handleValidationErrors,
 ];
 

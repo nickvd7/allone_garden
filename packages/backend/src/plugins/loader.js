@@ -18,7 +18,10 @@ const fs   = require('fs');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const PluginAPI = require('./api');
+const { KNOWN_CAPABILITIES } = PluginAPI;
 const { executeInSandbox, safeHandler } = require('./sandbox');
+const STRICT_PLUGIN_CAPABILITIES =
+  process.env.PLUGIN_STRICT_CAPABILITIES === 'true' || process.env.NODE_ENV === 'production';
 
 // Event bus shared by all plugins and the core game engine
 const eventBus = new EventEmitter();
@@ -70,15 +73,48 @@ function loadPlugin(pluginDir, deps) {
     return null;
   }
 
+  // ── Capabilities ─────────────────────────────────────────────────────────
+  // Plugins should declare an explicit `capabilities` array.
+  // In production we reject missing capabilities to enforce least privilege.
+  // In non-production we keep backward compatibility for legacy plugins.
+  let capabilities;
+  if (!Array.isArray(plugin.capabilities)) {
+    if (STRICT_PLUGIN_CAPABILITIES) {
+      console.error(
+        `[plugins] "${plugin.name}" is missing required capabilities array. ` +
+        'Declare an explicit subset, e.g. capabilities: [\'events\'].'
+      );
+      return null;
+    }
+    console.warn(
+      `[plugins] "${plugin.name}" does not declare a capabilities array — ` +
+      `granting all capabilities for backwards compatibility. ` +
+      `Add \`capabilities: ['db','broadcast','events']\` (or a subset) to your plugin manifest.`
+    );
+    capabilities = [...KNOWN_CAPABILITIES];
+  } else {
+    // Validate: reject unknown tokens to catch typos early
+    const unknown = plugin.capabilities.filter((c) => !KNOWN_CAPABILITIES.has(c));
+    if (unknown.length > 0) {
+      console.error(
+        `[plugins] Plugin "${plugin.name}" declared unknown capabilities: ${unknown.join(', ')}. ` +
+        `Known: ${[...KNOWN_CAPABILITIES].join(', ')}`
+      );
+      return null;
+    }
+    capabilities = plugin.capabilities;
+  }
+
   const hash = fileHash(entryFile);
-  const log = (msg) => console.log(msg);
+  const log  = (msg) => console.log(msg);
 
   const api = new PluginAPI({
-    pluginName: plugin.name,
-    db: deps.db,
-    io: deps.io,
+    pluginName:   plugin.name,
+    db:           deps.db,
+    io:           deps.io,
     eventBus,
     log,
+    capabilities,
   });
 
   // Wrap api.on so every registered handler runs through safeHandler,
@@ -95,8 +131,14 @@ function loadPlugin(pluginDir, deps) {
     return null;
   }
 
-  loaded[plugin.name] = { meta: { name: plugin.name, version: plugin.version, hash }, api };
-  console.log(`[plugins] ✅ Loaded "${plugin.name}" v${plugin.version} (${hash.slice(0, 8)})`);
+  loaded[plugin.name] = {
+    meta: { name: plugin.name, version: plugin.version, hash, capabilities },
+    api,
+  };
+  console.log(
+    `[plugins] ✅ Loaded "${plugin.name}" v${plugin.version} ` +
+    `(${hash.slice(0, 8)}) caps=[${capabilities.join(',')}]`
+  );
   return loaded[plugin.name].meta;
 }
 

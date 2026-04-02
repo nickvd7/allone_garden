@@ -12,7 +12,8 @@ const OVERLAY = {
 };
 const MODAL = {
   background: '#fff', borderRadius: '12px', padding: '32px',
-  width: '100%', maxWidth: '420px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+  width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
 };
 const SECTION = { marginBottom: '28px' };
 const BTN_BASE = {
@@ -28,6 +29,12 @@ const INPUT_STYLE  = {
   marginTop: '8px',
 };
 
+const AI_PROVIDERS = [
+  { id: 'openai',    label: 'OpenAI',    storageKey: 'garden_apikey_openai',    placeholder: 'sk-…',        docsUrl: 'https://platform.openai.com/api-keys' },
+  { id: 'anthropic', label: 'Anthropic', storageKey: 'garden_apikey_anthropic', placeholder: 'sk-ant-…',   docsUrl: 'https://console.anthropic.com/settings/keys' },
+  { id: 'gemini',    label: 'Gemini',    storageKey: 'garden_apikey_gemini',    placeholder: 'AIza…',      docsUrl: 'https://aistudio.google.com/app/apikey' },
+];
+
 export default function AccountSettings({ onClose, onDeleted }) {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteConfirm,  setDeleteConfirm]  = useState(false);
@@ -38,6 +45,25 @@ export default function AccountSettings({ onClose, onDeleted }) {
   const [currentPw, setCurrentPw] = useState('');
   const [newPw,     setNewPw]     = useState('');
   const [newPw2,    setNewPw2]    = useState('');
+
+  // ── AI API keys (localStorage only, never sent to our server) ───────────────
+  const [apiKeys, setApiKeys] = useState(() =>
+    Object.fromEntries(AI_PROVIDERS.map((p) => [p.id, localStorage.getItem(p.storageKey) || '']))
+  );
+  const [keySaved, setKeySaved] = useState(null); // provider id that was last saved
+
+  const handleSaveKey = (providerId) => {
+    const p = AI_PROVIDERS.find((x) => x.id === providerId);
+    if (!p) return;
+    const val = apiKeys[providerId].trim();
+    if (val) {
+      localStorage.setItem(p.storageKey, val);
+    } else {
+      localStorage.removeItem(p.storageKey);
+    }
+    setKeySaved(providerId);
+    setTimeout(() => setKeySaved(null), 2000);
+  };
 
   // ── Change password ─────────────────────────────────────────────────────────
   const handleChangePassword = async () => {
@@ -118,6 +144,42 @@ export default function AccountSettings({ onClose, onDeleted }) {
     <div style={OVERLAY}>
       <div style={MODAL}>
         <h2 style={{ marginTop: 0, marginBottom: '24px' }}>Account Settings</h2>
+
+        {/* AI API keys */}
+        <div style={SECTION}>
+          <h3 style={{ marginTop: 0 }}>🌿 Plant Recognition API keys</h3>
+          <p style={{ color: '#555', fontSize: '14px', margin: '0 0 12px' }}>
+            Used only for the Plant Recognition feature. Keys are stored in your browser only — never sent to our server.
+          </p>
+          {AI_PROVIDERS.map((p) => (
+            <div key={p.id} style={{ marginBottom: '10px' }}>
+              <label style={{ fontWeight: 600, fontSize: '13px', color: '#444', display: 'block', marginBottom: '4px' }}>
+                {p.label}{' '}
+                <a href={p.docsUrl} target="_blank" rel="noreferrer" style={{ color: '#388e3c', fontWeight: 400, fontSize: '12px' }}>
+                  Get key ↗
+                </a>
+              </label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="password"
+                  style={{ ...INPUT_STYLE, marginTop: 0, flex: 1 }}
+                  placeholder={p.placeholder}
+                  value={apiKeys[p.id]}
+                  onChange={(e) => setApiKeys((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                  autoComplete="off"
+                />
+                <button
+                  style={{ ...BTN_PRIMARY, padding: '8px 14px', fontSize: '13px', whiteSpace: 'nowrap' }}
+                  onClick={() => handleSaveKey(p.id)}
+                >
+                  {keySaved === p.id ? '✓ Saved' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '0 0 24px' }} />
 
         {/* Change password */}
         <div style={SECTION}>

@@ -131,6 +131,66 @@ describe('POST /api/admin/plugins/:name/reload', () => {
   });
 });
 
+// ── POST /api/admin/push/notify — broadcast (credentials optional in tests) ────
+describe('POST /api/admin/push/notify', () => {
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .post('/api/admin/push/notify')
+      .send({ title: 'Hi', body: 'Test' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 for non-admin', async () => {
+    const res = await request(app)
+      .post('/api/admin/push/notify')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ title: 'Hi', body: 'Test' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 when title missing', async () => {
+    const res = await request(app)
+      .post('/api/admin/push/notify')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ body: 'Only body' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns ok with zero sent when no FCM credentials (test env)', async () => {
+    const res = await request(app)
+      .post('/api/admin/push/notify')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ title: 'Hello', body: 'World' });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body).toHaveProperty('sent');
+  });
+});
+
+// ── GET /api/admin/push/logs ──────────────────────────────────────────────────────────────
+describe('GET /api/admin/push/logs', () => {
+  it('returns 401 without token', async () => {
+    const res = await request(app).get('/api/admin/push/logs');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 for non-admin', async () => {
+    const res = await request(app)
+      .get('/api/admin/push/logs')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns logs array for admin', async () => {
+    const res = await request(app)
+      .get('/api/admin/push/logs')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('logs');
+    expect(Array.isArray(res.body.logs)).toBe(true);
+  });
+});
+
 // ── GET /api/admin/peers ──────────────────────────────────────────────────────
 describe('GET /api/admin/peers', () => {
   it('returns empty array in in-memory mode', async () => {

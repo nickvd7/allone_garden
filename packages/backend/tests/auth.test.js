@@ -7,7 +7,7 @@
 const request = require('supertest');
 
 // Ensure in-memory mode (no real DB)
-process.env.JWT_SECRET    = 'test-secret-for-jest';
+process.env.JWT_SECRET    = 'test-secret-for-jest-0123456789-very-long';
 process.env.DATABASE_URL  = '';
 process.env.P2P_ENABLED   = 'false';
 
@@ -80,6 +80,9 @@ describe('POST /api/auth/login', () => {
     });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
+    const [headerB64] = res.body.token.split('.');
+    const header = JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf8'));
+    expect(header.alg).toBe('HS256');
   });
 
   it('rejects wrong password', async () => {

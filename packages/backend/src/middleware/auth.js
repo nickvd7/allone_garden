@@ -7,10 +7,15 @@
  *   router.get('/protected', requireAuth, handler);
  *
  * On success injects req.user = { userId, username }.
+ *
+ * When Redis is available, tokens that were revoked after a password change
+ * or account deletion are rejected with 401 even if they are cryptographically
+ * valid.  Falls back gracefully when Redis is unavailable.
  */
-const jwt = require('jsonwebtoken');
+const jwt                           = require('jsonwebtoken');
+const { isTokenRevoked }            = require('../redis');
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith('Bearer ')) {
@@ -19,13 +24,20 @@ function requireAuth(req, res, next) {
 
   const token = header.slice(7);
 
+  let payload;
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { userId: payload.userId, username: payload.username };
-    next();
-  } catch (err) {
+    payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+  } catch {
     return res.status(401).json({ error: 'Token expired or invalid' });
   }
+
+  // Check Redis revocation list (non-blocking — fails open when Redis is down)
+  if (await isTokenRevoked(payload.userId, payload.iat)) {
+    return res.status(401).json({ error: 'Token has been revoked — please log in again' });
+  }
+
+  req.user = { userId: payload.userId, username: payload.username };
+  next();
 }
 
 /**
@@ -33,12 +45,14 @@ function requireAuth(req, res, next) {
  * but never blocks the request. Useful for public endpoints that
  * show extra info to logged-in users.
  */
-function optionalAuth(req, res, next) {
+async function optionalAuth(req, res, next) {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
     try {
-      const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
-      req.user = { userId: payload.userId, username: payload.username };
+      const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET, { algorithms: ['HS256'] });
+      if (!(await isTokenRevoked(payload.userId, payload.iat))) {
+        req.user = { userId: payload.userId, username: payload.username };
+      }
     } catch {
       // Ignore invalid token for optional auth
     }

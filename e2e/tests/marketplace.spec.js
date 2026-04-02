@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register, login } = require('./helpers');
+const { uniqueUser, register, login, clickHeaderMoreItem } = require('./helpers');
 
 let user;
 
@@ -38,31 +38,31 @@ test.describe('Trade marketplace', () => {
 
 test.describe('Plugin marketplace', () => {
   test('opens plugin marketplace', async ({ page }) => {
-    await page.getByRole('button', { name: /Plugin/i }).click();
+    await clickHeaderMoreItem(page, /Plugins/i);
     await expect(page.getByText('🔌 Plugin Marketplace')).toBeVisible();
   });
 
   test('installed tab shows loaded plugins', async ({ page }) => {
-    await page.getByRole('button', { name: /Plugin/i }).click();
+    await clickHeaderMoreItem(page, /Plugins/i);
     // Default tab is Installed
     await expect(page.getByText(/Installed/i).first()).toBeVisible();
   });
 
   test('can switch to community tab', async ({ page }) => {
-    await page.getByRole('button', { name: /Plugin/i }).click();
+    await clickHeaderMoreItem(page, /Plugins/i);
     await page.getByRole('button', { name: /Community/i }).click();
     await expect(page.getByPlaceholder(/Search plugins/i)).toBeVisible();
   });
 
   test('community tab search filters plugins', async ({ page }) => {
-    await page.getByRole('button', { name: /Plugin/i }).click();
+    await clickHeaderMoreItem(page, /Plugins/i);
     await page.getByRole('button', { name: /Community/i }).click();
     await page.getByPlaceholder(/Search plugins/i).fill('weather');
     await expect(page.getByText('weather-forecast')).toBeVisible();
   });
 
   test('closes marketplace with ✕ button', async ({ page }) => {
-    await page.getByRole('button', { name: /Plugin/i }).click();
+    await clickHeaderMoreItem(page, /Plugins/i);
     await expect(page.getByText('🔌 Plugin Marketplace')).toBeVisible();
     await page.getByRole('button', { name: '✕' }).click();
     await expect(page.getByText('🔌 Plugin Marketplace')).not.toBeVisible();
@@ -73,7 +73,7 @@ test.describe('Plugin marketplace', () => {
 
 test.describe('Leaderboard', () => {
   test('opens leaderboard panel', async ({ page }) => {
-    await page.getByRole('button', { name: /Scores/i }).click();
+    await clickHeaderMoreItem(page, /Scores/i);
     await expect(page.getByText(/leaderboard|top/i).first()).toBeVisible();
   });
 });
@@ -82,12 +82,12 @@ test.describe('Leaderboard', () => {
 
 test.describe('Achievements', () => {
   test('opens achievements panel', async ({ page }) => {
-    await page.getByRole('button', { name: /Badges/i }).click();
+    await clickHeaderMoreItem(page, /Badges/i);
     await expect(page.getByText('🏆 Achievements')).toBeVisible();
   });
 
   test('achievements panel shows progress bar', async ({ page }) => {
-    await page.getByRole('button', { name: /Badges/i }).click();
+    await clickHeaderMoreItem(page, /Badges/i);
     // Counter shows 0 / 19 initially
     await expect(page.getByText(/\d+ \/ \d+/).first()).toBeVisible();
   });

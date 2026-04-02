@@ -7,30 +7,36 @@ describe('StructuresPanel', () => {
 
   // ── Rendering ────────────────────────────────────────────────────────────────
 
-  it('renders all 3 structure definitions', () => {
+  it('renders all structure definitions', () => {
     render(<StructuresPanel onBuild={noop} onUseWell={noop} onUseCompost={noop} />);
     expect(screen.getByText('Water Well')).toBeInTheDocument();
     expect(screen.getByText('Compost Heap')).toBeInTheDocument();
     expect(screen.getByText('Greenhouse')).toBeInTheDocument();
+    expect(screen.getByText('Barn')).toBeInTheDocument();
+    expect(screen.getByText('Chicken Coop')).toBeInTheDocument();
+    expect(screen.getByText('Stable')).toBeInTheDocument();
+    expect(screen.getByText('Silo')).toBeInTheDocument();
   });
 
-  it('exports STRUCTURE_DEFS with 3 entries', () => {
-    expect(STRUCTURE_DEFS).toHaveLength(3);
-    expect(STRUCTURE_DEFS.map((d) => d.id)).toEqual(['well', 'compost', 'greenhouse']);
+  it('exports STRUCTURE_DEFS with 7 entries', () => {
+    expect(STRUCTURE_DEFS).toHaveLength(7);
+    expect(STRUCTURE_DEFS.map((d) => d.id)).toEqual([
+      'well', 'compost', 'greenhouse', 'barn', 'chickenCoop', 'stable', 'silo',
+    ]);
   });
 
   // ── Build buttons ─────────────────────────────────────────────────────────────
 
   it('shows a build button for each unbuilt structure', () => {
     render(
-      <StructuresPanel structures={{}} coins={200} onBuild={noop} onUseWell={noop} onUseCompost={noop} />
+      <StructuresPanel structures={{}} coins={500} onBuild={noop} onUseWell={noop} onUseCompost={noop} />
     );
-    // Well costs 50, Compost 30, Greenhouse 80 — all affordable
+    // 7 structure defs — all show build buttons (coop/stable may be disabled until barn built)
     const buildBtns = screen.getAllByRole('button', { name: /🔨/ });
-    expect(buildBtns).toHaveLength(3);
+    expect(buildBtns).toHaveLength(7);
   });
 
-  it('disables the build button when coins are insufficient', () => {
+  it('disables all build buttons when coins are 0', () => {
     render(
       <StructuresPanel structures={{}} coins={0} onBuild={noop} onUseWell={noop} onUseCompost={noop} />
     );
@@ -177,5 +183,171 @@ describe('StructuresPanel', () => {
       />
     );
     expect(screen.getByText(/Active — protecting against storms/i)).toBeInTheDocument();
+  });
+
+  // ── Barn ─────────────────────────────────────────────────────────────────────
+
+  it('shows barn "animals unlocked" status when barn is built', () => {
+    render(
+      <StructuresPanel
+        structures={{ barn: { built: true } }}
+        coins={200}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+      />
+    );
+    expect(screen.getByText(/Animals unlocked/i)).toBeInTheDocument();
+  });
+
+  it('disables Chicken Coop and Stable build buttons when barn is not built', () => {
+    render(
+      <StructuresPanel structures={{}} coins={500} onBuild={noop} onUseWell={noop} onUseCompost={noop} />
+    );
+    // Both coop and stable require barn — both should be disabled with this title
+    const prereqBtns = screen.getAllByTitle(/requires barn first/i);
+    expect(prereqBtns).toHaveLength(2);
+    prereqBtns.forEach((btn) => expect(btn).toBeDisabled());
+  });
+
+  it('enables Chicken Coop build button once barn is built and coins are sufficient', () => {
+    render(
+      <StructuresPanel
+        structures={{ barn: { built: true } }}
+        coins={200}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+      />
+    );
+    // With barn built + 200 coins, Coop (60) should be enabled
+    const coopBtn = screen.getByTitle(/Build for 🪙60/i);
+    expect(coopBtn).not.toBeDisabled();
+  });
+
+  // ── Chicken Coop ─────────────────────────────────────────────────────────────
+
+  it('shows "Egg ready!" and enabled Collect Eggs button when eggReady', () => {
+    render(
+      <StructuresPanel
+        structures={{
+          barn:        { built: true },
+          chickenCoop: { built: true, eggReady: true },
+        }}
+        coins={0}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+        onCollectEggs={noop}
+      />
+    );
+    // Text may be split across nodes; use a function matcher
+    expect(screen.getByText((content) => content.includes('Egg ready!'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Collect Eggs/i })).not.toBeDisabled();
+  });
+
+  it('shows days-until-next-egg count when egg is not ready', () => {
+    render(
+      <StructuresPanel
+        structures={{
+          barn:        { built: true },
+          chickenCoop: { built: true, eggReady: false, daysSinceEgg: 1 },
+        }}
+        coins={0}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+        onCollectEggs={noop}
+      />
+    );
+    // 2 - 1 = 1 day until next egg
+    expect(screen.getByText(/1 day\(s\) until next egg/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Collect Eggs/i })).toBeDisabled();
+  });
+
+  it('calls onCollectEggs when Collect Eggs button is clicked', () => {
+    const onCollectEggs = jest.fn();
+    render(
+      <StructuresPanel
+        structures={{ chickenCoop: { built: true, eggReady: true } }}
+        coins={0}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+        onCollectEggs={onCollectEggs}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Collect Eggs/i }));
+    expect(onCollectEggs).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Stable ────────────────────────────────────────────────────────────────────
+
+  it('shows "Milk ready!" and enabled Collect Milk button when milkReady', () => {
+    render(
+      <StructuresPanel
+        structures={{
+          barn:   { built: true },
+          stable: { built: true, milkReady: true },
+        }}
+        coins={0}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+        onCollectMilk={noop}
+      />
+    );
+    expect(screen.getByText((content) => content.includes('Milk ready!'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Collect Milk/i })).not.toBeDisabled();
+  });
+
+  it('shows days-until-next-milk count when milk is not ready', () => {
+    render(
+      <StructuresPanel
+        structures={{
+          barn:   { built: true },
+          stable: { built: true, milkReady: false, daysSinceMilk: 1 },
+        }}
+        coins={0}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+        onCollectMilk={noop}
+      />
+    );
+    // 3 - 1 = 2 days until next milk
+    expect(screen.getByText(/2 day\(s\) until next milk/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Collect Milk/i })).toBeDisabled();
+  });
+
+  it('calls onCollectMilk when Collect Milk button is clicked', () => {
+    const onCollectMilk = jest.fn();
+    render(
+      <StructuresPanel
+        structures={{ stable: { built: true, milkReady: true } }}
+        coins={0}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+        onCollectMilk={onCollectMilk}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Collect Milk/i }));
+    expect(onCollectMilk).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Silo ─────────────────────────────────────────────────────────────────────
+
+  it('shows "+20% coins" passive status when silo is built', () => {
+    render(
+      <StructuresPanel
+        structures={{ silo: { built: true } }}
+        coins={0}
+        onBuild={noop}
+        onUseWell={noop}
+        onUseCompost={noop}
+      />
+    );
+    expect(screen.getByText(/\+20% coins on all crop sales/i)).toBeInTheDocument();
   });
 });

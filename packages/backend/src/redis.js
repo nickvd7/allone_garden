@@ -53,4 +53,49 @@ function isRedisReady() {
   return _ready && redisClient !== null;
 }
 
-module.exports = { redisClient, isRedisReady };
+// ── JWT token revocation via Redis ───────────────────────────────────────────
+//
+// When a user changes their password or deletes their account, we write
+// a "revoke before" timestamp (Unix seconds) to Redis.  The auth middleware
+// rejects any token whose `iat` is earlier than that timestamp.
+//
+// Key: jwt_revoked:<userId>   Value: Unix timestamp (seconds)   TTL: JWT max age + 1 day
+
+const JWT_MAX_SECONDS = 7 * 24 * 3600;   // must match JWT_EXPIRES_IN default (7d)
+
+/**
+ * Mark all tokens issued BEFORE now as revoked for the given user.
+ * Falls back silently when Redis is unavailable.
+ */
+async function revokeUserTokens(userId) {
+  if (!isRedisReady()) return;
+  try {
+    const key = `jwt_revoked:${userId}`;
+    await redisClient.set(key, String(Math.floor(Date.now() / 1000)), {
+      EX: JWT_MAX_SECONDS + 86400,   // keep for one extra day to handle clock skew
+    });
+  } catch (err) {
+    console.warn('[redis] revokeUserTokens failed:', err.message);
+  }
+}
+
+/**
+ * Returns true if the token (identified by its `iat` claim) has been revoked.
+ * Falls back to false (non-blocking) when Redis is unavailable.
+ *
+ * @param {string|number} userId
+ * @param {number}        iat   — token issued-at timestamp (Unix seconds from JWT payload)
+ */
+async function isTokenRevoked(userId, iat) {
+  if (!isRedisReady()) return false;
+  try {
+    const revokedBefore = await redisClient.get(`jwt_revoked:${userId}`);
+    if (revokedBefore === null) return false;
+    return iat <= Number(revokedBefore);
+  } catch (err) {
+    console.warn('[redis] isTokenRevoked check failed:', err.message);
+    return false;   // fail open — don't lock users out due to Redis hiccup
+  }
+}
+
+module.exports = { redisClient, isRedisReady, revokeUserTokens, isTokenRevoked };

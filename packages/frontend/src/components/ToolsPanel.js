@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useGameContent } from '../context/GameContentContext';
 
 const TOOLS = [
   { id: 'till',      emoji: '⛏️',  labelKey: 'tool_till' },
@@ -24,6 +25,13 @@ const SEEDS = [
 
 function ToolsPanel({ selectedTool, selectedSeed, onToolSelect, onSeedSelect }) {
   const { t } = useTranslation();
+  const { plants: contextPlants } = useGameContent();
+
+  // Custom plants = context plants whose slug isn't in the built-in SEEDS list
+  const builtInSlugs = new Set(SEEDS.map((s) => s.id));
+  const customSeeds  = contextPlants
+    .filter((p) => !builtInSlugs.has(p.slug))
+    .map((p) => ({ id: p.slug, emoji: p.harvestEmoji, label: p.name, days: p.growthDays }));
 
   const handleToolClick = (toolId) => {
     // Clicking the active tool deselects it
@@ -53,11 +61,22 @@ function ToolsPanel({ selectedTool, selectedSeed, onToolSelect, onSeedSelect }) 
         onChange={(e) => onSeedSelect(e.target.value)}
         disabled={selectedTool !== 'plant'}
       >
+        {/* Built-in seeds use i18n keys */}
         {SEEDS.map((seed) => (
           <option key={seed.id} value={seed.id}>
             {seed.emoji} {t(seed.labelKey)} ({seed.days}d)
           </option>
         ))}
+        {/* Custom plants added by admins */}
+        {customSeeds.length > 0 && (
+          <optgroup label="🌿 Custom Plants">
+            {customSeeds.map((seed) => (
+              <option key={seed.id} value={seed.id}>
+                {seed.emoji} {seed.label} ({seed.days}d)
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
     </div>
   );

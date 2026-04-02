@@ -1,0 +1,45 @@
+"AppBuild"
+{
+  "AppID"  "YOUR_STEAM_APP_ID"   // Replace with your Steam App ID after submission
+  "Desc"   "AllOne Garden build"
+  "BuildOutput" "../../build/steam_output"
+  "ContentRoot" "../../build"    // electron-builder output directory
+
+  "Depots"
+  {
+    // Windows x64
+    "YOUR_DEPOT_WIN"             // Replace with Windows depot ID
+    {
+      "FileMapping"
+      {
+        "LocalPath" "win-unpacked/*"
+        "DepotPath" "."
+        "Recursive" "1"
+      }
+      "FileExclusion" "*.pdb"
+    }
+
+    // macOS
+    "YOUR_DEPOT_MAC"             // Replace with macOS depot ID
+    {
+      "FileMapping"
+      {
+        "LocalPath" "mac/*"
+        "DepotPath" "."
+        "Recursive" "1"
+      }
+    }
+
+    // Linux x64
+    "YOUR_DEPOT_LINUX"           // Replace with Linux depot ID
+    {
+      "FileMapping"
+      {
+        "LocalPath" "linux-unpacked/*"
+        "DepotPath" "."
+        "Recursive" "1"
+      }
+      "FileExclusion" "*.map"
+    }
+  }
+}

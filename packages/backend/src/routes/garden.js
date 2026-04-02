@@ -7,9 +7,24 @@ const router  = express.Router();
 const db      = require('../db');
 const { requireAuth }                             = require('../middleware/auth');
 const { validateGardenAction, validateGardenSave } = require('../middleware/validate');
+const contentStore = require('../state/contentStore');
+const { updateMemGardenDay } = require('./leaderboard');
+const { recordSeasonScoresOnGardenSave } = require('./leaderboardSeasonHistory');
+const worldRoutes = require('./world');
 
 // In-memory fallback
 const memGardens = {};
+
+function emitGardenPreviewUpdated(req, userId) {
+  try {
+    worldRoutes.invalidateWorldProjectionCache?.();
+    const io = req.app?.get('io');
+    if (!io) return;
+    io.emit('garden:preview-updated', { userId: Number(userId), ts: Date.now() });
+  } catch {
+    // Non-fatal; world map can still refresh on open/poll.
+  }
+}
 
 function defaultGarden() {
   return {
@@ -33,7 +48,7 @@ router.get('/', requireAuth, async (req, res) => {
 
   if (db.isConnected()) {
     const result = await db.query(
-      'SELECT plots, current_day, weather FROM gardens WHERE user_id = $1',
+      'SELECT plots, current_day, weather, updated_at FROM gardens WHERE user_id = $1',
       [userId]
     );
 
@@ -44,33 +59,67 @@ router.get('/', requireAuth, async (req, res) => {
          VALUES ($1, $2, $3, $4)`,
         [userId, JSON.stringify(def.plots), def.currentDay, def.weather]
       );
-      return res.json(def);
+      return res.json({ ...def, serverUpdatedAt: null });
     }
 
     const row = result.rows[0];
+    const serverUpdatedAt = row.updated_at
+      ? new Date(row.updated_at).toISOString()
+      : null;
     return res.json({
       plots: row.plots,
       currentDay: row.current_day,
       weather: row.weather,
+      serverUpdatedAt,
     });
   }
 
   // Fallback
   if (!memGardens[userId]) memGardens[userId] = defaultGarden();
-  res.json(memGardens[userId]);
+  const g = memGardens[userId];
+  updateMemGardenDay(userId, g.currentDay);
+  res.json(g);
 });
 
 // ── POST /api/garden  — save full garden state ────────────────────────────────
 
 router.post('/', requireAuth, validateGardenSave, async (req, res) => {
   const { userId } = req.user;
-  const { plots, currentDay, weather } = req.body;
+  const { plots, currentDay, weather, ifUnmodifiedSince } = req.body;
 
   if (!plots || !Array.isArray(plots)) {
     return res.status(400).json({ error: 'plots array required' });
   }
 
   if (db.isConnected()) {
+    const newDay = currentDay || 1;
+    const prev = await db.query(
+      'SELECT current_day, updated_at, plots, weather FROM gardens WHERE user_id = $1',
+      [userId]
+    );
+    let oldDay = 1;
+    if (prev.rows.length) {
+      oldDay = prev.rows[0].current_day || 1;
+    }
+
+    if (ifUnmodifiedSince && prev.rows.length && prev.rows[0].updated_at) {
+      const serverT = new Date(prev.rows[0].updated_at).getTime();
+      const clientT = new Date(ifUnmodifiedSince).getTime();
+      if (!Number.isNaN(clientT) && serverT > clientT) {
+        const row = prev.rows[0];
+        return res.status(409).json({
+          error:           'conflict',
+          message:         'Garden was updated elsewhere — reload before saving',
+          serverUpdatedAt: new Date(row.updated_at).toISOString(),
+          garden:          {
+            plots:      row.plots,
+            currentDay: row.current_day,
+            weather:    row.weather,
+          },
+        });
+      }
+    }
+
     await db.query(
       `INSERT INTO gardens (user_id, plots, current_day, weather, updated_at)
        VALUES ($1, $2, $3, $4, NOW())
@@ -79,12 +128,25 @@ router.post('/', requireAuth, validateGardenSave, async (req, res) => {
              current_day = EXCLUDED.current_day,
              weather = EXCLUDED.weather,
              updated_at = NOW()`,
-      [userId, JSON.stringify(plots), currentDay || 1, weather || 'sunny']
+      [userId, JSON.stringify(plots), newDay, weather || 'sunny']
     );
-    return res.json({ success: true });
+
+    await recordSeasonScoresOnGardenSave(userId, oldDay, newDay);
+
+    const after = await db.query(
+      'SELECT updated_at FROM gardens WHERE user_id = $1',
+      [userId]
+    );
+    const serverUpdatedAt = after.rows[0]?.updated_at
+      ? new Date(after.rows[0].updated_at).toISOString()
+      : null;
+    emitGardenPreviewUpdated(req, userId);
+    return res.json({ success: true, serverUpdatedAt });
   }
 
   memGardens[userId] = { plots, currentDay: currentDay || 1, weather: weather || 'sunny' };
+  updateMemGardenDay(userId, currentDay || 1);
+  emitGardenPreviewUpdated(req, userId);
   res.json({ success: true });
 });
 
@@ -131,12 +193,10 @@ router.post('/action', requireAuth, validateGardenAction, async (req, res) => {
       if (plot.planted) plot.pest = false;
       break;
     case 'harvest': {
-      // Server-side ripeness check — must match frontend GROWTH_STAGES
-      const GROWTH_STAGES = {
-        tomato: 3, carrot: 2, lettuce: 2, radish: 1, corn: 4, potato: 3,
-        pumpkin: 5, sunflower: 2, blueberry: 4,
-      };
-      const required = GROWTH_STAGES[plot.plantType] ?? 3;
+      // Server-side ripeness check — uses dynamic plant registry (supports custom plants)
+      const plants = contentStore.getPlants();
+      const plantDef = plants.find((p) => p.slug === plot.plantType);
+      const required = plantDef ? plantDef.growthDays : 3;
       if (!plot.planted || (plot.daysPlanted || 0) < required) {
         return res.status(400).json({ error: 'Crop is not ready to harvest yet' });
       }
@@ -159,6 +219,7 @@ router.post('/action', requireAuth, validateGardenAction, async (req, res) => {
     );
   }
 
+  emitGardenPreviewUpdated(req, userId);
   res.json({ success: true, plot });
 });
 
@@ -189,17 +250,15 @@ router.post('/nextday', requireAuth, async (req, res) => {
   const nextWeather = weatherPool[Math.floor(Math.random() * weatherPool.length)];
   const pestChance = nextWeather === 'drought' ? 0.15 : 0.05;
 
-  // Crop growth-stage map (must match frontend)
-  const GROWTH_STAGES = {
-    tomato: 3, carrot: 2, lettuce: 2, radish: 1, corn: 4, potato: 3,
-    pumpkin: 5, sunflower: 2, blueberry: 4,
-  };
+  // Crop growth-stage map — dynamic lookup (supports custom plants)
+  const allPlants = contentStore.getPlants();
+  const growthDaysMap = Object.fromEntries(allPlants.map((p) => [p.slug, p.growthDays]));
 
   garden.plots = garden.plots.map((plot) => {
     if (!plot.planted) return plot;
 
     const hasPest = plot.pest || Math.random() < pestChance;
-    const totalDays = GROWTH_STAGES[plot.plantType] || 3;
+    const totalDays = growthDaysMap[plot.plantType] || 3;
     let days = plot.daysPlanted || 0;
 
     // Storm partially rolls back mature crops
@@ -209,7 +268,8 @@ router.post('/nextday', requireAuth, async (req, res) => {
 
     const waterBonus = (plot.waterLevel > 0 || nextWeather === 'rainy' || nextWeather === 'storm') ? 1 : 0;
     const fertBonus  = plot.fertilized ? 1 : 0;
-    const growthDays = hasPest ? days : days + waterBonus + fertBonus;
+    // Always progress at least 1 day when healthy; water/fertilizer accelerate.
+    const growthDays = hasPest ? days : days + 1 + waterBonus + fertBonus;
 
     let newWaterLevel = plot.waterLevel || 0;
     if (nextWeather === 'rainy' || nextWeather === 'storm') {
@@ -235,6 +295,7 @@ router.post('/nextday', requireAuth, async (req, res) => {
     );
   }
 
+  emitGardenPreviewUpdated(req, userId);
   res.json({ currentDay: garden.currentDay, weather: garden.weather, plots: garden.plots });
 });
 

@@ -129,6 +129,77 @@ async function setupDatabase() {
       )
     `);
 
+    // Archived leaderboard rows when a player crosses an in-game season boundary (112-day cycles)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_season_scores (
+        user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        cycle         INTEGER NOT NULL,
+        season_index  INTEGER NOT NULL CHECK (season_index BETWEEN 0 AND 3),
+        xp            INTEGER NOT NULL,
+        coins         INTEGER NOT NULL,
+        plants_grown  INTEGER NOT NULL,
+        recorded_at   TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (user_id, cycle, season_index)
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_season_scores_lookup
+      ON user_season_scores (cycle, season_index)
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_broadcast_log (
+        id            SERIAL PRIMARY KEY,
+        created_at    TIMESTAMPTZ DEFAULT NOW(),
+        title         VARCHAR(200) NOT NULL,
+        body_preview  TEXT,
+        token_count   INTEGER NOT NULL DEFAULT 0,
+        sent          INTEGER NOT NULL DEFAULT 0,
+        failures      INTEGER NOT NULL DEFAULT 0,
+        mode          VARCHAR(32),
+        source        VARCHAR(16) NOT NULL DEFAULT 'admin',
+        admin_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_client_events (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        event      VARCHAR(64) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_push_client_events_user ON push_client_events (user_id, created_at DESC)
+    `);
+
+    // ── Server config / world config ────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS server_config (
+        key        VARCHAR(100) PRIMARY KEY,
+        value      JSONB        NOT NULL DEFAULT '{}',
+        updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS plugin_config (
+        plugin_name VARCHAR(100) PRIMARY KEY,
+        config      JSONB        NOT NULL DEFAULT '{}',
+        updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS world_garden_slots (
+        user_id     INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        slot_index  INTEGER NOT NULL CHECK (slot_index >= 0),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_world_garden_slots_slot
+      ON world_garden_slots (slot_index)
+    `);
+
     await client.query('COMMIT');
     console.log('✅ Database setup complete!');
   } catch (error) {

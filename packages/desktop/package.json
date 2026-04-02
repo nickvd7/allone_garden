@@ -1,0 +1,37 @@
+{
+  "name": "allone_garden-desktop",
+  "version": "1.0.0",
+  "description": "AllOne Garden — Electron desktop wrapper with setup wizard",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "deploy:itch:win":   "butler push build nickvd7/allone-garden:windows-x64",
+    "deploy:itch:mac":   "butler push build nickvd7/allone-garden:mac-universal",
+    "deploy:itch:linux": "butler push build nickvd7/allone-garden:linux-x64",
+    "test": "jest"
+  },
+  "dependencies": {
+    "discord-rpc": "^4.0.1",
+    "electron-updater": "^6.8.3",
+    "get-port": "^5.1.1"
+  },
+  "optionalDependencies": {
+    "steamworks.js": "^0.3.1"
+  },
+  "devDependencies": {
+    "electron": "^35.7.5",
+    "electron-builder": "^24.13.3",
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "radish": {
+    "name": "Ravanello",
+    "short_desc": "Coltura più veloce. Perfetta per chi inizia.",
+    "long_desc": "Il ravanello è lo sprinter di AllOne Garden — pronto al raccolto dopo solo **1 giorno**. Il modesto valore (🪙6) è compensato dai cicli rapidi e dall’XP.\n\nCresce bene vicino a lattuga e carota, ideale per riempire gli spazi in un orto associato.",
+    "tips": {
+      "0": "Pianta ravanelli nelle parcelle libere mentre maturano colture più lente.",
+      "1": "Si abbina a lattuga e carota per piccoli bonus di vicinato.",
+      "2": "Ottimo per salire di livello all’inizio della partita."
+    }
+  },
+  "carrot": {
+    "name": "Carota",
+    "short_desc": "Coltura affidabile in 2 giorni, ottime combinazioni.",
+    "long_desc": "Le carote sono versatili: maturano in **2 giorni** e beneficiano di pomodori, lattuga e ravanelli vicini.\n\n🪙10 per raccolto — buon reddito a metà gioco.",
+    "tips": {
+      "0": "Circonda le carote con pomodori (+20%) e lattuga (+15%) per il massimo bonus.",
+      "1": "Tienile lontane dal mais — nessuna sinergia.",
+      "2": "Adatta a una strategia con compost per il ciclo fisso di 2 giorni."
+    }
+  },
+  "lettuce": {
+    "name": "Lattuga",
+    "short_desc": "Riempitivo economico. Buona vicina per molte piante.",
+    "long_desc": "La lattuga matura in **2 giorni** per modesti 🪙8. Il valore è nel vicinato: bonus da carota e ravanello.\n\nNon piantare vicino al mais (−15% alla lattuga).",
+    "tips": {
+      "0": "La lattuga riempie gli spazi tra colture di valore.",
+      "1": "Il trio carota/lattuga/ravanello dà bonus a tutti.",
+      "2": "Mai vicino al mais se vuoi resa."
+    }
+  },
+  "sunflower": {
+    "name": "Girasole",
+    "short_desc": "Coltura in 2 giorni. Il migliore amico della zucca.",
+    "long_desc": "I girasoli maturano in **2 giorni** per 🪙12 e danno +15% alle zucche adiacenti — essenziali nel tardo gioco.\n\nBeneficiano anche dei mirtilli vicini (+10%).",
+    "tips": {
+      "0": "Circonda le parcelle delle zucche con girasoli.",
+      "1": "Girasole + mirtillo + zucca è un trio forte.",
+      "2": "Ciclo breve: 2–3 raccolti per ciclo di zucca."
+    }
+  },
+  "tomato": {
+    "name": "Pomodoro",
+    "short_desc": "Classico a 3 giorni. Alto reddito con buoni vicini.",
+    "long_desc": "I pomodori richiedono **3 giorni** e danno 🪙15. Con il +20% dalla carota il valore effettivo sale a ~🪙18.\n\nTienili lontani dalle zucche (−10% ai pomodori).",
+    "tips": {
+      "0": "Pomodoro + carota è una delle coppie più forti all’inizio (+20%).",
+      "1": "Un bordo di lattuga aggiunge un piccolo bonus.",
+      "2": "Annaffia ogni giorno — i pomodori puniscono il trascurare."
+    }
+  },
+  "potato": {
+    "name": "Patata",
+    "short_desc": "Coltura robusta a 3 giorni. Ama il mais, non la zucca.",
+    "long_desc": "Le patate **3 giorni**, 🪙12. Forte sinergia con il mais: +20% reciproco — tra le combinazioni più efficienti.\n\nNon piantare vicino alle zucche.",
+    "tips": {
+      "0": "Alterna file di mais e patate per il +20% reciproco.",
+      "1": "Mai accanto alle zucche.",
+      "2": "La serra protegge le parcelle di valore dalle tempeste."
+    }
+  },
+  "blueberry": {
+    "name": "Mirtillo",
+    "short_desc": "Coltura di valore in 4 giorni. Ottima con i girasoli.",
+    "long_desc": "I mirtilli **4 giorni** ma ripagano con 🪙22. Beneficiano di girasole e carote.\n\nConcima ogni parcella — il ciclo lungo chiede accelerazione.",
+    "tips": {
+      "0": "Concima sempre — anche mezza giornata conta nel lungo periodo.",
+      "1": "Vicino a un girasole: +10%.",
+      "2": "Usa il pozzo all’inizio del ciclo per annaffiare tutto insieme."
+    }
+  },
+  "corn": {
+    "name": "Mais",
+    "short_desc": "Alta coltura a 4 giorni. Amico della patata, nemico della zucca.",
+    "long_desc": "Il mais **4 giorni**, 🪙18. Il legame con la patata (+20%) è la spina dorsale di un orto produttivo.\n\nDanneggia lattuga (−15%) e zucca (−20%) — pianifica bene.",
+    "tips": {
+      "0": "Alterna colonne di mais e patate.",
+      "1": "Tieni il mais lontano da lattuga e zucca.",
+      "2": "Concima per accorciare il ciclo di 4 giorni."
+    }
+  },
+  "pumpkin": {
+    "name": "Zucca",
+    "short_desc": "La coltura più redditizia. Lenta ma ne vale la pena.",
+    "long_desc": "La zucca **5 giorni interi**, 🪙28 — massimo valore base. Con il girasole (+15%) ~🪙32.\n\nFragile: mais, patata e pomodoro vicini riducono la resa. Dedica un angolo.",
+    "tips": {
+      "0": "Circonda ogni zucca con girasoli.",
+      "1": "Costruisci la serra prima delle zucche: la tempesta può ritardare il raccolto.",
+      "2": "Concima e annaffia ogni ciclo — non saltare giorni.",
+      "3": "Tieni le zucche lontane da mais e patate."
+    }
+  },
+  "well": {
+    "name": "Pozzo",
+    "short_desc": "Annaffia tutte le parcelle vangate in un clic. 3 cariche al giorno.",
+    "long_desc": "Il pozzo costa **50 🪙** e dà 3 cariche al giorno (si rinnova a «Giorno successivo»). Ogni uso +2 acqua su tutte le parcelle vangate.\n\nIndispensabile da ~10–12 parcelle attive.",
+    "tips": {
+      "0": "Costruiscilo secondo dopo il cumulo di compostaggio.",
+      "1": "Le cariche si resettano ogni giorno — usa tutte e 3.",
+      "2": "Combina con concime per la crescita massima."
+    }
+  },
+  "compost_heap": {
+    "name": "Cumulo di compostaggio",
+    "short_desc": "Genera cariche di concime ogni 3 raccolti.",
+    "long_desc": "Il cumulo costa **30 🪙** e si ripaga presto. Ogni 3 raccolti — 1 carica. «Concima tutto» la applica a tutte le parcelle piantate non concimate.\n\nL’edificio più economico — costruiscilo per primo.",
+    "tips": {
+      "0": "Costruiscilo per primo — 30 🪙 in 5–10 raccolti.",
+      "1": "Tieni la carica per quando hai molte parcelle piantate.",
+      "2": "Concime + acqua lo stesso giorno = crescita massima."
+    }
+  },
+  "greenhouse": {
+    "name": "Serra",
+    "short_desc": "Protezione passiva da tempesta e siccità.",
+    "long_desc": "La serra **80 🪙**, passiva. Tempesta ⛈️ e siccità 🏜️ diventano nuvoloso senza danni; parassiti in siccità dal 15% al 5%.\n\nEssenziale prima di un orto completo a zucche o mirtilli.",
+    "tips": {
+      "0": "Costruiscila prima delle prime zucche.",
+      "1": "La tempesta può ritardare di un giorno una zucca matura — la serra lo evita.",
+      "2": "Dopo la costruzione il meteo preoccupa meno."
+    }
+  }
+}

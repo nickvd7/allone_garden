@@ -1,0 +1,181 @@
+{
+  "gradendex": {
+    "ui": {
+      "loading": "Gradendex wird geladen…",
+      "error_load": "Gradendex konnte nicht geladen werden. Läuft der Server?",
+      "search_placeholder": "🔍 Pflanzen oder Gebäude suchen…",
+      "no_results": "Keine Einträge für „{{search}}“.",
+      "tab_all": "🌍 Alle",
+      "tab_plants": "🌱 Pflanzen",
+      "tab_structures": "🏗️ Gebäude",
+      "back_to_list": "← Zurück zur Liste",
+      "back": "← Zurück",
+      "edit": "✏️ Bearbeiten",
+      "edit_title_suffix": "— Bearbeiten",
+      "companion_planting": "Mischkultur",
+      "tips": "Tipps",
+      "last_edited": "Zuletzt bearbeitet von {{user}} · {{date}}",
+      "admin_hint": "✏️ Admin-Modus — Klicken Sie einen Eintrag zum Bearbeiten",
+      "stats_days": "{{count}} Tag",
+      "stats_days_plural": "{{count}} Tage",
+      "stats_coins": "{{count}} Münzen",
+      "aria_search": "Gradendex durchsuchen",
+      "aria_view": "{{name}} anzeigen",
+      "saving": "Speichern…",
+      "save_changes": "💾 Änderungen speichern",
+      "cancel": "Abbrechen",
+      "load_error_detail": "Speichern fehlgeschlagen",
+      "form_emoji": "Emoji",
+      "form_name": "Name",
+      "form_category": "Kategorie",
+      "form_short": "Kurzbeschreibung (max. 300 Zeichen)",
+      "form_long": "Langbeschreibung (Markdown: **fett**, *kursiv*, Zeilenumbrüche)",
+      "form_growth": "Wachstumstage",
+      "form_coins": "Basismünzen 🪙",
+      "form_tips": "Tipps (eine Zeile pro Tipp)",
+      "cat_plant": "Pflanze",
+      "cat_structure": "Gebäude",
+      "cat_tool": "Werkzeug",
+      "cat_other": "Sonstiges"
+    },
+    "entries": {
+      "radish": {
+        "name": "Radieschen",
+        "short_desc": "Am schnellsten wachsende Frucht. Ideal für Einsteiger.",
+        "long_desc": "Das Radieschen ist der Sprinter in AllOne Garden — schon nach **1 Tag** erntereif. Der bescheidene Münzenwert (🪙6) wird durch schnelle Ernten ausgeglichen, die XP und Inventar schnell füllen.\n\nRadieschen gedeihen gut neben Salat und Karotte und eignen sich als Lückenfüller in einer Mischkultur.",
+        "tips": {
+          "0": "Radieschen auf freien Beeten anbauen, während langsamere Pflanzen reifen.",
+          "1": "Passt zu Salat und Karotte für kleine Nachbarschaftsboni.",
+          "2": "Perfekt, um früh im Spiel schnell Level zu gewinnen."
+        }
+      },
+      "carrot": {
+        "name": "Karotte",
+        "short_desc": "Zuverlässige 2-Tage-Pflanze mit starken Kombinationen.",
+        "long_desc": "Karotten sind vielseitig in AllOne Garden. Sie reifen in **2 Tagen** und profitieren von Tomaten, Salat und Radieschen in der Nähe.\n\nMit 🪙10 pro Ernte solides Einkommen in der Mittelphase.",
+        "tips": {
+          "0": "Karotten zwischen Tomaten (+20 %) und Salat (+15 %) für den größten Bonus.",
+          "1": "Abstand zu Mais — keine Synergie.",
+          "2": "Passt zur Kompost-Strategie durch zuverlässige 2-Tage-Zyklen."
+        }
+      },
+      "lettuce": {
+        "name": "Salat",
+        "short_desc": "Günstige Lückenfüllung. Guter Nachbar für viele Pflanzen.",
+        "long_desc": "Salat reift in **2 Tagen** für bescheidene 🪙8. Der Wert liegt in der Mischkultur: Karotten und Radieschen profitieren, Salat profitiert von Karotten.\n\nNicht neben Mais pflanzen — sie hemmen sich gegenseitig (−15 % für Salat).",
+        "tips": {
+          "0": "Salat füllt Lücken zwischen wertvollen Kulturen.",
+          "1": "Trio Karotte/Salat/Radieschen gibt allen Boni.",
+          "2": "Nie neben Mais, wenn es um Ertrag geht."
+        }
+      },
+      "sunflower": {
+        "name": "Sonnenblume",
+        "short_desc": "Helle 2-Tage-Pflanze. Bester Freund des Kürbiss.",
+        "long_desc": "Sonnenblumen sind Könige der Mischkultur. Sie reifen in **2 Tagen** für 🪙12 und geben +15 % auf benachbarte Kürbisse — unverzichtbar im Spätspiel.\n\nProfitieren auch von Heidelbeer-Nachbarn (+10 %).",
+        "tips": {
+          "0": "Kürbisbeete mit Sonnenblumen umgeben.",
+          "1": "Sonnenblume + Heidelbeere + Kürbis ist ein starkes Spätspiel-Trio.",
+          "2": "Kurzer Zyklus: 2–3 Ernten pro Kürbiszyklus möglich."
+        }
+      },
+      "tomato": {
+        "name": "Tomate",
+        "short_desc": "Klassische 3-Tage-Pflanze. Hoher Ertrag mit den richtigen Nachbarn.",
+        "long_desc": "Tomaten brauchen **3 Tage**, zahlen aber 🪙15. Mit 20 %-Karottenbonus steigt der effektive Wert auf 🪙18 — Top in der Mittelphase.\n\nKürbis-Nachbarn senken Tomatenertrag um 10 %.",
+        "tips": {
+          "0": "Tomate + Karotte ist eines der stärksten frühen Duos (+20 %).",
+          "1": "Salat-Rand gibt einen kleinen Extra-Boost.",
+          "2": "Täglich gießen — Tomaten bestrafen Vernachlässigung."
+        }
+      },
+      "potato": {
+        "name": "Kartoffel",
+        "short_desc": "Robuste 3-Tage-Pflanze. Liebt Mais, mag keinen Kürbis.",
+        "long_desc": "Kartoffeln brauchen **3 Tage** und bringen 🪙12. Starkpunkt: Synergie mit Mais — Kartoffel neben Mais +20 % (und umgekehrt). Das Mais/Kartoffel-Paar ist eines der effizientesten Layouts.",
+        "tips": {
+          "0": "Mais- und Kartoffelreihen abwechseln für gegenseitige +20 %.",
+          "1": "Nie neben Kürbis pflanzen.",
+          "2": "Das Gewächshaus schützt wertvolle Mais/Kartoffel-Beete vor Sturm."
+        }
+      },
+      "blueberry": {
+        "name": "Heidelbeere",
+        "short_desc": "Wertvolle 4-Tage-Pflanze. Passt wunderbar zu Sonnenblumen.",
+        "long_desc": "Heidelbeeren brauchen **4 Tage**, belohnen aber mit 🪙22. Sie profitieren von Sonnenblume und Karotte als Nachbarn.\n\nLängerer Zyklus — jedes Beet düngen.",
+        "tips": {
+          "0": "Immer düngen — auch ein halber Tag weniger zählt langfristig.",
+          "1": "Sonnenblume als Nachbar: +10 %.",
+          "2": "Brunnen früh im Zyklus nutzen, um alles auf einmal zu gießen."
+        }
+      },
+      "corn": {
+        "name": "Mais",
+        "short_desc": "Hohe 4-Tage-Pflanze. Bester Freund der Kartoffel, Feind des Kürbisses.",
+        "long_desc": "Mais reift in **4 Tagen** für 🪙18. Die gegenseitige Bindung zur Kartoffel (+20 % jeweils) ist das Rückgrat einer produktiven Farm.\n\nMais schadet Salat (−15 %) und Kürbis (−20 %) — Beete sorgfältig planen.",
+        "tips": {
+          "0": "Mais- und Kartoffelspalten abwechseln für maximalen Bonus.",
+          "1": "Mais von Salat- und Kürbisbeeten fernhalten.",
+          "2": "Mais düngen, um den 4-Tage-Zyklus effektiv zu verkürzen."
+        }
+      },
+      "pumpkin": {
+        "name": "Kürbis",
+        "short_desc": "Wertvollste Frucht. Langsam, aber lohnend.",
+        "long_desc": "Kürbisse brauchen volle **5 Tage**, zahlen aber 🪙28 — höchster Basiswert. Mit Sonnenblumenbonus (+15 %) steigt der effektive Ertrag auf 🪙32.\n\nKürbisse sind empfindlich: Mais, Kartoffel und Tomate als Nachbarn senken den Ertrag.",
+        "tips": {
+          "0": "Jeden Kürbis mit Sonnenblumen umgeben — +15 % auf 🪙28 summiert sich.",
+          "1": "Gewächshaus vor Kürbis bauen: Stürme können reife Früchte um einen Tag zurücksetzen.",
+          "2": "Düngen + gießen jede Runde. Keinen Tag auslassen.",
+          "3": "Kürbisse in einer Ecke, fern von Mais und Kartoffel."
+        }
+      },
+      "well": {
+        "name": "Brunnen",
+        "short_desc": "Gießt alle umgegrabenen Beete mit einem Klick. 3 Ladungen pro Tag.",
+        "long_desc": "Der Brunnen kostet **50 🪙** und gibt täglich 3 Ladungen (erneuert bei „Nächster Tag“). Jede Nutzung erhöht den Wasserstand aller umgegrabenen Beete um +2.\n\nUnverzichtbar ab ~10–12 aktiven Beeten — enorme Zeitersparnis.",
+        "tips": {
+          "0": "Brunnen als zweites Gebäude (nach Komposthaufen) bauen.",
+          "1": "Ladungen täglich zurückgesetzt — alle 3 nutzen, nicht sparen.",
+          "2": "Mit Dünger kombinieren für maximales Tageswachstum."
+        }
+      },
+      "compost_heap": {
+        "name": "Komposthaufen",
+        "short_desc": "Erzeugt automatisch Dünger-Ladungen alle 3 Ernten.",
+        "long_desc": "Der Komposthaufen kostet **30 🪙** und amortisiert sich schnell. Alle 3 Ernten gibt es 1 Dünger-Ladung. „Alles düngen“ wendet sie auf alle bepflanzten, ungedüngten Beete an.\n\nGünstigstes Gebäude — zuerst bauen.",
+        "tips": {
+          "0": "Zuerst bauen — 30 🪙 schafft man in 5–10 Ernten.",
+          "1": "Ladung sparen, bis viele Beete bepflanzt sind.",
+          "2": "Dünger + Wasser am selben Tag = schnellstes Wachstum."
+        }
+      },
+      "greenhouse": {
+        "name": "Gewächshaus",
+        "short_desc": "Passiver Schutz vor Sturm und Dürre.",
+        "long_desc": "Das Gewächshaus kostet **80 🪙** und wirkt passiv — keine Ladungen, keine Klicks. Sturm ⛈️ und Dürre 🏜️ werden in sicheres Bewölkt umgewandelt; Schäden entfallen, Dürre-Schädlingschance von 15 % auf 5 %.\n\nWichtig vor einem vollen 24-Beet-Kürbis- oder Heidelbeer-Layout.",
+        "tips": {
+          "0": "Gewächshaus vor dem ersten Kürbis bauen.",
+          "1": "Stürme können reifen Kürbis um einen Tag zurücksetzen — das Gewächshaus verhindert das.",
+          "2": "Danach kaum noch Wetter-Sorgen."
+        }
+      }
+    },
+    "page": {
+      "title": "📖 Gradendex",
+      "subtitle": "— Nachschlagewerk für Pflanzen und Gebäude",
+      "brand": "🌱 AllOne Garden",
+      "back_game": "🎮 Zurück zum Spiel",
+      "intro": "Von der Community gepflegtes Nachschlagewerk für jede Pflanze und jedes Gebäude in AllOne Garden.",
+      "intro_logged_in": "Du bist angemeldet — Admins können Einträge direkt bearbeiten.",
+      "intro_guest_before": "",
+      "log_in": "Anmelden",
+      "intro_guest_after": "um als Admin beizutragen.",
+      "footer": "AllOne Garden · Gradendex · Daten von",
+      "open_full": "↗ Vollseite",
+      "open_full_title": "Gradendex in voller Seite öffnen",
+      "close": "Gradendex schließen",
+      "aria_dialog": "Gradendex"
+    }
+  }
+}

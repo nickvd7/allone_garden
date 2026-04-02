@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "test": "playwright test",
+    "test:mobile": "playwright test tests/mobile-layout.spec.js",
+    "test:mobile:visual": "playwright test tests/mobile-visual.spec.js",
+    "test:smoke": "playwright test tests/smoke.spec.js",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed"
   },

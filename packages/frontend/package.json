@@ -3,14 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@capacitor/android": "^6.2.1",
     "@capacitor/app": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@capacitor/haptics": "^6.0.0",
+    "@capacitor/ios": "^6.2.1",
     "@capacitor/keyboard": "^6.0.0",
     "@capacitor/network": "^6.0.0",
+    "@capacitor/preferences": "^6.0.4",
+    "@capacitor/push-notifications": "^6.0.5",
     "@capacitor/splash-screen": "^6.0.0",
     "@capacitor/status-bar": "^6.0.0",
     "axios": "^1.6.2",
+    "html5-qrcode": "^2.3.8",
     "i18next": "^23.7.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -19,7 +24,9 @@
     "socket.io-client": "^4.6.1"
   },
   "scripts": {
+    "prestart": "node scripts/strip-html5-qrcode-sourcemaps.js",
     "start": "react-scripts start",
+    "prebuild": "node scripts/strip-html5-qrcode-sourcemaps.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
@@ -30,6 +37,7 @@
     "cap:open:ios": "npx cap open ios",
     "mobile:android": "npm run build && npx cap sync android && npx cap open android",
     "mobile:ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "gradendex:extra": "node scripts/gradendex-bundle-remaining.js && node scripts/gradendex-merge-entry-overrides.js",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src --ext .js,.jsx"
   },
   "devDependencies": {

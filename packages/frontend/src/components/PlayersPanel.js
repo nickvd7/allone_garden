@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Demo players shown when no socket is connected
@@ -8,14 +8,38 @@ const DEMO_PLAYERS = [
   { id: 3, username: 'Tomato_Tom', level: 4,  server: 'nl.garden' },
 ];
 
-function PlayersPanel({ socket, onVisit, onHelp, onTrade }) {
+function isVirtualUser(player) {
+  return !!(player?.virtual || String(player?.id ?? '').startsWith('npc:'));
+}
+
+function PlayersPanel({ socket, currentUserId, onVisit, onHelp, onTrade }) {
   const { t } = useTranslation();
-  const [players, setPlayers] = useState(DEMO_PLAYERS);
+  const [players, setPlayers] = useState(() => (socket ? [] : DEMO_PLAYERS));
+
+  useEffect(() => {
+    if (!socket) {
+      setPlayers(DEMO_PLAYERS);
+      return;
+    }
+    setPlayers([]);
+  }, [socket]);
+
+  const realPlayers = useMemo(() => {
+    return players.filter((p) => {
+      if (isVirtualUser(p)) return false;
+      if (
+        currentUserId !== null &&
+        currentUserId !== undefined &&
+        String(p.id) === String(currentUserId)
+      ) return false;
+      return true;
+    });
+  }, [players, currentUserId]);
 
   useEffect(() => {
     if (!socket) return;
 
-    const onPlayerList = (list) => setPlayers(list);
+    const onPlayerList = (list) => setPlayers(Array.isArray(list) ? list : []);
     const onPlayerJoined = (player) =>
       setPlayers((prev) => [...prev.filter((p) => p.id !== player.id), player]);
     const onPlayerLeft = ({ id }) =>
@@ -46,23 +70,28 @@ function PlayersPanel({ socket, onVisit, onHelp, onTrade }) {
     if (onTrade) onTrade(player);
   };
 
+  if (socket && realPlayers.length === 0) {
+    return null;
+  }
+
   return (
-    <div className="card">
-      <h3>👥 {t('online_players')} ({players.length})</h3>
+    <div className="card players-panel">
+      <h3>👥 {t('online_players')} ({realPlayers.length})</h3>
 
       <div className="player-list">
-        {players.map((player) => (
+        {realPlayers.map((player) => (
           <div key={player.id} className="player-item">
             <div className="player-name">
               <span className="online-dot" />
               {player.username}
               <span style={{ fontSize: '0.7rem', color: '#aaa', fontWeight: 400 }}>
-                Lv.{player.level}
+                Lv.{player.level ?? '?'}
               </span>
             </div>
 
             <div className="player-actions">
               <button
+                type="button"
                 className="player-action-btn"
                 onClick={() => handleVisit(player)}
                 title={t('visit')}
@@ -70,6 +99,7 @@ function PlayersPanel({ socket, onVisit, onHelp, onTrade }) {
                 👁 {t('visit')}
               </button>
               <button
+                type="button"
                 className="player-action-btn"
                 onClick={() => handleHelp(player)}
                 title={t('help')}
@@ -77,6 +107,7 @@ function PlayersPanel({ socket, onVisit, onHelp, onTrade }) {
                 🤝 {t('help')}
               </button>
               <button
+                type="button"
                 className="player-action-btn"
                 onClick={() => handleTrade(player)}
                 title={t('trade')}
@@ -86,12 +117,6 @@ function PlayersPanel({ socket, onVisit, onHelp, onTrade }) {
             </div>
           </div>
         ))}
-
-        {players.length === 0 && (
-          <div style={{ color: '#aaa', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>
-            No other players online
-          </div>
-        )}
       </div>
     </div>
   );

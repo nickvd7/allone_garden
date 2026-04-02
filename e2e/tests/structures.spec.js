@@ -30,9 +30,9 @@ test.describe('Garden Structures', () => {
   });
 
   test('compost heap shows harvest counter', async ({ page }) => {
-    // Compost section should mention harvests or fertilizer
+    // Compost card should always be visible in structures panel
     await expect(
-      page.locator('text=/Compost/i, text=/compost/i').first()
+      page.locator('.structure-item').filter({ hasText: /Compost Heap/i }).first()
     ).toBeVisible();
   });
 

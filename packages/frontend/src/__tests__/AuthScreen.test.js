@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import axios from 'axios';
+import '../i18n/config';
 import AuthScreen from '../components/AuthScreen';
 
 jest.mock('axios');
@@ -19,20 +20,19 @@ describe('AuthScreen', () => {
 
   it('renders the app title and subtitle', () => {
     render(<AuthScreen onLogin={noop} />);
-    expect(screen.getByText('🌱 AllOne Garden')).toBeInTheDocument();
+    expect(screen.getByAltText('AllOne Garden')).toBeInTheDocument();
     expect(screen.getByText(/Open-source multiplayer/i)).toBeInTheDocument();
   });
 
   it('shows Login and Register tab buttons in default (login) mode', () => {
     render(<AuthScreen onLogin={noop} />);
-    // Tab buttons — exact text = 'Login' and 'Register' (no emoji prefix)
-    expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Login' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Register' })).toBeInTheDocument();
   });
 
   it('switches to Register mode when the Register tab is clicked', () => {
     render(<AuthScreen onLogin={noop} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Register' }));
     expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
     // Submit button changes to "🌱 Create account"
     expect(screen.getByRole('button', { name: /Create account/i })).toBeInTheDocument();
@@ -40,27 +40,27 @@ describe('AuthScreen', () => {
 
   it('switches back to Login mode when the Login tab is clicked', () => {
     render(<AuthScreen onLogin={noop} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Register' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Login' }));
     // Email field disappears again
     expect(screen.queryByPlaceholderText('Email')).not.toBeInTheDocument();
   });
 
-  it('opens forgot-password mode from the "Wachtwoord vergeten?" link', () => {
+  it('opens forgot-password mode from the "Forgot password?" link', () => {
     render(<AuthScreen onLogin={noop} />);
-    fireEvent.click(screen.getByRole('button', { name: /Wachtwoord vergeten/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Forgot password/i }));
     // Forgot heading appears; email field present; username/password gone
     expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Username')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument();
   });
 
-  it('"Terug naar inloggen" returns from forgot mode to login', () => {
+  it('"Back to login" returns from forgot mode to login', () => {
     render(<AuthScreen onLogin={noop} />);
-    fireEvent.click(screen.getByRole('button', { name: /Wachtwoord vergeten/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Terug naar inloggen/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Forgot password/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Back to login/i }));
     // Login/Register tabs are back
-    expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Login' })).toBeInTheDocument();
   });
 
   // ── Guest play ───────────────────────────────────────────────────────────────
@@ -107,9 +107,7 @@ describe('AuthScreen', () => {
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'wrong' } });
     fireEvent.click(screen.getByRole('button', { name: /🚪/ }));
 
-    await waitFor(() =>
-      expect(screen.getByText('Invalid credentials')).toBeInTheDocument()
-    );
+    await screen.findByText('Invalid credentials');
   });
 
   // ── Register form ────────────────────────────────────────────────────────────
@@ -121,7 +119,7 @@ describe('AuthScreen', () => {
     });
 
     render(<AuthScreen onLogin={onLogin} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Register' }));
     fireEvent.change(screen.getByPlaceholderText('Username'), { target: { value: 'Bob' } });
     fireEvent.change(screen.getByPlaceholderText('Email'),    { target: { value: 'bob@example.com' } });
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'pass12345' } });
@@ -141,14 +139,11 @@ describe('AuthScreen', () => {
     axios.post.mockResolvedValueOnce({ data: {} });
 
     render(<AuthScreen onLogin={noop} />);
-    fireEvent.click(screen.getByRole('button', { name: /Wachtwoord vergeten/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Forgot password/i }));
     fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'alice@example.com' } });
-    // Submit button in forgot mode reads "📧 Stuur resetlink"
-    fireEvent.click(screen.getByRole('button', { name: /Stuur resetlink/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Send reset link/i }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/Als dit adres bekend is/i)).toBeInTheDocument()
-    );
+    await screen.findByText(/If this address is registered/i);
   });
 
   // ── Reset-password mode via URL token ────────────────────────────────────────
@@ -157,8 +152,7 @@ describe('AuthScreen', () => {
     window.location = { search: '?token=abc123' };
 
     render(<AuthScreen onLogin={noop} />);
-    // Reset mode shows the new-password input and "🔐 Wachtwoord opslaan" button
-    expect(screen.getByPlaceholderText('Nieuw wachtwoord')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Wachtwoord opslaan/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('New password')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save password/i })).toBeInTheDocument();
   });
 });

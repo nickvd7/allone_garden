@@ -131,9 +131,10 @@ function TourOverlay({ onFinish }) {
   useEffect(() => {
     measureTarget();
     window.addEventListener('resize', measureTarget);
+    const rafId = rafRef.current;
     return () => {
       window.removeEventListener('resize', measureTarget);
-      cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(rafId);
     };
   }, [measureTarget]);
 
