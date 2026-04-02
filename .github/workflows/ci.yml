@@ -205,6 +205,7 @@ jobs:
     name: SAST (Trivy)
     runs-on: ubuntu-latest
     permissions:
+      contents: read           # required for actions/checkout (unset scopes default to none)
       security-events: write   # needed to upload SARIF
 
     steps:
