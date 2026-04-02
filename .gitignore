@@ -6,6 +6,10 @@ node_modules/
 packages/frontend/build/
 packages/backend/dist/
 
+# Test / coverage output (local only)
+packages/backend/coverage/
+e2e/test-results/
+
 # Environment files — NEVER commit real secrets
 .env
 packages/backend/.env
