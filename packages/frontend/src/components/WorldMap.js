@@ -1338,24 +1338,6 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                 )}
               </div>
             )}
-
-            {/* Legend */}
-            {renderOccupants.length > 0 && (
-              <div className="walk-legend">
-                {renderOccupants.map((p) => {
-                  const slot = serverSlots[p.slotId];
-                  return (
-                    <div key={p.id} className="walk-legend-item"
-                      onClick={() => slot && setPos({ x: slot.x, y: slot.y + 1 })}
-                      title={t('worldMap.legend_jump', { name: p.username })}
-                    >
-                      <span className="walk-legend-dot" style={{ background: avatarColor(p.id) }} />
-                      {p.username} {isCurrentPlayer(p) ? <small>({t('worldMap.you')})</small> : null}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           {/* ── Right panel ──────────────────────────────────────────── */}

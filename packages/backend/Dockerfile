@@ -1,6 +1,8 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
+# bcrypt / optional native addons may need a toolchain on musl
+RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 RUN npm install --omit=dev
 

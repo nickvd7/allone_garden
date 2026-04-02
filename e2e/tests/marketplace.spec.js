@@ -15,22 +15,38 @@ test.beforeEach(async ({ page }) => {
   await login(page, user);
 });
 
+async function openTradeFromInventoryFab(page) {
+  await page.keyboard.press('Escape');
+  const closeWorldPanel = page.getByRole('button', { name: /^Close panel$/i });
+  if (await closeWorldPanel.isVisible().catch(() => false)) {
+    await closeWorldPanel.click();
+  }
+  await page.getByRole('button', { name: /Open inventory/i }).click({ force: true });
+  await expect(page.locator('.inventory-sidebar').getByRole('heading', { name: /inventory/i })).toBeVisible({
+    timeout: 15_000,
+  });
+  await page
+    .locator('.inventory-sidebar')
+    .getByRole('button', { name: /Marketplace/i })
+    .click({ force: true });
+  await expect(page.getByText('🔄 Marketplace')).toBeVisible({ timeout: 15_000 });
+}
+
 // ── Trade marketplace ─────────────────────────────────────────────────────────
 
 test.describe('Trade marketplace', () => {
   test('opens and closes trade modal', async ({ page }) => {
-    await page.getByTitle('Marketplace').click();
-    await expect(page.getByText(/marketplace|trade/i).first()).toBeVisible();
-    // Close via Escape or close button
-    await page.keyboard.press('Escape');
-    // Modal should be gone
-    await expect(page.locator('[data-modal="trade"]')).not.toBeVisible({ timeout: 3_000 }).catch(() => {});
+    await openTradeFromInventoryFab(page);
+    await page
+      .getByText('🔄 Marketplace')
+      .locator('xpath=following-sibling::button')
+      .click();
+    await expect(page.getByText('🔄 Marketplace')).not.toBeVisible({ timeout: 5_000 });
   });
 
   test('trade modal shows market listings section', async ({ page }) => {
-    await page.getByTitle('Marketplace').click();
-    // Market tab or heading should appear
-    await expect(page.getByText(/market|listing/i).first()).toBeVisible();
+    await openTradeFromInventoryFab(page);
+    await expect(page.getByText(/market|listing|Browse|browse/i).first()).toBeVisible();
   });
 });
 

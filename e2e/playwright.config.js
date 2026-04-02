@@ -33,6 +33,7 @@ module.exports = defineConfig({
       command: 'node src/index.js',
       cwd: '../packages/backend',
       port: backendPort,
+      timeout: 180_000,
       reuseExistingServer: !process.env.CI,
       env: {
         NODE_ENV: 'test',
@@ -49,6 +50,7 @@ module.exports = defineConfig({
       command: 'npm start',
       cwd: '../packages/frontend',
       port: frontendPort,
+      timeout: 180_000,
       reuseExistingServer: !process.env.CI,
       env: {
         BROWSER: 'none',

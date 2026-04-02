@@ -81,16 +81,17 @@ describe('PlayersPanel — socket events', () => {
     expect(screen.getAllByText('TestUser').length).toBe(1);
   });
 
-  it('renders nothing when list is only virtual users', () => {
+  it('shows zero count when list is only virtual users', () => {
     const socket = makeSocket();
-    const { container } = render(<PlayersPanel socket={socket} />);
+    render(<PlayersPanel socket={socket} />);
     act(() =>
       socket._trigger('players:list', [
         { id: 'npc:1', username: 'Bot', virtual: true },
         { id: 'npc:2', username: 'NPC', virtual: true },
       ]),
     );
-    expect(container.querySelector('.players-panel')).toBeNull();
+    expect(screen.getByText(/\(0\)/)).toBeInTheDocument();
+    expect(screen.queryByText('Bot')).not.toBeInTheDocument();
   });
 
   it('excludes current user from list', () => {

@@ -324,6 +324,13 @@ body,
   margin-bottom: 0;
 }
 
+.inventory-sidebar__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
 .inventory-sidebar__close {
   padding: 0.16rem 0.48rem !important;
   font-size: 0.76rem !important;
@@ -3784,29 +3791,7 @@ body,
   font-size: 0.72rem;
 }
 
-.world-map-embedded .walk-map-column > .walk-legend {
-  position: absolute;
-  left: max(0.35rem, env(safe-area-inset-left, 0px));
-  right: max(0.35rem, env(safe-area-inset-right, 0px));
-  bottom: max(3rem, calc(env(safe-area-inset-bottom, 0px) + 2.65rem));
-  z-index: 23;
-  max-height: 2.35rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  flex-wrap: nowrap;
-  padding: 0.18rem 0.35rem;
-  margin: 0;
-  background: rgba(10, 28, 13, 0.58);
-  border: 1px solid rgba(137, 188, 130, 0.28);
-  border-radius: 8px;
-  backdrop-filter: blur(3px);
-}
-
 @media (max-width: 640px) {
-  .world-map-embedded .walk-map-column > .walk-legend {
-    display: none;
-  }
-
   .world-map-embedded .walk-map-column > .walk-hud {
     bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
     max-width: calc(100% - 5.5rem);
@@ -3966,42 +3951,6 @@ body,
   padding: 0 3px;
   font-family: monospace;
   font-size: 0.75rem;
-}
-
-/* Player legend below HUD */
-.walk-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  padding: 0.3rem 0.1rem 0.2rem;
-}
-
-.walk-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  color: #c8e6b8;
-  cursor: pointer;
-  background: rgba(0,0,0,0.2);
-  border-radius: 6px;
-  padding: 0.15rem 0.5rem;
-  transition: background 0.15s;
-}
-
-.walk-legend-item:hover {
-  background: rgba(255,255,255,0.15);
-}
-
-.walk-legend-item small {
-  opacity: 0.65;
-}
-
-.walk-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .walk-seed-picker {

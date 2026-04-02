@@ -70,10 +70,6 @@ function PlayersPanel({ socket, currentUserId, onVisit, onHelp, onTrade }) {
     if (onTrade) onTrade(player);
   };
 
-  if (socket && realPlayers.length === 0) {
-    return null;
-  }
-
   return (
     <div className="card players-panel">
       <h3>👥 {t('online_players')} ({realPlayers.length})</h3>

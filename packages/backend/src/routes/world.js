@@ -63,7 +63,7 @@ async function safeQuery(text, params = []) {
 }
 
 function parseMaybeJson(value, fallback = null) {
-  if (value == null) return fallback;
+  if (value === null || value === undefined) return fallback;
   if (typeof value === 'string') {
     try {
       return JSON.parse(value);

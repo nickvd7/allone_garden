@@ -45,6 +45,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Set up Java 17 (required by Gradle)
         uses: actions/setup-java@v4
@@ -55,25 +56,27 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install frontend dependencies
+      # Install from repo root so workspace overrides apply (@capacitor/cli must use tar@6, not hoisted tar@7).
+      - name: Install workspace dependencies
+        working-directory: ${{ github.workspace }}
         run: npm ci
 
       - name: Build React app
+        working-directory: packages/frontend
         run: npm run build
         env:
           CI: false                          # treat warnings as warnings, not errors
           REACT_APP_API_URL: ""              # relative URLs — backend is on the same host
 
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli
-
       - name: Add Android platform (if not already present)
+        working-directory: packages/frontend
         run: |
           if [ ! -d android ]; then
             npx cap add android
           fi
 
       - name: Sync Capacitor
+        working-directory: packages/frontend
         run: npx cap sync android
 
       - name: Build debug APK
@@ -117,22 +120,28 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
+          cache-dependency-path: package-lock.json
+      - name: Install workspace dependencies
         if: steps.ios-secrets.outputs.ready == 'true'
-      - run: npm run build
+        working-directory: ${{ github.workspace }}
+        run: npm ci
+      - name: Build React app
         if: steps.ios-secrets.outputs.ready == 'true'
+        working-directory: packages/frontend
+        run: npm run build
         env:
           CI: false
-      - run: npm install -g @capacitor/cli
-        if: steps.ios-secrets.outputs.ready == 'true'
       - name: Add iOS platform (if not already present)
         if: steps.ios-secrets.outputs.ready == 'true'
+        working-directory: packages/frontend
         run: |
           if [ ! -d ios ]; then
             npx cap add ios
           fi
-      - run: npx cap sync ios
+      - name: Sync Capacitor (iOS)
         if: steps.ios-secrets.outputs.ready == 'true'
+        working-directory: packages/frontend
+        run: npx cap sync ios
       - name: Import signing certificate
         if: steps.ios-secrets.outputs.ready == 'true'
         uses: apple-actions/import-codesign-certs@v3

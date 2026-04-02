@@ -60,18 +60,51 @@ export async function login(page, user) {
 }
 
 /**
- * Logout via the header button.
+ * Wacht tot de wereldkaart geladen is en het eigen-tuinpaneel zichtbaar is
+ * (spawn staat op een eigen vak; geen legenda meer).
  */
-export async function logout(page) {
-  await page.getByRole('button', { name: /Logout/i }).click();
-  await page.waitForSelector('text=AllOne Garden', { timeout: 5_000 });
+export async function openOwnGardenPanel(page) {
+  const { expect } = require('@playwright/test');
+  await page.locator('.walk-viewport').first().waitFor({ state: 'visible', timeout: 15_000 });
+  await expect(page.getByRole('button', { name: /Till/i })).toBeVisible({ timeout: 25_000 });
 }
 
 /**
- * Open the header "More" dropdown and click an item.
- * Uses role=menuitem to avoid matching other buttons in the page.
+ * Logout via the header user menu (👤 → Logout).
+ */
+export async function logout(page) {
+  const { expect } = require('@playwright/test');
+  await page.locator('#header-profile-btn').click();
+  await page.getByRole('menuitem', { name: /Logout/i }).click();
+  await expect(page.locator('#auth-main-title')).toBeVisible({ timeout: 15_000 });
+}
+
+/** Registered username appears in the profile dropdown (not on a top-level header button). */
+export async function assertLoggedInAs(page, username) {
+  const { expect } = require('@playwright/test');
+  await page.locator('#header-profile-btn').click();
+  await expect(page.getByRole('menuitem', { name: new RegExp(username, 'i') })).toBeVisible({
+    timeout: 10_000,
+  });
+  await page.keyboard.press('Escape');
+}
+
+/**
+ * Open the header user (👤) menu and click an item, or open profile modal flows
+ * for Leaderboard / Badges (formerly under "More" + Scores).
  */
 export async function clickHeaderMoreItem(page, itemNameRegex) {
-  await page.getByRole('button', { name: /More/i }).click();
+  await page.locator('#header-profile-btn').click();
+  const src = itemNameRegex.source || String(itemNameRegex);
+  if (/scores/i.test(src)) {
+    await page.getByRole('menuitem', { name: /Profile/i }).click();
+    await page.getByRole('button', { name: /Leaderboard/i }).click();
+    return;
+  }
+  if (/badges/i.test(src)) {
+    await page.getByRole('menuitem', { name: /Profile/i }).click();
+    await page.getByRole('button', { name: /Badges/i }).click();
+    return;
+  }
   await page.getByRole('menuitem', { name: itemNameRegex }).click();
 }

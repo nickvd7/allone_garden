@@ -44,7 +44,7 @@ test.describe('Mobile layout', () => {
 
   test('guest layout works in mobile landscape (844x390)', async ({ page }) => {
     await assertMobileLayout(page, 844, 390);
-    await expect(page.locator('.tools-and-structures').first()).toBeVisible();
-    await expect(page.locator('.garden-section').first()).toBeVisible();
+    await expect(page.locator('.header').first()).toBeVisible();
+    await expect(page.locator('.world-map-embedded').first()).toBeVisible();
   });
 });

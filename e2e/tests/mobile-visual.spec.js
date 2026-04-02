@@ -14,6 +14,15 @@ async function openGuest(page, width, height) {
 }
 
 test.describe('Mobile visual sanity', () => {
+  test.beforeEach(({ }, testInfo) => {
+    if (process.env.CI) {
+      testInfo.skip(
+        true,
+        'Screenshot baselines are macOS-only; add *-chromium-linux.png or run update-snapshots on Linux'
+      );
+    }
+  });
+
   test('portrait first fold remains usable (390x844)', async ({ page }) => {
     await openGuest(page, 390, 844);
     await expect(page).toHaveScreenshot('mobile-portrait-first-fold.png', {

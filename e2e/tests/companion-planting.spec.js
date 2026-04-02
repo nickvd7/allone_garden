@@ -1,52 +1,55 @@
 // @ts-check
+/**
+ * Companion-planting op de huidige UI: eigen tuin via wereldkaart (mini 3×3-raster).
+ * De volledige companion-legenda / 💚-indicatoren bestaan alleen in de legacy Garden-grid;
+ * hier verifiëren we dat gewassen die in defaultContent als goede buren gelden (tomaat ↔ wortel)
+ * op twee aangrenzende vakken geplant kunnen worden, met zichtbare gewas-emoji’s.
+ */
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register } = require('./helpers');
+const { uniqueUser, register, openOwnGardenPanel } = require('./helpers');
 
-test.describe('Companion Planting', () => {
-  test.beforeEach(async ({ page }) => {
-    const user = uniqueUser();
+test.describe('Companion planting (world map)', () => {
+  let user;
+
+  test.beforeAll(async ({ browser }) => {
+    user = uniqueUser();
+    const page = await browser.newPage();
     await register(page, user);
+    await page.close();
   });
 
-  test('companion legend appears once plants are growing', async ({ page }) => {
-    // Plant something: till → select plant tool → click plot
-    await page.locator('.tool-btn', { hasText: /Till/i }).click();
-    const firstPlot = page.locator('.plot').first();
-    await firstPlot.click();
-
-    await page.locator('.tool-btn', { hasText: /^.*Plant.*$/i }).click();
-    await firstPlot.click();
-
-    // Second plot next to the first
-    await page.locator('.tool-btn', { hasText: /Till/i }).click();
-    const secondPlot = page.locator('.plot').nth(1);
-    await secondPlot.click();
-
-    await page.locator('.tool-btn', { hasText: /^.*Plant.*$/i }).click();
-    await secondPlot.click();
-
-    // The companion legend should appear
-    await expect(page.locator('.companion-legend').first()).toBeVisible({ timeout: 3_000 });
+  test.beforeEach(async ({ page }) => {
+    const { login } = require('./helpers');
+    await login(page, user);
   });
 
-  test('plot shows companion indicator emoji when plants are adjacent', async ({ page }) => {
-    // Till and plant two adjacent plots
-    for (const n of [0, 1]) {
-      await page.locator('.tool-btn', { hasText: /Till/i }).click();
-      await page.locator('.plot').nth(n).click();
-      await page.locator('.tool-btn', { hasText: /^.*Plant.*$/i }).click();
-      await page.locator('.plot').nth(n).click();
-    }
+  function ownMiniPlots(page) {
+    return page.locator('.world-own-plot:not(.world-own-plot--neighbor)');
+  }
 
-    // At least one companion-indicator (💚 or ⚠️) should appear
-    const indicators = page.locator('.companion-indicator');
-    const count = await indicators.count();
-    // Indicators only appear when plants interact — count may be 0 for neutral
-    // combinations, so we just check the legend is visible which confirms the
-    // logic ran.
-    await expect(
-      page.locator('.companion-legend').first()
-    ).toBeVisible({ timeout: 3_000 });
-    expect(count).toBeGreaterThanOrEqual(0);
+  test('tomaat en wortel op aangrenzende vakken + emoji’s (content: goede combinatie)', async ({ page }) => {
+    await openOwnGardenPanel(page);
+    const plots = ownMiniPlots(page);
+    await expect(plots).toHaveCount(9);
+
+    await plots.nth(0).click({ force: true });
+    await plots.nth(1).click({ force: true });
+    await expect(plots.nth(0)).toHaveClass(/world-own-plot--tilled/, { timeout: 5_000 });
+    await expect(plots.nth(1)).toHaveClass(/world-own-plot--tilled/);
+
+    const panel = page.locator('.walk-garden-view');
+    // Standaard selectedSeed = tomato; default target plot index = 1
+    await panel.getByRole('button', { name: /Plant/i }).click();
+    await expect(page.locator('#own-garden-seed-select')).toBeVisible({ timeout: 5_000 });
+    await expect(plots.nth(1)).toHaveClass(/world-own-plot--planted/, { timeout: 5_000 });
+
+    await page.locator('#own-garden-seed-select').selectOption('carrot');
+    await plots.nth(0).click({ force: true });
+
+    await expect(plots.nth(0)).toHaveClass(/world-own-plot--planted/);
+    await expect(plots.nth(1)).toHaveClass(/world-own-plot--planted/);
+
+    await expect(plots.nth(0).locator('.world-own-plot-emoji')).not.toBeEmpty();
+    await expect(plots.nth(1).locator('.world-own-plot-emoji')).not.toBeEmpty();
   });
 });

@@ -1,12 +1,12 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register, login, logout, dismissWebpackOverlay } = require('./helpers');
+const { uniqueUser, register, login, logout, dismissWebpackOverlay, assertLoggedInAs } = require('./helpers');
 
 test.describe('Authentication', () => {
   test('shows login screen on first visit', async ({ page }) => {
     await page.goto('/');
     await dismissWebpackOverlay(page);
-    await expect(page.getByText('🌱 AllOne Garden')).toBeVisible();
+    await expect(page.getByRole('img', { name: /AllOne Garden/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Login' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Register' })).toBeVisible();
   });
@@ -14,8 +14,7 @@ test.describe('Authentication', () => {
   test('can register a new account', async ({ page }) => {
     const user = uniqueUser();
     await register(page, user);
-    // Should see the header with username
-    await expect(page.getByRole('button', { name: new RegExp(user.username, 'i') })).toBeVisible();
+    await assertLoggedInAs(page, user.username);
   });
 
   test('shows error on duplicate username', async ({ page }) => {
@@ -42,7 +41,7 @@ test.describe('Authentication', () => {
     await expect(page.getByRole('tab', { name: 'Login' })).toBeVisible();
 
     await login(page, user);
-    await expect(page.getByRole('button', { name: new RegExp(user.username, 'i') })).toBeVisible();
+    await assertLoggedInAs(page, user.username);
   });
 
   test('shows error on wrong password', async ({ page }) => {
@@ -61,14 +60,17 @@ test.describe('Authentication', () => {
     await dismissWebpackOverlay(page);
     await page.getByRole('button', { name: /Play as Guest/i }).click();
     await page.waitForSelector('.header', { timeout: 10_000 });
-    await expect(page.getByRole('button', { name: /Guest/i })).toBeVisible();
+    await page.locator('#header-profile-btn').click();
+    await expect(page.getByRole('menuitem', { name: /Guest/i })).toBeVisible();
+    await page.keyboard.press('Escape');
   });
 
   test('session persists across page reload', async ({ page }) => {
     const user = uniqueUser();
     await register(page, user);
     await page.reload();
+    await dismissWebpackOverlay(page);
     await page.waitForSelector('.header', { timeout: 10_000 });
-    await expect(page.getByRole('button', { name: new RegExp(user.username, 'i') })).toBeVisible();
+    await assertLoggedInAs(page, user.username);
   });
 });

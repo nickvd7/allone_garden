@@ -14,7 +14,7 @@ const PLANT_INFO = {
   blueberry: { emoji: '🫐', labelKey: 'plant_blueberry', sellPrice: 16 },
 };
 
-function Inventory({ inventory, onSell, onClose }) {
+function Inventory({ inventory, onSell, onClose, onOpenTrade }) {
   const { t } = useTranslation();
 
   const items = Object.entries(inventory).map(([id, count]) => ({
@@ -32,16 +32,28 @@ function Inventory({ inventory, onSell, onClose }) {
     <div className="card inventory-sidebar">
       <div className="inventory-sidebar__header">
         <h3>🧺 {t('inventory')}</h3>
-        {onClose && (
-          <button
-            type="button"
-            className="btn btn-secondary inventory-sidebar__close"
-            onClick={onClose}
-            aria-label="Inventory sluiten"
-          >
-            ✕
-          </button>
-        )}
+        <div className="inventory-sidebar__header-actions">
+          {onOpenTrade && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onOpenTrade}
+              title="Marketplace"
+            >
+              🏪 {t('marketplace', { defaultValue: 'Marketplace' })}
+            </button>
+          )}
+          {onClose && (
+            <button
+              type="button"
+              className="btn btn-secondary inventory-sidebar__close"
+              onClick={onClose}
+              aria-label="Inventory sluiten"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="inventory-grid">

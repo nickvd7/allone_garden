@@ -1,8 +1,8 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register } = require('./helpers');
+const { uniqueUser, register, openOwnGardenPanel } = require('./helpers');
 
-test.describe('Garden', () => {
+test.describe('Garden (world map)', () => {
   let user;
 
   test.beforeAll(async ({ browser }) => {
@@ -17,51 +17,49 @@ test.describe('Garden', () => {
     await login(page, user);
   });
 
-  test('garden grid is visible with plots', async ({ page }) => {
-    const plots = page.locator('.plot');
-    await expect(plots.first()).toBeVisible();
-    const count = await plots.count();
-    expect(count).toBeGreaterThanOrEqual(24);
+  test('own garden plots strip is visible after jump', async ({ page }) => {
+    await openOwnGardenPanel(page);
+    const ownPlots = page.locator('.world-own-plot:not(.world-own-plot--neighbor)');
+    await expect(ownPlots.first()).toBeVisible();
+    expect(await ownPlots.count()).toBeGreaterThanOrEqual(1);
   });
 
-  test('can select the Till tool', async ({ page }) => {
-    const tillBtn = page.locator('.tool-btn', { hasText: /Till/i });
+  test('can select the Till tool in world panel', async ({ page }) => {
+    await openOwnGardenPanel(page);
+    const tillBtn = page.getByRole('button', { name: /Till/i });
     await tillBtn.click();
-    // Tool button should appear selected (active class or aria-pressed)
-    await expect(tillBtn).toHaveClass(/active|selected/, { timeout: 2_000 }).catch(() => {
-      // Fallback: button is still clickable without error
-    });
+    await expect(tillBtn).toHaveClass(/active|world-action-item--active/, { timeout: 3_000 }).catch(() => {});
   });
 
-  test('can till a plot', async ({ page }) => {
-    await page.locator('.tool-btn', { hasText: /Till/i }).click();
-    const firstPlot = page.locator('.plot').first();
-    await firstPlot.click();
-    // After tilling the plot class or content changes
-    await expect(firstPlot).not.toHaveClass(/untilled/, { timeout: 3_000 }).catch(() => {});
+  test('can till a plot from world panel', async ({ page }) => {
+    await openOwnGardenPanel(page);
+    await page.getByRole('button', { name: /Till/i }).click();
+    const targetPlot = page.locator('.world-own-plot:not(.world-own-plot--neighbor)').first();
+    await targetPlot.click({ force: true });
+    await expect(targetPlot).toHaveClass(/world-own-plot--tilled/, { timeout: 5_000 });
   });
 
   test('can advance to next day', async ({ page }) => {
-    // Get current day text
-    const dayText = page.locator('text=/Day \\d+/');
-    await expect(dayText).toBeVisible();
-    const before = await dayText.textContent();
+    const dayLine = page.locator('.mobile-world-mini-hud__line').filter({ hasText: /Day \d+/ });
+    await expect(dayLine).toBeVisible();
+    const before = await dayLine.textContent();
 
-    await page.getByRole('button', { name: /Next Day/i }).click();
+    await page.getByRole('button', { name: /Next day/i }).click();
     await page.waitForTimeout(500);
 
-    const after = await dayText.textContent();
+    const after = await dayLine.textContent();
     expect(after).not.toBe(before);
   });
 
-  test('tools panel shows all garden tools', async ({ page }) => {
-    for (const tool of ['Till', 'Plant', 'Water', 'Harvest', 'Fertilize']) {
-      await expect(page.locator('.tool-btn', { hasText: new RegExp(tool, 'i') })).toBeVisible();
+  test('world garden panel shows core tools', async ({ page }) => {
+    await openOwnGardenPanel(page);
+    for (const tool of ['Till', 'Plant', 'Water', 'Harvest']) {
+      await expect(page.getByRole('button', { name: new RegExp(tool, 'i') })).toBeVisible();
     }
   });
 
-  test('stats bar shows XP, coins and level', async ({ page }) => {
-    await expect(page.locator('text=/XP|xp|⭐/').first()).toBeVisible();
-    await expect(page.locator('text=/coin|🪙/i').first()).toBeVisible();
+  test('mini HUD shows day and XP', async ({ page }) => {
+    await expect(page.locator('.mobile-world-mini-hud__line').filter({ hasText: /Day \d+/ })).toBeVisible();
+    await expect(page.locator('.mobile-world-mini-hud__line').filter({ hasText: /XP/ })).toBeVisible();
   });
 });
