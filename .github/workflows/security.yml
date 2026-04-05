@@ -50,13 +50,14 @@ jobs:
       - name: No OpenSSH private keys in tracked sources
         run: |
           set -euo pipefail
-          matches=$(git grep -l "BEGIN OPENSSH PRIVATE KEY" -- '*.yml' '*.yaml' '*.js' '*.ts' '*.tsx' '*.json' '*.md' '*.sh' '*.env*' 2>/dev/null || true)
+          # Exclude .github/workflows: this file contains the marker inside the grep command itself.
+          matches=$(git grep -l "BEGIN OPENSSH PRIVATE KEY" -- . ':(exclude).github/workflows' 2>/dev/null || true)
           if [ -n "$matches" ]; then
             echo "::error::Possible OpenSSH private key in tracked files:"
             echo "$matches"
             exit 1
           fi
-          echo "OK — no OPENSSH private key markers in common source paths"
+          echo "OK — no OPENSSH private key markers outside workflow definitions"
 
   # ── Secret scanning (gitleaks) ───────────────────────────────────────────────
   gitleaks:
