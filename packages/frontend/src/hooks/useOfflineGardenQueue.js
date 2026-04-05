@@ -4,16 +4,18 @@
  * on 409 conflict the queue is cleared (server wins).
  */
 import { useEffect, useRef } from 'react';
+import {
+  AUTH_HTTPONLY,
+  getBearerAuthHeader,
+  getFetchCredentials,
+  readGardenToken,
+} from '../auth/session';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const QUEUE_KEY = 'allone_garden_offline_garden_queue';
 
 /** Sync with App.js — last known server `updated_at` for optimistic concurrency */
 export const GARDEN_SERVER_UPDATED_KEY = 'allone_garden_server_updated_at';
-
-function getToken() {
-  return typeof localStorage !== 'undefined' ? localStorage.getItem('garden_token') : null;
-}
 
 function loadQueue() {
   try {
@@ -39,8 +41,8 @@ export function useOfflineGardenQueue({ enabled, gameState, backendUp }) {
     const flush = async () => {
       const q = loadQueue();
       if (!q.length) return;
-      const token = getToken();
-      if (!token) {
+      const token = readGardenToken();
+      if (!AUTH_HTTPONLY && !token) {
         saveQueue([]);
         return;
       }
@@ -53,10 +55,11 @@ export function useOfflineGardenQueue({ enabled, gameState, backendUp }) {
         if (since) body.ifUnmodifiedSince = since;
         try {
           const res = await fetch(`${BASE}/api/garden`, {
-            method:  'POST',
-            headers: {
-              'Content-Type':  'application/json',
-              Authorization: `Bearer ${token}`,
+            method:      'POST',
+            credentials: getFetchCredentials(),
+            headers:     {
+              'Content-Type': 'application/json',
+              ...getBearerAuthHeader(),
             },
             body: JSON.stringify(body),
           });

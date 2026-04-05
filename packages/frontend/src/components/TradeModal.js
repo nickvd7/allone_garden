@@ -179,7 +179,7 @@ function ListingRow({ listing, onBuy, ownUserId }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDeduct, onGuestSale }) {
-  const hasAuth = !!localStorage.getItem('garden_token');
+  const hasAuth = userId > 0;
   const [tab, setTab]         = useState('browse'); // 'browse' | 'sell' | 'prices'
   const [listings, setListings] = useState([]);
   const [loading, setLoading]   = useState(false);

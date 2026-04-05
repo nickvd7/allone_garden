@@ -129,7 +129,8 @@ describe('AuthScreen', () => {
     await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
     expect(axios.post).toHaveBeenCalledWith(
       expect.stringContaining('/api/auth/register'),
-      expect.objectContaining({ username: 'Bob', email: 'bob@example.com' })
+      expect.objectContaining({ username: 'Bob', email: 'bob@example.com' }),
+      expect.objectContaining({ withCredentials: false })
     );
   });
 

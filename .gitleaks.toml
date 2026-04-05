@@ -1,0 +1,18 @@
+# Gitleaks — secret scanning (used by .github/workflows/security.yml).
+# Allowlist noisy paths; keep rules strict elsewhere.
+
+title = "AllOne Garden"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Tests and fixtures commonly contain token-shaped strings"
+paths = [
+  '''.*\.test\.js$''',
+  '''.*\.test\.jsx$''',
+  '''(^|/)tests/''',
+  '''(^|/)__tests__/''',
+  '''(^|/)e2e/''',
+  '''\.env\.example$''',
+]

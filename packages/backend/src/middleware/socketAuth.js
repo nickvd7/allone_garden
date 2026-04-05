@@ -14,11 +14,24 @@
  * Usage in index.js:
  *   io.use(socketAuthMiddleware);
  */
+const cookie           = require('cookie');
 const jwt              = require('jsonwebtoken');
 const { isTokenRevoked } = require('../redis');
+const { COOKIE_NAME, httpOnlyCookieEnabled } = require('../config/authCookies');
+
+function tokenFromHandshake(handshake) {
+  const fromAuth = handshake.auth?.token;
+  if (fromAuth) return fromAuth;
+  if (httpOnlyCookieEnabled() && handshake.headers?.cookie) {
+    const parsed = cookie.parse(handshake.headers.cookie);
+    const c = parsed[COOKIE_NAME];
+    return typeof c === 'string' && c.trim() ? c.trim() : null;
+  }
+  return null;
+}
 
 async function socketAuthMiddleware(socket, next) {
-  const token = socket.handshake.auth?.token;
+  const token = tokenFromHandshake(socket.handshake);
 
   if (!token) {
     // Allow unauthenticated guests — they can chat and observe but not save progress
@@ -49,7 +62,7 @@ async function socketAuthMiddleware(socket, next) {
  * Use for namespaces or rooms that require login.
  */
 async function requireSocketAuth(socket, next) {
-  const token = socket.handshake.auth?.token;
+  const token = tokenFromHandshake(socket.handshake);
   if (!token) return next(new Error('Authentication required'));
 
   let payload;

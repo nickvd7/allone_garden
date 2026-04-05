@@ -92,7 +92,10 @@ router.post('/event', apiLimiter, async (req, res) => {
     if (header.startsWith('Bearer ')) {
       const jwt = require('jsonwebtoken');
       const decoded = jwt.verify(header.slice(7), process.env.JWT_SECRET, { algorithms: ['HS256'] });
-      userId = decoded.id || null;
+      userId =
+        typeof decoded.userId === 'number' && Number.isFinite(decoded.userId)
+          ? decoded.userId
+          : null;
     }
   } catch { /* anonymous event */ }
 
@@ -112,7 +115,7 @@ router.post('/event', apiLimiter, async (req, res) => {
 
 // ── GET /api/analytics/summary ───────────────────────────────────────────────
 router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
-  const days = Math.min(parseInt(req.query.days, 10) || 30, 90);
+  const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 90);
 
   const dbResult = await db.query(`
     SELECT
@@ -122,10 +125,10 @@ router.get('/summary', requireAuth, requireAdmin, async (req, res) => {
       COUNT(DISTINCT user_id)                       AS unique_users,
       DATE_TRUNC('day', created_at)::DATE           AS day
     FROM analytics_events
-    WHERE created_at >= NOW() - INTERVAL '${days} days'
+    WHERE created_at >= NOW() - ($1::integer * INTERVAL '1 day')
     GROUP BY event_name, day
     ORDER BY day DESC, total DESC
-  `);
+  `, [days]);
 
   if (dbResult) {
     return res.json({ source: 'db', days, rows: dbResult.rows });

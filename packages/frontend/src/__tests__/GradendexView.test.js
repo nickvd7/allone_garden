@@ -296,7 +296,10 @@ describe('GradendexView — edit form', () => {
       expect(axios.put).toHaveBeenCalledWith(
         expect.stringContaining('/api/gradendex/tomato'),
         expect.objectContaining({ name: 'Super Tomato' }),
-        expect.objectContaining({ headers: { Authorization: 'Bearer mock-jwt-token' } })
+        expect.objectContaining({
+          withCredentials: false,
+          headers:       { Authorization: 'Bearer mock-jwt-token' },
+        })
       );
     });
   });

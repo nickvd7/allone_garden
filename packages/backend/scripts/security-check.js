@@ -9,8 +9,15 @@
  *
  * Usage:  node scripts/security-check.js
  *         npm run security-check
+ *
+ * In GitHub Actions, set SECURITY_CHECK_CI=true and inject the same env vars
+ * a production server would need — the same rules apply as for NODE_ENV=production.
  */
 require('dotenv').config();
+
+if (process.env.SECURITY_CHECK_CI === 'true') {
+  console.log('[security-check] SECURITY_CHECK_CI — using workflow-supplied environment\n');
+}
 
 const PROD = process.env.NODE_ENV === 'production';
 

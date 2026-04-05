@@ -9,6 +9,7 @@ import api from '../hooks/useApi';
  * Community tab  — registry catalogue (served by backend, falls back to bundled list).
  *
  * Admins (user.isAdmin) can install plugins from the registry and unload running ones.
+ * isAdmin mirrors the server (safeUser); real authorization is enforced in /api/plugins.
  */
 
 // Bundled fallback catalogue — shown when the backend registry is unreachable.

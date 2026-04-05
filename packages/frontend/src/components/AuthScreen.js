@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { AUTH_HTTPONLY, persistGardenToken } from '../auth/session';
 import appLogo from '../assets/allone-garden-logo-transparent.png';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -40,9 +41,11 @@ function AuthScreen({ onLogin }) {
             ? { username: form.username, password: form.password }
             : { username: form.username, email: form.email, password: form.password };
 
-        const { data } = await axios.post(`${API}${endpoint}`, body);
-        localStorage.setItem('garden_token', data.token);
-        onLogin(data.user, data.token);
+        const { data } = await axios.post(`${API}${endpoint}`, body, {
+          withCredentials: AUTH_HTTPONLY,
+        });
+        persistGardenToken(data.token);
+        onLogin(data.user, AUTH_HTTPONLY ? null : data.token);
 
       } else if (mode === 'forgot') {
         await axios.post(`${API}/api/auth/forgot-password`, { email: form.email });

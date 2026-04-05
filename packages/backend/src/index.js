@@ -26,7 +26,8 @@ const path    = require('path');
 const express = require('express');
 const http    = require('http');
 const socketIO = require('socket.io');
-const cors    = require('cors');
+const cors         = require('cors');
+const cookieParser = require('cookie-parser');
 
 const authRoutes    = require('./routes/auth');
 const gardenRoutes  = require('./routes/garden');
@@ -68,6 +69,7 @@ const io     = socketIO(server, {
   cors: {
     origin: corsOriginValidator,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
 });
 
@@ -77,7 +79,8 @@ app.set('io', io);
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(helmetMiddleware);
 app.use(requestId);
-app.use(cors({ origin: corsOriginValidator }));
+app.use(cookieParser());
+app.use(cors({ origin: corsOriginValidator, credentials: true }));
 app.use(apiLimiter);                         // global rate limit
 
 // ── REST routes ───────────────────────────────────────────────────────────────

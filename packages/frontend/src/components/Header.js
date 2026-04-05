@@ -27,23 +27,23 @@ const LANGUAGES = [
 function Header({
   onLanguageChange,
   currentLang,
-  serverInfo,
+  serverInfo: _serverInfo,
   username,
   darkMode,
   onToggleDark,
   onLogout,
   onOpenAccount,
-  onOpenTrade,
+  onOpenTrade: _onOpenTrade,
   onOpenPlugins,
   onOpenProfile,
-  onOpenWorldMap,
+  onOpenWorldMap: _onOpenWorldMap,
   onOpenSocialMenu,
   socialBadge,
   onToggleInventory,
   inventoryOpen,
-  worldSummary,
+  worldSummary: _worldSummary,
   onNextDay,
-  onOpenXpDetails,
+  onOpenXpDetails: _onOpenXpDetails,
 }) {
   const { t } = useTranslation();
   const [profileOpen, setProfileOpen] = useState(false);

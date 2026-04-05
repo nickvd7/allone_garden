@@ -6,6 +6,13 @@ import './App.css';
 import './i18n/config';
 
 import api, { RateLimitError, ConflictError } from './hooks/useApi';
+import {
+  AUTH_HTTPONLY,
+  clearGardenToken,
+  getFetchCredentials,
+  hasAuthenticatedApi,
+  readGardenToken,
+} from './auth/session';
 import { useAnalytics } from './hooks/useAnalytics';
 import { useDiscordPresence } from './hooks/useDiscordPresence';
 import { useSteamAchievements } from './hooks/useSteamAchievements';
@@ -131,7 +138,8 @@ function App() {
   const [authUser,    setAuthUser]    = useState(null);
   const [authToken,   setAuthToken]   = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  usePushNotifications(authToken);
+  const hasServerAuth = hasAuthenticatedApi(authUser, authToken);
+  usePushNotifications(hasServerAuth);
   const [backendUp,   setBackendUp]   = useState(false);
 
   const [socket,     setSocket]     = useState(null);
@@ -200,6 +208,7 @@ function App() {
 
   // ── Content Wiki badge — poll every 60 s ──────────────────────────────────────
   // Admins see global pending count; regular users see their own revision_requested count.
+  // authUser.isAdmin is derived from the server profile (UI hint only); counts use public/admin endpoints as appropriate.
   useEffect(() => {
     if (!authUser) return;
     const fetchCount = () => {
@@ -209,7 +218,7 @@ function App() {
           .then(({ count }) => setContentWikiBadge(count || 0))
           .catch(() => {});
       } else {
-        if (!authToken) { setContentWikiBadge(0); return; }
+        if (!hasServerAuth) { setContentWikiBadge(0); return; }
         api.get('/api/content/proposals/mine')
           .then((data) => {
             const n = (data.proposals || []).filter((p) => p.status === 'revision_requested').length;
@@ -221,25 +230,39 @@ function App() {
     fetchCount();
     const interval = setInterval(fetchCount, 60_000);
     return () => clearInterval(interval);
-  }, [authUser, authToken]);
+  }, [authUser, hasServerAuth]);
 
-  // ── Restore session from localStorage ────────────────────────────────────────
+  // ── Restore session from localStorage or HttpOnly cookie ───────────────────
   useEffect(() => {
-    const savedToken = localStorage.getItem('garden_token');
+    if (AUTH_HTTPONLY) {
+      fetch(`${BACKEND_URL}/api/auth/me`, { credentials: getFetchCredentials() })
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then(({ user }) => {
+          setAuthUser(user);
+          setAuthToken(null);
+          setBackendUp(true);
+        })
+        .catch(() => {})
+        .finally(() => setAuthChecked(true));
+      return;
+    }
+
+    const savedToken = readGardenToken();
     if (!savedToken) { setAuthChecked(true); return; }
 
     fetch(`${BACKEND_URL}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${savedToken}` },
+      credentials: getFetchCredentials(),
+      headers:     { Authorization: `Bearer ${savedToken}` },
     })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(({ user }) => { setAuthUser(user); setAuthToken(savedToken); setBackendUp(true); })
-      .catch(() => localStorage.removeItem('garden_token'))
+      .catch(() => clearGardenToken())
       .finally(() => setAuthChecked(true));
   }, []);
 
   // ── Load garden + inventory from backend after login ──────────────────────────
   useEffect(() => {
-    if (!authUser || !backendUp || !authToken) return;
+    if (!authUser || !backendUp || !hasServerAuth) return;
 
     api.get('/api/garden')
       .then((data) => {
@@ -260,7 +283,7 @@ function App() {
         }));
       })
       .catch(() => {}); // backend garden not found — use defaults
-  }, [authUser, backendUp, authToken]);
+  }, [authUser, backendUp, hasServerAuth]);
 
   // ── Auto-save garden to backend (debounced, 3 s after last change) ────────────
   const saveGarden = useCallback((state) => {
@@ -345,9 +368,10 @@ function App() {
     if (!authUser) return;
 
     const newSocket = io(BACKEND_URL, {
-      transports: ['websocket'],
+      transports:      ['websocket'],
       reconnectionAttempts: 5,
-      auth: { token: authToken },
+      withCredentials: AUTH_HTTPONLY,
+      auth:            { token: authToken || undefined },
     });
 
     newSocket.on('connect', () => {
@@ -435,7 +459,7 @@ function App() {
       };
       if (msgs[status]) showNotification(msgs[status]);
       // Refresh personal badge count immediately
-      if (authToken) {
+      if (hasServerAuth) {
         api.get('/api/content/proposals/mine')
           .then((data) => {
             const n = (data.proposals || []).filter((p) => p.status === 'revision_requested').length;
@@ -456,7 +480,7 @@ function App() {
       socket.off('call:offer',      onCallOffer);
       socket.off('proposal:status_changed', onProposalStatus);
     };
-  }, [socket, showNotification, authToken]);
+  }, [socket, showNotification, hasServerAuth]);
 
   useEffect(() => {
     if (!socket) return;
@@ -473,7 +497,7 @@ function App() {
   const handleLogin = (user, token) => {
     setAuthUser(user);
     setAuthToken(token);
-    if (token) setBackendUp(true);
+    if (user.id !== 0) setBackendUp(true);
     track('session_start', { level: user.level || 1 });
     setGameState((prev) => ({
       ...prev,
@@ -496,7 +520,11 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('garden_token');
+    clearGardenToken();
+    fetch(`${BACKEND_URL}/api/auth/logout`, {
+      method: 'POST',
+      credentials: getFetchCredentials(),
+    }).catch(() => {});
     socket?.disconnect();
     setSocket(null);
     setAuthUser(null);
@@ -507,7 +535,7 @@ function App() {
   };
 
   const handleNextDay = useCallback(() => {
-    if (!authToken) {
+    if (!hasServerAuth) {
       setGameState((prev) => ({
         ...prev,
         currentDay: (prev.currentDay || 1) + 1,
@@ -548,7 +576,7 @@ function App() {
       .catch(() => {
         showNotification('Kon de volgende dag niet starten.');
       });
-  }, [authToken, showNotification]);
+  }, [hasServerAuth, showNotification]);
 
   // Sell a crop from inventory — silo gives +20% bonus
   const handleSell = useCallback((cropId, qty, priceEach) => {
@@ -790,7 +818,7 @@ function App() {
     return <AuthScreen onLogin={handleLogin} />;
   }
   document.title = 'AllOne Garden';
-  const isGuestMode = !authToken;
+  const isGuestMode = authUser.id === 0;
 
   return (
     <div className="App">

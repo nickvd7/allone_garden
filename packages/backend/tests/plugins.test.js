@@ -111,6 +111,20 @@ describe('PluginAPI db capability', () => {
       api.dbQuery('scores', 'SELECT * FROM some_other_table', [])
     ).rejects.toThrow(/\{\{table\}\}/);
   });
+
+  it('rejects dbCreateTable columnDefs with SQL keywords', async () => {
+    const api = makeApi(['db']);
+    await expect(
+      api.dbCreateTable('scores', 'id INT, evil INT REFERENCES users(id)')
+    ).rejects.toThrow(/disallowed SQL keywords/i);
+  });
+
+  it('rejects dbCreateTable columnDefs with disallowed characters', async () => {
+    const api = makeApi(['db']);
+    await expect(
+      api.dbCreateTable('scores', 'id INT DEFAULT 1::text')
+    ).rejects.toThrow(/::/);
+  });
 });
 
 // ── PluginAPI broadcast capability ────────────────────────────────────────────

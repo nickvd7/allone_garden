@@ -83,6 +83,32 @@ class PluginAPI {
   // by dbCreateTable(), not here.
   static _ALLOWED_SQL = /^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+/i;
 
+  // Block obvious injection / second statements in CREATE TABLE (...) fragments.
+  static _FORBIDDEN_IN_COLUMN_DEFS =
+    /\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|INTO|FROM|WHERE|CAST|REFERENCES|CONSTRAINT|FOREIGN|TRIGGER|FUNCTION|PROCEDURE|TABLE|GENERATED)\b/i;
+
+  /**
+   * @param {string} columnDefs
+   */
+  static _validateColumnDefs(columnDefs) {
+    const s = columnDefs.trim();
+    if (!s) {
+      throw new Error('[PluginAPI] columnDefs must be a non-empty string');
+    }
+    if (s.length > 2048) {
+      throw new Error('[PluginAPI] columnDefs exceeds maximum length (2048)');
+    }
+    if (/;|--|\/\*|\$|\r|\n|\\|::/.test(s)) {
+      throw new Error('[PluginAPI] columnDefs must not contain ";", "--", "/*", "$", newlines, "\\", or "::"');
+    }
+    if (PluginAPI._FORBIDDEN_IN_COLUMN_DEFS.test(s)) {
+      throw new Error('[PluginAPI] columnDefs contains disallowed SQL keywords');
+    }
+    if (!/^[a-zA-Z0-9_ ,\t'"().+-]+$/.test(s)) {
+      throw new Error('[PluginAPI] columnDefs may only contain letters, digits, spaces, commas, underscores, quotes, and parentheses');
+    }
+  }
+
   async dbQuery(tableSuffix, sql, params) {
     this._requireCapability('db');
     PluginAPI._validateSuffix(tableSuffix);
@@ -129,13 +155,10 @@ class PluginAPI {
     this._requireCapability('db');
     PluginAPI._validateSuffix(tableSuffix);
 
-    // Guard against SQL injection in columnDefs: reject statement terminators and comments.
-    if (typeof columnDefs !== 'string' || columnDefs.trim().length === 0) {
+    if (typeof columnDefs !== 'string') {
       throw new Error('[PluginAPI] columnDefs must be a non-empty string');
     }
-    if (/;|--|\/\*/.test(columnDefs)) {
-      throw new Error('[PluginAPI] columnDefs must not contain ";", "--", or "/*" (possible SQL injection)');
-    }
+    PluginAPI._validateColumnDefs(columnDefs);
 
     const table = `plugin_${this._pluginName}_${tableSuffix}`;
     await this._db.query(`CREATE TABLE IF NOT EXISTS ${table} (${columnDefs})`);

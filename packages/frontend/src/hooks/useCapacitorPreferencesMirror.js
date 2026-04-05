@@ -4,9 +4,12 @@
  */
 import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { AUTH_HTTPONLY } from '../auth/session';
 import { GARDEN_SERVER_UPDATED_KEY } from './useOfflineGardenQueue';
 
-const KEYS = [GARDEN_SERVER_UPDATED_KEY, 'garden_token'];
+const KEYS = AUTH_HTTPONLY
+  ? [GARDEN_SERVER_UPDATED_KEY]
+  : [GARDEN_SERVER_UPDATED_KEY, 'garden_token'];
 
 export function useCapacitorPreferencesMirror({ enabled }) {
   useEffect(() => {

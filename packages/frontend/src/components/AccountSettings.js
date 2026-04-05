@@ -5,6 +5,11 @@
  */
 import React, { useState } from 'react';
 import api, { RateLimitError } from '../hooks/useApi';
+import {
+  clearGardenToken,
+  getBearerAuthHeader,
+  getFetchCredentials,
+} from '../auth/session';
 
 const OVERLAY = {
   position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
@@ -73,12 +78,15 @@ export default function AccountSettings({ onClose, onDeleted }) {
     setLoading(true);
     // Use native fetch for PATCH (api helper only covers get/post/delete)
     try {
-      const token = localStorage.getItem('garden_token');
       const res = await fetch(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/account/password`,
         {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          method:      'PATCH',
+          credentials: getFetchCredentials(),
+          headers:     {
+            'Content-Type': 'application/json',
+            ...getBearerAuthHeader(),
+          },
           body: JSON.stringify({ currentPassword: currentPw, newPassword: newPw }),
         }
       );
@@ -98,10 +106,12 @@ export default function AccountSettings({ onClose, onDeleted }) {
     setLoading(true);
     try {
       // Use raw fetch so we can handle the blob download
-      const token = localStorage.getItem('garden_token');
       const res = await fetch(
         `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/account/export`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          credentials: getFetchCredentials(),
+          headers:     { ...getBearerAuthHeader() },
+        }
       );
       if (res.status === 429) { setError('Too many requests — please wait.'); return; }
       if (!res.ok) { setError('Export failed.'); return; }
@@ -127,7 +137,13 @@ export default function AccountSettings({ onClose, onDeleted }) {
     setLoading(true);
     try {
       await api.delete('/api/account', { password: deletePassword });
-      localStorage.removeItem('garden_token');
+      try {
+        await fetch(
+          `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/logout`,
+          { method: 'POST', credentials: getFetchCredentials() }
+        );
+      } catch { /* ignore */ }
+      clearGardenToken();
       onDeleted();
     } catch (err) {
       if (err instanceof RateLimitError) {

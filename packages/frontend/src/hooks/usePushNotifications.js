@@ -6,12 +6,12 @@ import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import api from './useApi';
 
-export function usePushNotifications(authToken) {
+export function usePushNotifications(hasAuth) {
   const listenersRef = useRef([]);
 
   useEffect(() => {
     if (process.env.REACT_APP_ENABLE_PUSH !== 'true') return;
-    if (!authToken) return;
+    if (!hasAuth) return;
     if (Capacitor.getPlatform() === 'web') return;
 
     let cancelled = false;
@@ -51,5 +51,5 @@ export function usePushNotifications(authToken) {
       listenersRef.current.forEach((h) => h?.remove?.());
       listenersRef.current = [];
     };
-  }, [authToken]);
+  }, [hasAuth]);
 }

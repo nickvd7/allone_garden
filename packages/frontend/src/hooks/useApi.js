@@ -1,12 +1,10 @@
 /**
- * Thin wrapper around fetch that injects the JWT token from localStorage
+ * Thin wrapper around fetch that injects the JWT (Bearer and/or HttpOnly cookie)
  * and returns parsed JSON.  Falls back gracefully when the backend is offline.
  */
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { getBearerAuthHeader, getFetchCredentials } from '../auth/session';
 
-function getToken() {
-  return localStorage.getItem('garden_token');
-}
+const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // Thrown when the server returns 429 Too Many Requests
 export class RateLimitError extends Error {
@@ -27,14 +25,17 @@ export class ConflictError extends Error {
 }
 
 async function apiFetch(path, options = {}) {
-  const token = getToken();
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...getBearerAuthHeader(),
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${BASE}${path}`, { ...options, headers });
+  const response = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers,
+    credentials: getFetchCredentials(),
+  });
 
   if (response.status === 429) {
     const retryAfter = response.headers.get('Retry-After');

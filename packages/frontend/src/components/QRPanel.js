@@ -6,6 +6,7 @@
  *  • Generator — printable QR sticker sheet for all plant types
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { getBearerAuthHeader, getFetchCredentials } from '../auth/session';
 
 const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -132,9 +133,9 @@ function QRGenerator() {
 
   useEffect(() => {
     setLoading(true);
-    const token = localStorage.getItem('garden_token');
     fetch(`${BASE}/api/qr/sheet`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: getFetchCredentials(),
+      headers:     { ...getBearerAuthHeader() },
     })
       .then((r) => r.json())
       .then((d) => setPlants(d.plants || []))

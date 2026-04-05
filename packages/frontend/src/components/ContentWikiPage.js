@@ -11,13 +11,10 @@
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../hooks/useApi';
+import { AUTH_HTTPONLY, readGardenToken } from '../auth/session';
 import { BLANK, ItemForm, formStyles } from './ContentForms';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-function getStoredToken() {
-  try { return localStorage.getItem('garden_token') || null; } catch { return null; }
-}
 
 // ── Content type tabs ─────────────────────────────────────────────────────────
 const CONTENT_TABS = [
@@ -260,7 +257,7 @@ function ContentWikiPage() {
   const [myProposalsLoading, setMyProposalsLoading] = useState(false);
   const [myProposalsFilter, setMyProposalsFilter]   = useState('all');
 
-  const token = getStoredToken();
+  const token = readGardenToken();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
@@ -277,7 +274,7 @@ function ContentWikiPage() {
 
   // Load user's proposals whenever the Mine tab is opened
   const loadMyProposals = useCallback(async () => {
-    if (!token) return;
+    if (!AUTH_HTTPONLY && !token) return;
     setMyProposalsLoading(true);
     try {
       const data = await api.get('/api/content/proposals/mine');

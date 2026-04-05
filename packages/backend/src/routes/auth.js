@@ -15,6 +15,7 @@ const { validateRegister, validateLogin,
         handleValidationErrors }                   = require('../middleware/validate');
 const { updateMemEntry }                           = require('./leaderboard');
 const { sendPasswordReset }                        = require('../services/email');
+const { setAuthCookie, clearAuthCookie }             = require('../config/authCookies');
 
 // In-memory reset token store (used when DATABASE_URL is not set)
 // Map: token (hex) -> { userId, expires }
@@ -77,7 +78,9 @@ router.post('/register', authLimiter, validateRegister, async (req, res) => {
       const user = result.rows[0];
       updateMemEntry(safeUser(user));
       auditLog('register', req, { newUserId: user.id, username });
-      return res.status(201).json({ token: makeToken(user), user: safeUser(user) });
+      const token = makeToken(user);
+      setAuthCookie(res, token);
+      return res.status(201).json({ token, user: safeUser(user) });
     }
 
     // In-memory fallback
@@ -88,7 +91,9 @@ router.post('/register', authLimiter, validateRegister, async (req, res) => {
     memUsers.push(user);
     updateMemEntry(safeUser(user));
     auditLog('register', req, { newUserId: user.id, username });
-    res.status(201).json({ token: makeToken(user), user: safeUser(user) });
+    const token = makeToken(user);
+    setAuthCookie(res, token);
+    res.status(201).json({ token, user: safeUser(user) });
   } catch (err) {
     console.error('[auth/register]', err.message);
     res.status(500).json({ error: 'Registration failed' });
@@ -116,7 +121,9 @@ router.post('/login', authLimiter, validateLogin, async (req, res) => {
       await db.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
       updateMemEntry(safeUser(user));
       auditLog('login', req, { userId: user.id });
-      return res.json({ token: makeToken(user), user: safeUser(user) });
+      const token = makeToken(user);
+      setAuthCookie(res, token);
+      return res.json({ token, user: safeUser(user) });
     }
 
     // In-memory fallback
@@ -129,11 +136,20 @@ router.post('/login', authLimiter, validateLogin, async (req, res) => {
     }
     updateMemEntry(safeUser(user));
     auditLog('login', req, { userId: user.id });
-    res.json({ token: makeToken(user), user: safeUser(user) });
+    const token = makeToken(user);
+    setAuthCookie(res, token);
+    res.json({ token, user: safeUser(user) });
   } catch (err) {
     console.error('[auth/login]', err.message);
     res.status(500).json({ error: 'Login failed' });
   }
+});
+
+// ── POST /api/auth/logout ───────────────────────────────────────────────────
+// Clears the HttpOnly auth cookie when AUTH_HTTPONLY_COOKIE is enabled.
+router.post('/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ ok: true });
 });
 
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────

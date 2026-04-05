@@ -7,16 +7,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import GradendexView from './GradendexView';
+import { readGardenToken } from '../auth/session';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-function getStoredToken() {
-  try {
-    return localStorage.getItem('garden_token') || null;
-  } catch {
-    return null;
-  }
-}
 
 function GradendexPage() {
   const { t } = useTranslation();
@@ -31,7 +24,7 @@ function GradendexPage() {
     try { localStorage.setItem('garden_dark', String(darkMode)); } catch {}
   }, [darkMode]);
 
-  const token = getStoredToken();
+  const token = readGardenToken();
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg, #f1f8e9)', color: 'var(--text, #1b5e20)' }}>

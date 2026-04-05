@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import { AUTH_HTTPONLY, getBearerAuthHeader, readGardenToken } from '../auth/session';
 import { localizeGradendexEntry, categoryLabel, companionDisplayName } from '../utils/gradendexI18n';
 import i18n from '../i18n/config';
 
@@ -63,10 +64,16 @@ function EditForm({ entry, token, onSave, onCancel }) {
         base_coins:  form.base_coins  !== '' ? Number(form.base_coins)  : null,
         tips: form.tips.split('\n').map((x) => x.trim()).filter(Boolean),
       };
+      const bearerToken = AUTH_HTTPONLY ? null : (token || readGardenToken());
       const { data } = await axios.put(
         `${API}/api/gradendex/${entry.slug}`,
         payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          withCredentials: AUTH_HTTPONLY,
+          headers:       AUTH_HTTPONLY
+            ? { ...getBearerAuthHeader() }
+            : (bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
+        }
       );
       onSave(data.entry);
     } catch (err) {
@@ -301,9 +308,13 @@ function GradendexView({ token = null, compact = false }) {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    const bearerToken = AUTH_HTTPONLY ? null : (token || readGardenToken());
+    if (!AUTH_HTTPONLY && !bearerToken) return;
     axios.get(`${API}/api/gradendex/can-edit`, {
-      headers: { Authorization: `Bearer ${token}` },
+      withCredentials: AUTH_HTTPONLY,
+      headers:       AUTH_HTTPONLY
+        ? { ...getBearerAuthHeader() }
+        : (bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
     })
       .then(() => setCanEdit(true))
       .catch(() => setCanEdit(false));

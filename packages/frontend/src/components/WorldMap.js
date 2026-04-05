@@ -704,7 +704,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
         },
       };
     });
-  }, [onUpdateGame, gameState?.selectedTool, t]);
+  }, [onUpdateGame, gameState?.selectedTool, gameState?.plots, gameState?.selectedSeed, t]);
 
   const getTile = useCallback((x, y) => {
     if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) return W;
@@ -962,7 +962,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   }, [pos.x, pos.y, nearbyIdKey]);
 
   const handleTileClick = useCallback((tileData) => {
-    const { mx, my, ownPlot, ownPatchIndex, tile, gardenPlayer } = tileData;
+    const { mx, my, ownPlot, ownPatchIndex, gardenPlayer } = tileData;
     if (mx !== pos.x || my !== pos.y) hasUserMovedRef.current = true;
     if (ownPlot && ownPatchIndex !== null && ownPatchIndex !== undefined) {
       applyToolOnOwnPlot(ownPatchIndex);
