@@ -17,6 +17,7 @@ const pluginLoader     = require('../plugins/loader');
 const { requireAuth }  = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
 const { auditLog }     = require('../middleware/security');
+const { assertSafeRemoteUrl } = require('../utils/pluginUrlSecurity');
 
 const PLUGINS_ROOT = path.resolve(__dirname, '../../../../../plugins/community');
 const REGISTRY_URL = process.env.PLUGIN_REGISTRY_URL || '';
@@ -35,8 +36,9 @@ router.get('/registry', async (req, res) => {
     return res.json(BUNDLED_CATALOGUE);
   }
 
-  // Proxy the external registry with a 5 s timeout
+  // Proxy the external registry with a 5 s timeout (same SSRF rules as plugin downloads)
   try {
+    await assertSafeRemoteUrl(REGISTRY_URL);
     const data = await fetchJson(REGISTRY_URL, 5000);
     res.json(data);
   } catch (err) {
@@ -112,21 +114,23 @@ router.post('/:name/install', requireAuth, requireAdmin, async (req, res) => {
     res.status(201).json({ success: true, plugin: meta });
   } catch (err) {
     console.error('[plugins] Install error:', err.message);
-    res.status(500).json({ error: 'Installation failed: ' + err.message });
+    res.status(500).json({ error: 'Installation failed' });
   }
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fetchJson(url, timeoutMs) {
-  return fetchText(url, timeoutMs).then((t) => JSON.parse(t));
+async function fetchJson(url, timeoutMs) {
+  const t = await fetchText(url, timeoutMs);
+  return JSON.parse(t);
 }
 
-function fetchText(url, timeoutMs) {
+async function fetchText(url, timeoutMs) {
+  await assertSafeRemoteUrl(url);
   return new Promise((resolve, reject) => {
     const req = https.get(url, { timeout: timeoutMs }, (res) => {
       if (res.statusCode !== 200) {
-        return reject(new Error(`HTTP ${res.statusCode} from ${url}`));
+        return reject(new Error(`HTTP ${res.statusCode}`));
       }
       let body = '';
       res.on('data', (chunk) => {

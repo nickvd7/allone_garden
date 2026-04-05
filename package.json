@@ -10,15 +10,39 @@
     ],
     "overrides": {
       "lodash": "^4.18.1",
-      "tar": "^6.2.1",
+      "tar": "7.5.13",
+      "bcrypt": {
+        "@mapbox/node-pre-gyp": {
+          "tar": "7.5.13"
+        }
+      },
+      "@capacitor/cli": {
+        "tar": "7.5.13"
+      },
+      "app-builder-lib": {
+        "tar": "7.5.13"
+      },
+      "@electron/rebuild": {
+        "tar": "7.5.13"
+      },
+      "node-gyp": {
+        "tar": "7.5.13"
+      },
+      "cacache": {
+        "tar": "7.5.13"
+      },
       "nth-check": "^2.1.1",
       "postcss": "^8.4.49",
       "serialize-javascript": "7.0.5",
       "@tootallnate/once": "^3.0.1",
       "underscore": "^1.13.8",
-      "webpack-dev-server": "4.15.2"
+      "webpack-dev-server": "5.2.3",
+      "react-scripts": {
+        "webpack-dev-server": "$webpack-dev-server"
+      }
     },
     "scripts": {
+      "postinstall": "node scripts/prune-nested-webpack-dev-server.cjs",
       "dev": "npm run dev:frontend",
       "dev:frontend": "cd packages/frontend && npm start",
       "dev:backend": "cd packages/backend && npm run dev",

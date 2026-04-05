@@ -86,6 +86,12 @@ async function revokeUserTokens(userId) {
  * @param {string|number} userId
  * @param {number}        iat   — token issued-at timestamp (Unix seconds from JWT payload)
  */
+function strictJwtRevoke() {
+  return (
+    process.env.JWT_REVOKE_STRICT === 'true' || process.env.NODE_ENV === 'production'
+  );
+}
+
 async function isTokenRevoked(userId, iat) {
   if (!isRedisReady()) return false;
   try {
@@ -94,7 +100,9 @@ async function isTokenRevoked(userId, iat) {
     return iat <= Number(revokedBefore);
   } catch (err) {
     console.warn('[redis] isTokenRevoked check failed:', err.message);
-    return false;   // fail open — don't lock users out due to Redis hiccup
+    // Fail closed in production (or JWT_REVOKE_STRICT) so revoked sessions stay dead if Redis errors mid-check
+    if (strictJwtRevoke()) return true;
+    return false;
   }
 }
 

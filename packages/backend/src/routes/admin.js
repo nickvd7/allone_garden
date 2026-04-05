@@ -448,7 +448,7 @@ router.post('/push/notify', requireAuth, requireAdmin, async (req, res) => {
     return res.json({ ok: true, tokens: rows.length, ...result });
   } catch (err) {
     console.error('[admin/push/notify]', err.message);
-    return res.status(500).json({ error: err.message || 'Send failed' });
+    return res.status(500).json({ error: 'Send failed' });
   }
 });
 

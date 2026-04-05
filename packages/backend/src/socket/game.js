@@ -4,8 +4,15 @@
  * so plugins can react to them.
  */
 module.exports = function gameHandler(socket, io, eventBus) {
+  function requireLoggedIn() {
+    if (socket.userId !== null && socket.userId !== undefined) return true;
+    socket.emit('game:error', { code: 'AUTH_REQUIRED', message: 'Log in to perform this action.' });
+    return false;
+  }
+
   // Player performs a plot action (till / plant / water / fertilize / harvest)
   socket.on('game:action', (data) => {
+    if (!requireLoggedIn()) return;
     const action = {
       type: data.type,
       userId: socket.userId,
@@ -34,6 +41,7 @@ module.exports = function gameHandler(socket, io, eventBus) {
 
   // A player advances their game day
   socket.on('game:nextday', (data) => {
+    if (!requireLoggedIn()) return;
     const { currentDay, weather } = data;
     if (eventBus) {
       eventBus.emit('onDayChange', { userId: socket.userId, currentDay, weather });

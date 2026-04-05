@@ -94,10 +94,14 @@ async function recogniseWithAnthropic(base64Image, mimeType, apiKey) {
 }
 
 async function recogniseWithGemini(base64Image, mimeType, apiKey) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url =
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type':  'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify({
       contents: [{
         parts: [
@@ -135,12 +139,20 @@ function buildPrompt() {
 function parseJsonResponse(text) {
   // Strip markdown fences if any
   const clean = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+  const stripPollution = (obj) => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+    const out = {};
+    for (const k of Object.keys(obj)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+      out[k] = obj[k];
+    }
+    return out;
+  };
   try {
-    return JSON.parse(clean);
+    return stripPollution(JSON.parse(clean));
   } catch {
-    // Try to extract JSON substring
     const match = clean.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
+    if (match) return stripPollution(JSON.parse(match[0]));
     throw new Error('Could not parse AI response as JSON');
   }
 }

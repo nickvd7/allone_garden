@@ -7,10 +7,12 @@
  */
 const request = require('supertest');
 
-process.env.JWT_SECRET   = 'test-secret-for-jest';
+process.env.JWT_SECRET   = 'test-secret-for-jest-0123456789-very-long';
 process.env.DATABASE_URL = '';
 process.env.P2P_ENABLED  = 'false';
 process.env.NODE_ENV     = 'test';
+// In-memory forgot-password only returns resetToken when this flag is set (never in production).
+process.env.EXPOSE_RESET_TOKEN = 'true';
 
 const { app } = require('../src/index');
 

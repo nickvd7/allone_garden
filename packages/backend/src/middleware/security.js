@@ -38,7 +38,8 @@ const helmetMiddleware = helmet({
       scriptSrc:   ["'self'"],
       styleSrc:    ["'self'", "'unsafe-inline'"],  // React inline styles
       imgSrc:      ["'self'", 'data:'],
-      connectSrc:  ["'self'", 'ws:', 'wss:'],      // Socket.IO WebSocket
+      // Browser CSP applies to documents this server serves (e.g. Electron); keep tight.
+      connectSrc:  ["'self'"],
       fontSrc:     ["'self'"],
       objectSrc:   ["'none'"],
       frameSrc:    ["'none'"],

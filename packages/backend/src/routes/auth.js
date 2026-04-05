@@ -159,9 +159,8 @@ router.get('/me', requireAuth, async (req, res) => {
 //
 // Accepts { email }. Generates a single-use reset token valid for 1 hour.
 // Always returns success to prevent user enumeration.
-// In non-production / in-memory mode the token is included in the response
-// so server admins can relay it to the user (or tests can use it directly).
-// In production with SMTP configured, the token would be emailed instead.
+// With a real DB the token is never returned in JSON (only emailed / logged via sendPasswordReset).
+// In-memory dev: set EXPOSE_RESET_TOKEN=true and NODE_ENV≠production to include resetToken in JSON for tests.
 
 router.post('/forgot-password', authLimiter, async (req, res) => {
   const { email } = req.body;
@@ -198,9 +197,10 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
       await sendPasswordReset(email, user.username, token);
     }
 
-    // Expose token when not connected to DB (dev / test mode) so tests/devs
-    // can use it without needing a real mailbox
-    res.json({ success: true, ...(user ? { resetToken: token } : {}) });
+    // Never return reset tokens unless explicitly enabled (dev/tests only).
+    const exposeToken =
+      process.env.EXPOSE_RESET_TOKEN === 'true' && process.env.NODE_ENV !== 'production';
+    res.json({ success: true, ...(exposeToken && user ? { resetToken: token } : {}) });
   } catch (err) {
     console.error('[auth/forgot-password]', err.message);
     res.status(500).json({ error: 'Could not process reset request' });
