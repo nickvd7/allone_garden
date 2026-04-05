@@ -65,7 +65,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # Install from repo root so workspace overrides apply (@capacitor/cli must use tar@6, not hoisted tar@7).
+      # Install from repo root (postinstall patches @capacitor/cli for tar@7 extract API).
       - name: Install workspace dependencies
         working-directory: ${{ github.workspace }}
         run: npm ci

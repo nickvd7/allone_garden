@@ -7,6 +7,33 @@ const frontendPort = Number(process.env.E2E_FRONTEND_PORT || 3000);
 const backendOrigin = `http://127.0.0.1:${backendPort}`;
 const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
 
+/** CRA dev server is flaky on GitHub runners (memory / WDS); CI builds once and serves static files. */
+const useStaticFrontend = process.env.CI === 'true';
+
+const frontendWebServer = useStaticFrontend
+  ? {
+      command: `npx serve -s ../packages/frontend/build -l tcp://127.0.0.1:${frontendPort}`,
+      cwd: __dirname,
+      port: frontendPort,
+      timeout: 120_000,
+      reuseExistingServer: false,
+    }
+  : {
+      command: 'npm start',
+      cwd: '../packages/frontend',
+      port: frontendPort,
+      timeout: 180_000,
+      reuseExistingServer: !process.env.CI,
+      env: {
+        BROWSER: 'none',
+        CI: 'false',
+        PORT: String(frontendPort),
+        REACT_APP_API_URL: backendOrigin,
+        ESLINT_NO_DEV_ERRORS: 'true',
+        TSC_COMPILE_ON_ERROR: 'true',
+      },
+    };
+
 module.exports = defineConfig({
   testDir: './tests',
   timeout: 40_000,
@@ -45,22 +72,6 @@ module.exports = defineConfig({
         ADMIN_USERS: 'admin_e2e',
       },
     },
-    {
-      // Frontend dev server (CRA respects PORT)
-      command: 'npm start',
-      cwd: '../packages/frontend',
-      port: frontendPort,
-      timeout: 180_000,
-      reuseExistingServer: !process.env.CI,
-      env: {
-        BROWSER: 'none',
-        CI: 'false',
-        PORT: String(frontendPort),
-        REACT_APP_API_URL: backendOrigin,
-        // Minder kans op webpack overlay die Playwright-clicks blokkeert
-        ESLINT_NO_DEV_ERRORS: 'true',
-        TSC_COMPILE_ON_ERROR: 'true',
-      },
-    },
+    frontendWebServer,
   ],
 });

@@ -166,6 +166,15 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
+      - name: Build frontend for e2e
+        working-directory: packages/frontend
+        env:
+          REACT_APP_API_URL: http://127.0.0.1:5000
+          CI: false
+          GENERATE_SOURCEMAP: false
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
+
       - name: Run e2e tests
         working-directory: e2e
         run: npx playwright test

@@ -42,7 +42,7 @@
       }
     },
     "scripts": {
-      "postinstall": "node scripts/prune-nested-webpack-dev-server.cjs",
+      "postinstall": "node scripts/prune-nested-webpack-dev-server.cjs && node scripts/patch-capacitor-cli-tar.cjs",
       "dev": "npm run dev:frontend",
       "dev:frontend": "cd packages/frontend && npm start",
       "dev:backend": "cd packages/backend && npm run dev",
