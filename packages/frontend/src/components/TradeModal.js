@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '../hooks/useApi';
 
 /** Lokale markt voor spelen zonder account (geen JWT). Alleen op dit apparaat opgeslagen. */
-const GUEST_MARKET_KEY = 'garden_guest_market_v1';
+const guestMarketLsId = 'garden_guest_market_v1';
 
 function defaultGuestSeedListings() {
   return [
@@ -15,7 +15,7 @@ function defaultGuestSeedListings() {
 
 function loadGuestListings() {
   try {
-    const raw = localStorage.getItem(GUEST_MARKET_KEY);
+    const raw = localStorage.getItem(guestMarketLsId);
     if (raw) {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr) && arr.length) return arr;
@@ -28,7 +28,7 @@ function loadGuestListings() {
 
 function saveGuestListings(arr) {
   try {
-    localStorage.setItem(GUEST_MARKET_KEY, JSON.stringify(arr));
+    localStorage.setItem(guestMarketLsId, JSON.stringify(arr));
   } catch {
     /* ignore */
   }

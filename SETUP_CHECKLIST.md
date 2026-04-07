@@ -74,7 +74,7 @@ See [README.md — Local verification](README.md#local-verification-ci-parity) f
 - [ ] **Set `DISCORD_APP_ID`**  
   In `packages/desktop/.env` (or as an environment variable):
   ```
-  DISCORD_APP_ID=123456789012345678
+  DISCORD_APP_ID=<your-discord-application-id>
   ```
 
 - [ ] **Upload game assets to the Discord Developer Portal**

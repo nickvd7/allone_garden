@@ -1,0 +1,4 @@
+# Valse positieven (geen echte secrets): zie commit bd17112 in historie.
+# Discord: voorbeeld-ID in documentatie. TradeModal: localStorage-sleutelnaam, geen API-key.
+bd17112bef28752ae218f634698249833a6a379d:SETUP_CHECKLIST.md:discord-client-id:77
+bd17112bef28752ae218f634698249833a6a379d:packages/frontend/src/components/TradeModal.js:generic-api-key:5
