@@ -42,16 +42,27 @@ fi
 success "Node.js $(node --version)"
 
 # ── PostgreSQL ────────────────────────────────────────────────────────────────
-if ! command -v psql &>/dev/null; then
+# Always use the Homebrew server formula so `brew services` matches `psql`.
+if ! brew list postgresql@16 &>/dev/null; then
   info "Installing PostgreSQL 16…"
   brew install postgresql@16
-  brew services start postgresql@16
-  # Give postgres a moment to start
-  sleep 2
-else
-  brew services start postgresql@16 2>/dev/null || true
 fi
-success "PostgreSQL ready"
+brew link postgresql@16 --force 2>/dev/null || true
+brew services start postgresql@16
+
+PGHOST="${PGHOST:-localhost}"
+PGPORT="${PGPORT:-5432}"
+info "Waiting for PostgreSQL on ${PGHOST}:${PGPORT}…"
+for _ in {1..30}; do
+  if command -v pg_isready &>/dev/null && pg_isready -h "$PGHOST" -p "$PGPORT" &>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+if ! command -v pg_isready &>/dev/null || ! pg_isready -h "$PGHOST" -p "$PGPORT" &>/dev/null; then
+  error "PostgreSQL is not accepting connections on ${PGHOST}:${PGPORT}. Try: brew services restart postgresql@16"
+fi
+success "PostgreSQL ready (${PGHOST}:${PGPORT})"
 
 # ── Redis ─────────────────────────────────────────────────────────────────────
 if ! command -v redis-cli &>/dev/null; then
@@ -84,22 +95,26 @@ DB_USER="garden"
 DB_NAME="allone_garden"
 DB_PASS=$(openssl rand -hex 16)
 
-psql postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
-  psql postgres -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}'"
+if psql -h "$PGHOST" -p "$PGPORT" postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
+  psql -h "$PGHOST" -p "$PGPORT" postgres -c "ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASS}'"
+else
+  psql -h "$PGHOST" -p "$PGPORT" postgres -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}'"
+fi
 
-psql postgres -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
-  psql postgres -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER}"
+psql -h "$PGHOST" -p "$PGPORT" postgres -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
+  psql -h "$PGHOST" -p "$PGPORT" postgres -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER}"
 
 success "Database '${DB_NAME}' ready"
 
-# ── .env ──────────────────────────────────────────────────────────────────────
+# ── .env (DATABASE_URL always matches DB_PASS) ───────────────────────────────
+DATABASE_URL="postgres://${DB_USER}:${DB_PASS}@${PGHOST}:${PGPORT}/${DB_NAME}"
 if [[ ! -f "$BACKEND_ENV" ]]; then
   JWT_SECRET=$(openssl rand -hex 48)
   cat > "$BACKEND_ENV" <<EOF
 NODE_ENV=production
 PORT=5000
 FRONTEND_URL=http://localhost:3000
-DATABASE_URL=postgres://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME}
+DATABASE_URL=${DATABASE_URL}
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRES_IN=7d
@@ -107,9 +122,15 @@ SERVER_NAME=My Mac Garden
 P2P_ENABLED=false
 EOF
   chmod 600 "$BACKEND_ENV"
-  success ".env created"
+  success ".env created (DATABASE_URL + JWT_SECRET)"
 else
-  warn ".env already exists — skipping"
+  if grep -q '^DATABASE_URL=' "$BACKEND_ENV" 2>/dev/null; then
+    sed -i '' "s|^DATABASE_URL=.*|DATABASE_URL=${DATABASE_URL}|" "$BACKEND_ENV"
+  else
+    printf '\nDATABASE_URL=%s\n' "${DATABASE_URL}" >> "$BACKEND_ENV"
+  fi
+  chmod 600 "$BACKEND_ENV"
+  success ".env updated (DATABASE_URL)"
 fi
 
 # ── DB schema ─────────────────────────────────────────────────────────────────
@@ -123,7 +144,14 @@ cd "$SCRIPT_DIR/packages/backend"
 pm2 delete allone-garden 2>/dev/null || true
 pm2 start src/index.js --name allone-garden --env production
 pm2 save
-pm2 startup | tail -1 | bash 2>/dev/null || warn "Run 'pm2 startup' manually to enable auto-start on login"
+# Do not pipe "pm2 startup" to bash via tail -1: newer PM2 ends with a non-command line,
+# which makes the pipeline fail under "set -o pipefail" even when launchd was configured.
+pm2 startup 2>/dev/null || true
+if compgen -G "${HOME}/Library/LaunchAgents/pm2."*.plist &>/dev/null; then
+  success "pm2 restore-on-login (launchd) looks configured"
+else
+  warn "Run 'pm2 startup' manually if you want the app to come back after a reboot"
+fi
 
 echo ""
 echo -e "${GREEN}${BOLD}✅  AllOne Garden is running!${RESET}"

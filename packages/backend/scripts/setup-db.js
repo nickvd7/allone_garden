@@ -3,8 +3,15 @@
  * Run once: npm run db:setup
  * Creates all tables if they do not already exist.
  */
+const path = require('path');
 const { Pool } = require('pg');
-require('dotenv').config();
+
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+
+if (!process.env.DATABASE_URL) {
+  console.error('Missing DATABASE_URL. Add it to packages/backend/.env (or run from packages/backend with .env present).');
+  process.exit(1);
+}
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 

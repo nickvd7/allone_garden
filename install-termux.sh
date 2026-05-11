@@ -46,14 +46,29 @@ initdb "$PREFIX/var/lib/postgresql" -U "$USER" 2>/dev/null || true
 
 # Start postgres in background
 pg_ctl -D "$PREFIX/var/lib/postgresql" -l "$PREFIX/var/lib/postgresql/pg.log" start 2>/dev/null || true
-sleep 2
+
+# Admin via local socket (peer auth); Node uses TCP in DATABASE_URL below.
+PGPORT="${PGPORT:-5432}"
+info "Waiting for PostgreSQL (socket / port ${PGPORT})…"
+for _ in $(seq 1 30); do
+  if command -v pg_isready &>/dev/null && pg_isready -p "$PGPORT" -U "$USER" &>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+if ! command -v pg_isready &>/dev/null || ! pg_isready -p "$PGPORT" -U "$USER" &>/dev/null; then
+  error "PostgreSQL is not ready. Check $PREFIX/var/lib/postgresql/pg.log"
+fi
 
 DB_USER="garden"
 DB_NAME="allone_garden"
-DB_PASS=$(openssl rand -hex 12)
+DB_PASS=$(openssl rand -hex 16)
 
-psql -U "$USER" postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1 || \
+if psql -U "$USER" postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
+  psql -U "$USER" postgres -c "ALTER USER ${DB_USER} WITH PASSWORD '${DB_PASS}'"
+else
   psql -U "$USER" postgres -c "CREATE USER ${DB_USER} WITH PASSWORD '${DB_PASS}'"
+fi
 
 psql -U "$USER" postgres -tc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1 || \
   psql -U "$USER" postgres -c "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER}"
@@ -75,7 +90,8 @@ info "Building frontend…"
 (cd packages/frontend && npm run build)
 success "Frontend built"
 
-# ── .env ──────────────────────────────────────────────────────────────────────
+# ── .env (DATABASE_URL always matches DB_PASS) ───────────────────────────────
+DATABASE_URL="postgres://${DB_USER}:${DB_PASS}@127.0.0.1:${PGPORT}/${DB_NAME}"
 if [[ ! -f "$BACKEND_ENV" ]]; then
   JWT_SECRET=$(openssl rand -hex 48)
 
@@ -86,16 +102,23 @@ if [[ ! -f "$BACKEND_ENV" ]]; then
 NODE_ENV=production
 PORT=5000
 FRONTEND_URL=http://${WIFI_IP}:5000
-DATABASE_URL=postgres://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME}
+DATABASE_URL=${DATABASE_URL}
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=${JWT_SECRET}
 JWT_EXPIRES_IN=7d
 SERVER_NAME=My Android Garden
 P2P_ENABLED=false
 EOF
-  success ".env created"
+  chmod 600 "$BACKEND_ENV"
+  success ".env created (DATABASE_URL + JWT_SECRET)"
 else
-  warn ".env already exists — skipping"
+  if grep -q '^DATABASE_URL=' "$BACKEND_ENV" 2>/dev/null; then
+    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${DATABASE_URL}|" "$BACKEND_ENV"
+  else
+    printf '\nDATABASE_URL=%s\n' "${DATABASE_URL}" >> "$BACKEND_ENV"
+  fi
+  chmod 600 "$BACKEND_ENV"
+  success ".env updated (DATABASE_URL)"
 fi
 
 # ── DB schema ─────────────────────────────────────────────────────────────────

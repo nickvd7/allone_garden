@@ -57,9 +57,9 @@ bash install-mac.sh
 ```
 
 What the script does:
-- Uses Homebrew to install Node.js 20, PostgreSQL 16, and Redis
-- Creates a `garden` database user with a random password
-- Generates a random JWT secret
+- Uses Homebrew to ensure Node.js 18+, **PostgreSQL 16**, and Redis (installs or starts services as needed)
+- Creates the `allone_garden` database and a `garden` role with a random password (or resets the role password on re-runs so it stays in sync)
+- Writes **`packages/backend/.env`**: on first run it creates the file (including `JWT_SECRET`); on every run it sets or updates **`DATABASE_URL`** so the password always matches PostgreSQL
 - Starts the server with **pm2** (auto-restarts on crash, survives terminal close)
 - Configures pm2 to start on login
 
@@ -120,7 +120,8 @@ bash install-termux.sh
 
 What the script does:
 - Installs Node.js, PostgreSQL, Redis, and OpenSSL via `pkg`
-- Initialises PostgreSQL and creates the `allone_garden` database
+- Starts PostgreSQL, waits until it is ready, then creates the `allone_garden` database and a `garden` role (or resets the role password on re-runs)
+- Writes **`packages/backend/.env`**: first run creates it (including `JWT_SECRET`); every run sets or updates **`DATABASE_URL`** so it matches PostgreSQL
 - Detects your Wi-Fi IP and writes it into `.env` as `FRONTEND_URL`
 - Builds the React frontend and copies it into the backend `/public` folder
 - Creates a `start-android.sh` convenience script
@@ -152,7 +153,8 @@ What the script does:
 - Installs Node.js 20, PostgreSQL, Redis, Nginx, Certbot
 - Creates a `garden` system user
 - Clones the repo to `/opt/allone-garden`
-- Generates a random JWT secret and database password
+- Enables PostgreSQL, waits until `pg_isready` succeeds, then ensures the DB user exists with a random password (`CREATE` or `ALTER USER` on re-runs)
+- Writes **`packages/backend/.env`**: first run creates it (including `JWT_SECRET`); every run sets or updates **`DATABASE_URL`** so it matches PostgreSQL
 - Creates a `systemd` service (`allone-garden`) that starts on boot
 - Configures Nginx as a reverse proxy
 - Optionally requests a Let's Encrypt TLS certificate

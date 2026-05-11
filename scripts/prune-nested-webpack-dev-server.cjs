@@ -1,9 +1,10 @@
 'use strict';
 
 /**
- * react-scripts nests webpack-dev-server@4.x under its own node_modules even when
- * the root override installs 5.2.3+ at the hoisted level. npm audit still flags the
- * nested copy. Remove the nested install + lockfile entry so resolution uses 5.x.
+ * react-scripts nests webpack-dev-server under its own node_modules. npm may still
+ * hoist a single version from root overrides. Remove the nested copy + lockfile entry
+ * so the tree uses one resolved version (must stay on webpack-dev-server 4.x — CRA
+ * 5 is incompatible with the webpack-dev-server 5 API).
  */
 const fs = require('fs');
 const path = require('path');

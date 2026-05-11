@@ -147,15 +147,29 @@ success "Dependencies installed and frontend built"
 info "Configuring PostgreSQL…"
 systemctl enable --now postgresql
 
-# Generate a random DB password
+PGPORT="${PGPORT:-5432}"
+info "Waiting for PostgreSQL (port ${PGPORT})…"
+for _ in $(seq 1 30); do
+  if su -c "pg_isready -p '${PGPORT}'" postgres &>/dev/null; then
+    break
+  fi
+  sleep 1
+done
+if ! su -c "pg_isready -p '${PGPORT}'" postgres &>/dev/null; then
+  error "PostgreSQL is not ready. Try: sudo systemctl restart postgresql"
+fi
+
+# Generate a random DB password (alphanumeric — safe in DATABASE_URL)
 DB_PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 20)
 
-# Create database user and database (idempotent)
-su -c "psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='${POSTGRES_USER}'\" | grep -q 1 || \
-       psql -c \"CREATE USER ${POSTGRES_USER} WITH PASSWORD '${DB_PASS}'\"" postgres
+if su -c "psql -tc \"SELECT 1 FROM pg_roles WHERE rolname='${POSTGRES_USER}'\" | grep -q 1" postgres; then
+  su -c "psql -c \"ALTER USER ${POSTGRES_USER} WITH PASSWORD '${DB_PASS}'\"" postgres
+else
+  su -c "psql -c \"CREATE USER ${POSTGRES_USER} WITH PASSWORD '${DB_PASS}'\"" postgres
+fi
 
-su -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='${POSTGRES_DB}'\" | grep -q 1 || \
-       psql -c \"CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER}\"" postgres
+su -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname='${POSTGRES_DB}'\" | grep -q 1" postgres || \
+  su -c "psql -c \"CREATE DATABASE ${POSTGRES_DB} OWNER ${POSTGRES_USER}\"" postgres
 
 success "PostgreSQL ready (db: ${POSTGRES_DB}, user: ${POSTGRES_USER})"
 
@@ -164,8 +178,10 @@ info "Enabling Redis…"
 systemctl enable --now redis-server
 success "Redis running on port ${REDIS_PORT}"
 
-# ── Environment file ──────────────────────────────────────────────────────────
+# ── Environment file (DATABASE_URL always matches DB_PASS) ──────────────────
 ENV_FILE="${INSTALL_DIR}/packages/backend/.env"
+DATABASE_URL="postgresql://${POSTGRES_USER}:${DB_PASS}@127.0.0.1:${PGPORT}/${POSTGRES_DB}"
+
 if [[ ! -f "$ENV_FILE" ]]; then
   info "Creating .env file…"
 
@@ -186,7 +202,7 @@ PORT=${BACKEND_PORT}
 FRONTEND_URL=${FRONTEND_URL_VALUE}
 
 # Database
-DATABASE_URL=postgresql://${POSTGRES_USER}:${DB_PASS}@localhost:5432/${POSTGRES_DB}
+DATABASE_URL=${DATABASE_URL}
 
 # Redis
 REDIS_URL=redis://localhost:${REDIS_PORT}
@@ -208,12 +224,17 @@ ENABLE_TRADING=true
 ENABLE_CHAT=true
 EOF
 
-  chown "${SERVICE_USER}:${SERVICE_USER}" "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
-  success ".env created (JWT secret generated)"
+  success ".env created (JWT secret + DATABASE_URL)"
 else
-  warn ".env already exists — skipping (delete it to regenerate)"
+  if grep -q '^DATABASE_URL=' "$ENV_FILE" 2>/dev/null; then
+    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${DATABASE_URL}|" "$ENV_FILE"
+  else
+    printf '\nDATABASE_URL=%s\n' "${DATABASE_URL}" >> "$ENV_FILE"
+  fi
+  success ".env updated (DATABASE_URL)"
 fi
+chown "${SERVICE_USER}:${SERVICE_USER}" "$ENV_FILE"
+chmod 600 "$ENV_FILE"
 
 # ── Run DB migrations ─────────────────────────────────────────────────────────
 info "Running database setup…"

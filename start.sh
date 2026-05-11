@@ -2,7 +2,8 @@
 # =============================================================================
 # AllOne Garden — local development starter
 # Starts both frontend (React) and backend (Node.js) in parallel.
-# No database required — backend runs in in-memory mode.
+# Uses packages/backend/.env (created from .env.example on first run).
+# Leave DATABASE_URL empty there for in-memory mode, or set it to use PostgreSQL.
 # =============================================================================
 set -e
 
@@ -109,8 +110,8 @@ echo ""
 echo "  Press Ctrl+C to stop."
 echo ""
 
-# Force local dev to run without PostgreSQL; routes fall back to in-memory stores.
-BACKEND_CMD="cd packages/backend && DATABASE_URL= PORT=${BACKEND_PORT} FRONTEND_URL=${FRONTEND_URL_RUN} npm run dev"
+# PORT / FRONTEND_URL override .env so picked free ports win over defaults in .env.
+BACKEND_CMD="cd packages/backend && PORT=${BACKEND_PORT} FRONTEND_URL=${FRONTEND_URL_RUN} npm run dev"
 FRONTEND_CMD="cd packages/frontend && PORT=${FRONTEND_PORT} REACT_APP_API_URL=${BACKEND_URL} npm start"
 
 # Use concurrently if available (installed as root devDependency), else sequential
@@ -122,7 +123,7 @@ if npx concurrently --version &>/dev/null 2>&1; then
     "$FRONTEND_CMD"
 else
   echo "Starting backend in background…"
-  ( cd packages/backend && DATABASE_URL= PORT="$BACKEND_PORT" FRONTEND_URL="$FRONTEND_URL_RUN" npm run dev ) &
+  ( cd packages/backend && PORT="$BACKEND_PORT" FRONTEND_URL="$FRONTEND_URL_RUN" npm run dev ) &
   BACKEND_PID=$!
   trap "kill $BACKEND_PID 2>/dev/null" EXIT
   echo "Starting frontend…"
