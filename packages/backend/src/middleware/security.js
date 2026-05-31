@@ -143,20 +143,62 @@ const accountLimiter = rateLimit({
   store: makeStore('account'),
 });
 
-// ── 3. Body size limits ────────────────────────────────────────────────────────
+// ── 3. CSRF guard (Origin check for cookie-auth mode) ─────────────────────────
+//
+// When AUTH_HTTPONLY_COOKIE=true the browser automatically attaches the auth
+// cookie to every same-site request, making state-changing endpoints vulnerable
+// to cross-site request forgery.  We defend with a lightweight Origin check:
+//
+//   - Allow if Origin matches FRONTEND_URL (exact) or APP_URL.
+//   - Allow if Origin is absent AND the request came from a non-browser client
+//     (Electron, mobile app, curl) — identifiable by no Sec-Fetch-Site header.
+//   - Deny everything else with 403.
+//
+// This is intentionally a no-op when AUTH_HTTPONLY_COOKIE is not enabled,
+// since token-based (Bearer) auth is not CSRF-vulnerable.
+
+const AUTH_HTTPONLY_COOKIE = process.env.AUTH_HTTPONLY_COOKIE === 'true';
+
+const _csrfAllowed = new Set(
+  [process.env.FRONTEND_URL, process.env.APP_URL]
+    .flatMap((v) => (v || '').split(','))
+    .map((v) => v.trim().replace(/\/$/, ''))
+    .filter(Boolean)
+);
+
+function csrfGuard(req, res, next) {
+  if (!AUTH_HTTPONLY_COOKIE) return next();
+
+  const origin = req.headers['origin'];
+  if (!origin) {
+    // No Origin — allow only if the browser didn't add Sec-Fetch-Site
+    // (i.e. this is a non-browser/server-to-server call, not a cross-origin form).
+    if (req.headers['sec-fetch-site'] === undefined) return next();
+    return res.status(403).json({ error: 'CSRF check failed: missing Origin' });
+  }
+
+  const normalised = origin.replace(/\/$/, '');
+  if (_csrfAllowed.has(normalised) || normalised === `http://localhost:${process.env.PORT || 5000}`) {
+    return next();
+  }
+
+  return res.status(403).json({ error: 'CSRF check failed: Origin not allowed' });
+}
+
+// ── 4. Body size limits ────────────────────────────────────────────────────────
 // Garden payload (plots array) can be large; cap at 512 KB.
 // Auth and trade payloads should be tiny; cap at 10 KB.
 const bodyLimitLarge = express.json({ limit: '512kb' });
 const bodyLimitSmall = express.json({ limit: '10kb' });
 
-// ── 4. Request ID (for audit log correlation) ──────────────────────────────────
+// ── 5. Request ID (for audit log correlation) ──────────────────────────────────
 function requestId(req, res, next) {
   req.id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   res.setHeader('X-Request-Id', req.id);
   next();
 }
 
-// ── 5. Audit logger ────────────────────────────────────────────────────────────
+// ── 6. Audit logger ────────────────────────────────────────────────────────────
 // Logs auth and admin events with IP and user agent.
 // In production, pipe stdout to a log aggregator.
 function auditLog(event, req, extra = {}) {
@@ -183,6 +225,7 @@ module.exports = {
   recognitionLimiter,
   bodyLimitLarge,
   bodyLimitSmall,
+  csrfGuard,
   requestId,
   auditLog,
 };

@@ -51,7 +51,7 @@ const gameHandler      = require('./socket/game');
 const proximityHandler = require('./socket/proximity');
 const playersHandler   = require('./socket/players');
 const pluginLoader = require('./plugins/loader');
-const { helmetMiddleware, requestId, apiLimiter, bodyLimitSmall, bodyLimitLarge } = require('./middleware/security');
+const { helmetMiddleware, requestId, apiLimiter, bodyLimitSmall, bodyLimitLarge, csrfGuard } = require('./middleware/security');
 const { socketAuthMiddleware } = require('./middleware/socketAuth');
 const {
   parseAllowedOrigins,
@@ -83,6 +83,11 @@ app.use(requestId);
 app.use(cookieParser());
 app.use(cors({ origin: corsOriginValidator, credentials: true }));
 app.use(apiLimiter);                         // global rate limit
+// Reject cross-origin state-changing requests when cookie auth is active
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  return csrfGuard(req, res, next);
+});
 
 // ── REST routes ───────────────────────────────────────────────────────────────
 app.get('/health', (req, res) =>

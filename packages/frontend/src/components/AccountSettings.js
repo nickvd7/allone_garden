@@ -51,9 +51,9 @@ export default function AccountSettings({ onClose, onDeleted }) {
   const [newPw,     setNewPw]     = useState('');
   const [newPw2,    setNewPw2]    = useState('');
 
-  // ── AI API keys (localStorage only, never sent to our server) ───────────────
+  // ── AI API keys (sessionStorage — cleared when tab closes, never sent to server) ──
   const [apiKeys, setApiKeys] = useState(() =>
-    Object.fromEntries(AI_PROVIDERS.map((p) => [p.id, localStorage.getItem(p.storageKey) || '']))
+    Object.fromEntries(AI_PROVIDERS.map((p) => [p.id, sessionStorage.getItem(p.storageKey) || '']))
   );
   const [keySaved, setKeySaved] = useState(null); // provider id that was last saved
 
@@ -62,9 +62,9 @@ export default function AccountSettings({ onClose, onDeleted }) {
     if (!p) return;
     const val = apiKeys[providerId].trim();
     if (val) {
-      localStorage.setItem(p.storageKey, val);
+      sessionStorage.setItem(p.storageKey, val);
     } else {
-      localStorage.removeItem(p.storageKey);
+      sessionStorage.removeItem(p.storageKey);
     }
     setKeySaved(providerId);
     setTimeout(() => setKeySaved(null), 2000);
@@ -165,7 +165,7 @@ export default function AccountSettings({ onClose, onDeleted }) {
         <div style={SECTION}>
           <h3 style={{ marginTop: 0 }}>🌿 Plant Recognition API keys</h3>
           <p style={{ color: '#555', fontSize: '14px', margin: '0 0 12px' }}>
-            Used only for the Plant Recognition feature. Keys are stored in your browser only — never sent to our server.
+            Used only for the Plant Recognition feature. Keys are stored in your browser session only (cleared when you close the tab) — never sent to our server.
           </p>
           {AI_PROVIDERS.map((p) => (
             <div key={p.id} style={{ marginBottom: '10px' }}>

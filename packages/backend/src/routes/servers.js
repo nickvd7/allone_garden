@@ -242,7 +242,7 @@ router.post('/heartbeat', heartbeatLimiter, async (req, res) => {
 
   const rawUrl     = safeString(req.body?.url,   300);
   const token      = safeString(req.body?.token,  70);
-  const playerCount = Math.max(0, parseInt(req.body?.playerCount) || 0);
+  const playerCount = Math.min(10000, Math.max(0, parseInt(req.body?.playerCount) || 0));
 
   if (!rawUrl || !token) {
     return res.status(400).json({ error: 'url and token required' });

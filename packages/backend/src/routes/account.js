@@ -16,7 +16,7 @@ const { handleValidationErrors } = require('../middleware/validate');
 const { auditLog, accountLimiter } = require('../middleware/security');
 const { revokeUserTokens }       = require('../redis');
 
-const BCRYPT_ROUNDS = 12;
+const BCRYPT_ROUNDS = Math.max(10, Math.min(15, parseInt(process.env.BCRYPT_ROUNDS || '12', 10)));
 
 // ── PATCH /api/account/password ───────────────────────────────────────────────
 

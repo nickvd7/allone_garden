@@ -68,11 +68,14 @@ function safeUser(user) {
   };
 }
 
+// Bcrypt work factor — clamp to 10-15 so operators can tune without going unsafe
+const BCRYPT_ROUNDS = Math.max(10, Math.min(15, parseInt(process.env.BCRYPT_ROUNDS || '12', 10)));
+
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 router.post('/register', authLimiter, validateRegister, async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    const passwordHash = await bcrypt.hash(password, 12); // cost factor 12
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     if (db.isConnected()) {
       const existing = await db.query(
@@ -268,7 +271,7 @@ router.post('/reset-password', authLimiter, validateResetPassword, async (req, r
         return res.status(400).json({ error: 'Invalid or expired reset token' });
       }
       const { user_id } = result.rows[0];
-      const newHash = await bcrypt.hash(newPassword, 12);
+      const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
       await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, user_id]);
       await db.query('DELETE FROM password_reset_tokens WHERE token = $1', [token]);
       auditLog('password_reset', req, { userId: user_id });
@@ -284,7 +287,7 @@ router.post('/reset-password', authLimiter, validateResetPassword, async (req, r
     if (!user) {
       return res.status(400).json({ error: 'Invalid or expired reset token' });
     }
-    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     memResetTokens.delete(token); // single-use
     auditLog('password_reset', req, { userId: user.id });
     res.json({ success: true });

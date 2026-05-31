@@ -1,5 +1,5 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20.19-alpine AS builder
 WORKDIR /app
 
 ARG REACT_APP_API_URL=http://localhost:5000
@@ -11,7 +11,7 @@ ENV GENERATE_SOURCEMAP=false
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
