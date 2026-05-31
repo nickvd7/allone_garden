@@ -55,8 +55,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * 'update:available'  → { version }
    * 'update:downloaded' → { version }
    */
-  onUpdateAvailable:  (cb) => ipcRenderer.on('update:available',  (_e, d) => cb(d)),
-  onUpdateDownloaded: (cb) => ipcRenderer.on('update:downloaded', (_e, d) => cb(d)),
+  onUpdateAvailable:  (cb) => ipcRenderer.once('update:available',  (_e, d) => cb(d)),
+  onUpdateDownloaded: (cb) => ipcRenderer.once('update:downloaded', (_e, d) => cb(d)),
 
   /**
    * Discord Rich Presence: send current game state to main process.

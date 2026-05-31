@@ -50,7 +50,7 @@ function safeUser(user) {
     xp:          user.xp          || 0,
     coins:       user.coins       || 100,
     plantsGrown: user.plants_grown || user.plantsGrown || 0,
-    isAdmin:     ADMIN_USERS.includes(user.username) || (user.level || 1) >= 99,
+    isAdmin:     ADMIN_USERS.includes(user.username),
   };
 }
 

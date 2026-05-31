@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; font-src 'self'; object-src 'none'; frame-src 'none';" />
   <title>AllOne Garden — Grow Together, Own Your World</title>
   <meta name="description" content="An open-source, decentralized multiplayer gardening game. Run your own server on a Raspberry Pi, Mac, PC, or even an Android phone and join a community of growers across the internet." />
   <meta property="og:title"       content="AllOne Garden" />
@@ -328,6 +329,53 @@
       font-size: 0.75rem;
     }
 
+    /* ── Download ────────────────────────────────────────────────────────── */
+    #download { background: #fff; }
+    .download-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .dl-card {
+      background: var(--green-pale);
+      border: 2px solid transparent;
+      border-radius: var(--radius);
+      padding: 1.75rem 1.5rem;
+      text-align: center;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .dl-card:hover { border-color: var(--green-light); transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+    .dl-card.detected { border-color: var(--green-mid); box-shadow: var(--shadow); }
+    .dl-icon { font-size: 2.8rem; margin-bottom: 0.85rem; display: block; }
+    .dl-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .dl-card p  { font-size: 0.83rem; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.5; }
+    .dl-badge {
+      display: inline-block;
+      background: var(--green-mid); color: #fff;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+      padding: 0.15rem 0.55rem; border-radius: 99px;
+      margin-bottom: 0.6rem;
+    }
+    .btn-download {
+      display: block;
+      background: var(--green-mid); color: #fff;
+      padding: 0.65rem 1.5rem; border-radius: 8px;
+      text-decoration: none; font-weight: 700; font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .btn-download:hover { background: var(--green-dark); }
+    .dl-note { font-size: 0.78rem; color: var(--muted); margin-top: 0.6rem; }
+    .mode-pills {
+      display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap;
+      margin: 2.5rem 0 0;
+    }
+    .mode-pill {
+      background: var(--green-pale); border: 1.5px solid var(--green-light);
+      border-radius: 99px; padding: 0.4rem 1rem;
+      font-size: 0.85rem; font-weight: 600; color: var(--green-dark);
+    }
+
     /* ── Responsive ──────────────────────────────────────────────────────── */
     @media (max-width: 640px) {
       nav { padding: 0 1rem; }
@@ -345,13 +393,14 @@
   <a class="nav-logo" href="#">🌱 AllOne Garden</a>
   <ul class="nav-links">
     <li><a href="#features">Features</a></li>
+    <li><a href="#download">Download</a></li>
     <li><a href="#game-preview">Preview</a></li>
     <li><a href="#federation">Federation</a></li>
     <li><a href="#install">Install</a></li>
     <li><a href="#mobile">Mobile</a></li>
     <li><a href="#open-source">Open Source</a></li>
   </ul>
-  <a class="nav-cta" href="#install">Get Started</a>
+  <a class="nav-cta" href="#download">Download</a>
 </nav>
 
 <!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
@@ -364,7 +413,7 @@
     No central server. No subscriptions. Just community, plants, and good soil.
   </p>
   <div class="hero-actions">
-    <a class="btn-hero-primary" href="#install">Plant your server</a>
+    <a class="btn-hero-primary" href="#download">Download Launcher</a>
     <a class="btn-hero-secondary" href="https://github.com/nickvd7/allone_garden" target="_blank" rel="noopener">View on GitHub ↗</a>
   </div>
 
@@ -383,6 +432,112 @@
     <div class="plot plot-soil">🟫</div>
   </div>
 </section>
+
+<!-- ── Download Launcher ─────────────────────────────────────────────────────── -->
+<section id="download">
+  <div class="container">
+    <p class="section-label">Get the Launcher</p>
+    <h2 class="section-title">One click to start playing</h2>
+    <p class="section-subtitle">
+      Download the launcher for your platform. It sets up the game automatically and
+      lets you choose how to play — no technical knowledge required.
+    </p>
+
+    <div class="download-grid" id="dl-grid">
+
+      <div class="dl-card" id="dl-windows">
+        <span class="dl-icon">🪟</span>
+        <h3>Windows</h3>
+        <p>Windows 10 / 11 · 64-bit<br/>Requires Git &amp; Node.js 20+</p>
+        <a class="btn-download"
+           href="https://raw.githubusercontent.com/nickvd7/allone_garden/main/launcher/allone-garden.bat"
+           download="allone-garden.bat">
+          ⬇ Download for Windows
+        </a>
+        <p class="dl-note">Double-click <code>allone-garden.bat</code> to start</p>
+      </div>
+
+      <div class="dl-card" id="dl-mac">
+        <span class="dl-icon">🍎</span>
+        <h3>macOS</h3>
+        <p>macOS 12+ (Monterey or later)<br/>Requires Git &amp; Node.js 20+</p>
+        <a class="btn-download"
+           href="https://raw.githubusercontent.com/nickvd7/allone_garden/main/launcher/allone-garden.command"
+           download="allone-garden.command">
+          ⬇ Download for Mac
+        </a>
+        <p class="dl-note">Double-click <code>allone-garden.command</code> to start</p>
+      </div>
+
+      <div class="dl-card" id="dl-pi">
+        <span class="dl-icon">🫐</span>
+        <h3>Raspberry Pi &amp; Linux</h3>
+        <p>Raspberry Pi OS, Ubuntu, Debian…<br/>Requires Git &amp; Node.js 20+</p>
+        <a class="btn-download"
+           href="https://raw.githubusercontent.com/nickvd7/allone_garden/main/launcher/allone-garden.sh"
+           download="allone-garden.sh">
+          ⬇ Download for Linux / Pi
+        </a>
+        <p class="dl-note">Run <code>bash allone-garden.sh</code> in a terminal</p>
+      </div>
+
+    </div>
+
+    <!-- Mode explanation -->
+    <div style="background:var(--green-mint); border-radius:var(--radius); padding:2rem; margin-top:1rem;">
+      <p style="font-weight:700; font-size:1rem; margin-bottom:1.25rem; text-align:center;">
+        The launcher gives you three ways to play:
+      </p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.25rem;">
+        <div style="text-align:center;">
+          <div style="font-size:2rem; margin-bottom:0.5rem;">🏠</div>
+          <strong>Play locally</strong>
+          <p style="font-size:0.85rem; color:var(--muted); margin-top:0.4rem; line-height:1.5;">
+            Solo or with friends on the same Wi-Fi. No internet needed — perfect for home or school.
+          </p>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:2rem; margin-bottom:0.5rem;">🌐</div>
+          <strong>Play online</strong>
+          <p style="font-size:0.85rem; color:var(--muted); margin-top:0.4rem; line-height:1.5;">
+            Connect to any community server. Enter the URL, register, and start growing immediately.
+          </p>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:2rem; margin-bottom:0.5rem;">🖥️</div>
+          <strong>Host a server</strong>
+          <p style="font-size:0.85rem; color:var(--muted); margin-top:0.4rem; line-height:1.5;">
+            Turn your PC, Mac, or Pi into a game server. Share the address and friends can join from anywhere.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p style="text-align:center; margin-top:1.5rem; font-size:0.85rem; color:var(--muted);">
+      Prefer a manual setup?
+      <a href="#install" style="color:var(--green-mid); font-weight:600;">See full install instructions ↓</a>
+    </p>
+  </div>
+</section>
+
+<script>
+  // Highlight the card matching the user's detected OS — pure cosmetic, no tracking.
+  (function() {
+    var ua = navigator.userAgent || '';
+    var id = ua.indexOf('Win') !== -1 ? 'dl-windows'
+           : /Mac|iPhone|iPad/.test(ua) ? 'dl-mac'
+           : ua.indexOf('Linux') !== -1  ? 'dl-pi'
+           : null;
+    if (id) {
+      var card = document.getElementById(id);
+      if (card) {
+        card.classList.add('detected');
+        card.insertAdjacentHTML('afterbegin',
+          '<span class="dl-badge">Recommended for your device</span><br>');
+      }
+    }
+  })();
+</script>
 
 <!-- ── Features ─────────────────────────────────────────────────────────────── -->
 <section id="features">
@@ -767,7 +922,7 @@
     <h2>Ready to start growing?</h2>
     <p>Your server, your rules, your community. No subscriptions, no central authority, just good garden vibes.</p>
     <div class="cta-buttons">
-      <a class="btn-cta-white" href="#install">Plant your server</a>
+      <a class="btn-cta-white" href="#download">Download Launcher</a>
       <a class="btn-cta-outline" href="https://github.com/nickvd7/allone_garden/blob/main/INSTALL.md" target="_blank" rel="noopener">Read the docs</a>
     </div>
   </div>

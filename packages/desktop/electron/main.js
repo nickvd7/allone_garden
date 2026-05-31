@@ -221,7 +221,7 @@ async function startBackend(config) {
   const nodeBin = process.env.GARDEN_NODE || nodeExe;
 
   backendProc = spawn(
-    'node',
+    nodeBin,
     [path.join(BACKEND_ROOT, 'src', 'index.js')],
     {
       cwd: BACKEND_ROOT,
@@ -411,17 +411,49 @@ ipcMain.handle('get-setup-state', () => {
   return { needsSetup: !readConfig() };
 });
 
-// Renderer sends completed config from wizard
+// Renderer sends completed config from wizard.
+// Validate before trusting — a compromised renderer could otherwise inject
+// file:// URLs or out-of-range ports.
 ipcMain.handle('complete-setup', async (_event, config) => {
-  writeConfig(config);
+  if (!config || typeof config !== 'object') {
+    return { ok: false, error: 'Invalid config' };
+  }
 
-  // Close setup window, launch game
+  const validModes = ['local', 'remote'];
+  if (!validModes.includes(config.mode)) {
+    return { ok: false, error: 'Invalid mode' };
+  }
+
+  if (config.mode === 'remote') {
+    if (typeof config.serverUrl !== 'string' || !/^https?:\/\//i.test(config.serverUrl)) {
+      return { ok: false, error: 'serverUrl must start with http:// or https://' };
+    }
+  }
+
+  const port = Number(config.port);
+  if (config.port !== undefined && (Number.isNaN(port) || port < 1024 || port > 65535)) {
+    return { ok: false, error: 'port must be 1024–65535' };
+  }
+
+  if (config.serverName !== undefined && typeof config.serverName !== 'string') {
+    return { ok: false, error: 'serverName must be a string' };
+  }
+
+  const safeConfig = {
+    mode:       config.mode,
+    serverName: typeof config.serverName === 'string' ? config.serverName.slice(0, 64) : 'My Garden',
+    ...(config.mode === 'remote' ? { serverUrl: config.serverUrl } : {}),
+    ...(config.port            ? { port }                          : {}),
+  };
+
+  writeConfig(safeConfig);
+
   if (mainWindow) {
     mainWindow.close();
     mainWindow = null;
   }
 
-  await launchGame(config);
+  await launchGame(safeConfig);
   return { ok: true };
 });
 
@@ -440,9 +472,12 @@ ipcMain.handle('reset-config', () => {
   return { ok: true };
 });
 
-// Open a URL in the system browser
+// Open a URL in the system browser — only allow http/https to block file:// and
+// javascript: URIs that a compromised renderer could inject.
 ipcMain.handle('open-external', (_event, url) => {
-  shell.openExternal(url);
+  if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+    shell.openExternal(url);
+  }
 });
 
 // ── Auto-update IPC ───────────────────────────────────────────────────────────
