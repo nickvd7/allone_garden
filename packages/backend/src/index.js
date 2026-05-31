@@ -44,6 +44,7 @@ const weatherRoutes     = require('./routes/weather');
 const qrRoutes          = require('./routes/qr');
 const recognizeRoutes   = require('./routes/recognize');
 const { router: pushRouter } = require('./routes/push');
+const serversRouter = require('./routes/servers');
 const proposalStore   = require('./state/proposalStore');
 const chatHandler      = require('./socket/chat');
 const gameHandler      = require('./socket/game');
@@ -103,6 +104,7 @@ app.use('/api/weather',      bodyLimitSmall, weatherRoutes);
 app.use('/api/qr',           bodyLimitSmall, qrRoutes);
 app.use('/api/recognize',    bodyLimitLarge, recognizeRoutes);
 app.use('/api/push',         bodyLimitSmall, pushRouter);
+app.use('/api/servers',      bodyLimitSmall, serversRouter);
 
 // ── Electron desktop mode: serve built React frontend ─────────────────────────
 // When running inside the Electron desktop app (ELECTRON_MODE=1) the backend
@@ -176,6 +178,9 @@ if (db.isConnected()) {
     }))))
     .catch(() => {}); // table may not exist yet
 }
+
+// ── Server registry: prune stale community entries on startup ─────────────────
+serversRouter.pruneStaleServers().catch(() => {});
 
 // ── P2P Federation (optional) ─────────────────────────────────────────────────
 if (process.env.P2P_ENABLED === 'true') {

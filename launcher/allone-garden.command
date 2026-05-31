@@ -229,24 +229,79 @@ mode_host() {
   node "$INSTALL_DIR/packages/backend/src/index.js"
 }
 
+get_main_server_url() {
+  local cfg="$INSTALL_DIR/config/main-server.json"
+  [ -f "$cfg" ] || return 0
+  node -e "
+    try {
+      const c = require('$cfg');
+      if (c.url && c.url !== '' && !/localhost|127\./.test(c.url)) process.stdout.write(c.url);
+    } catch {}
+  " 2>/dev/null || true
+}
+
+get_main_server_name() {
+  local cfg="$INSTALL_DIR/config/main-server.json"
+  [ -f "$cfg" ] || { echo "Official Server"; return; }
+  node -e "
+    try { process.stdout.write(require('$cfg').name || 'Official Server'); } catch {}
+  " 2>/dev/null || echo "Official Server"
+}
+
+mode_main_server() {
+  local url
+  url=$(get_main_server_url)
+
+  if [ -z "$url" ]; then
+    printf '\n'
+    printf "  ${YELLOW}⚠️  The main server URL is not configured yet.${RESET}\n"
+    printf "  Run install-mainserver-pi.sh on your Raspberry Pi first,\n"
+    printf "  then update config/main-server.json with your domain.\n\n"
+    read -rp "  Press Enter to return... "
+    return
+  fi
+
+  local name
+  name=$(get_main_server_name)
+  printf '\n'
+  printf "  ${GREEN}🌍 Connecting to %s${RESET}\n" "$name"
+  printf "  ${BOLD}%s${RESET}\n\n" "$url"
+
+  if curl -sf "${url}/health" &>/dev/null; then
+    printf "  ${GREEN}✅ Server is online${RESET}\n"
+  else
+    printf "  ${YELLOW}⚠️  Could not reach server — opening browser anyway${RESET}\n"
+  fi
+
+  open "$url"
+  read -rp "  Press Enter to exit... "
+}
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 banner
 check_prereqs
 sync_repo
 banner
 
+MAIN_URL=$(get_main_server_url)
+MAIN_NAME=$(get_main_server_name)
+
 printf "  ${BOLD}How do you want to play?${RESET}\n\n"
 printf "  ${CYAN}[1]  🏠  Play locally   — solo or LAN, no internet required${RESET}\n"
 printf "  ${CYAN}[2]  🌐  Play online    — join an existing server${RESET}\n"
 printf "  ${CYAN}[3]  🖥️   Host a server  — let others join from LAN or internet${RESET}\n"
+if [ -n "$MAIN_URL" ]; then
+  printf "  ${GREEN}[4]  🌍  %-24s— official server${RESET}\n" "$MAIN_NAME"
+fi
 printf "  ${CYAN}[q]  Exit${RESET}\n\n"
-printf "  Choice [1/2/3/q]: "
+printf "  Choice [1/2/3%s/q]: " "$([ -n "$MAIN_URL" ] && echo '/4')"
 read -r choice
 
 case "$choice" in
-  1) mode_local  ;;
-  2) mode_online ;;
-  3) mode_host   ;;
-  q|Q) exit 0   ;;
+  1) mode_local       ;;
+  2) mode_online      ;;
+  3) mode_host        ;;
+  4) mode_main_server ;;
+  q|Q) exit 0        ;;
   *) printf "  ${RED}Invalid choice.${RESET}\n"; sleep 2 ;;
 esac

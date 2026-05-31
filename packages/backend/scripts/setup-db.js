@@ -207,6 +207,27 @@ async function setupDatabase() {
       ON world_garden_slots (slot_index)
     `);
 
+    // ── Server registry (community server browser) ──────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS server_registry (
+        id           SERIAL PRIMARY KEY,
+        name         VARCHAR(100) NOT NULL,
+        url          TEXT UNIQUE NOT NULL,
+        description  TEXT,
+        owner        VARCHAR(100),
+        player_count INTEGER DEFAULT 0,
+        version      VARCHAR(20),
+        token        VARCHAR(96) NOT NULL,
+        verified     BOOLEAN DEFAULT FALSE,
+        last_seen    TIMESTAMPTZ DEFAULT NOW(),
+        created_at   TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_server_registry_last_seen
+      ON server_registry (verified, last_seen DESC)
+    `);
+
     await client.query('COMMIT');
     console.log('✅ Database setup complete!');
   } catch (error) {

@@ -238,25 +238,74 @@ function Start-HostMode {
     Pop-Location
 }
 
+function Get-MainServerConfig {
+    $cfgPath = Join-Path $INSTALL_DIR 'config\main-server.json'
+    if (-not (Test-Path $cfgPath)) { return $null }
+    try {
+        $c = Get-Content $cfgPath -Raw | ConvertFrom-Json
+        if ($c.url -and $c.url -ne '' -and $c.url -notmatch 'localhost|127\.0\.0\.1') {
+            return $c
+        }
+    } catch {}
+    return $null
+}
+
+function Start-MainServerMode {
+    $mc = Get-MainServerConfig
+    if (-not $mc) {
+        Write-Host ''
+        Write-Host '  ⚠️  The main server URL is not configured yet.' -ForegroundColor Yellow
+        Write-Host '     Run install-mainserver-pi.sh on your Raspberry Pi first,'
+        Write-Host '     then update config/main-server.json with your domain.'
+        Write-Host ''
+        Read-Host '  Press Enter to return'
+        return
+    }
+
+    Write-Host ''
+    Write-Host "  🌍 Connecting to $($mc.name)..." -ForegroundColor Green
+    Write-Host "  $($mc.url)" -ForegroundColor White
+    Write-Host ''
+
+    try {
+        $r = Invoke-WebRequest "$($mc.url)/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+        if ($r.StatusCode -eq 200) {
+            Write-Host '  ✅ Server is online' -ForegroundColor Green
+        }
+    } catch {
+        Write-Host '  ⚠️  Could not reach server — opening browser anyway' -ForegroundColor Yellow
+    }
+
+    Start-Process $mc.url
+    Read-Host '  Press Enter to exit'
+}
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 Show-Banner
 Assert-Prerequisites
 Sync-Repo
 Show-Banner
 
+$mainCfg = Get-MainServerConfig
+
 Write-Host '  How do you want to play?' -ForegroundColor White
 Write-Host ''
 Write-Host '  [1]  🏠  Play locally   — solo or LAN, no internet required' -ForegroundColor Cyan
 Write-Host '  [2]  🌐  Play online    — join an existing server'            -ForegroundColor Cyan
 Write-Host '  [3]  🖥️   Host a server  — let others join from LAN or internet' -ForegroundColor Cyan
+if ($mainCfg) {
+    Write-Host "  [4]  🌍  $($mainCfg.name.PadRight(22)) — official server" -ForegroundColor Green
+}
 Write-Host '  [q]  Exit'                                                     -ForegroundColor Gray
 Write-Host ''
 
-$choice = (Read-Host '  Choice [1/2/3/q]').Trim()
+$promptSuffix = if ($mainCfg) { '/4' } else { '' }
+$choice = (Read-Host "  Choice [1/2/3${promptSuffix}/q]").Trim()
 switch ($choice) {
     '1' { Start-LocalMode }
     '2' { Start-OnlineMode }
     '3' { Start-HostMode }
+    '4' { Start-MainServerMode }
     { $_ -in 'q','Q' } { exit 0 }
     default { Write-Host '  Invalid choice.' -ForegroundColor Red; Start-Sleep 2 }
 }

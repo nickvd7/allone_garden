@@ -1,0 +1,6 @@
+{
+  "name": "AllOne Garden",
+  "url": "",
+  "description": "Community-hosted multiplayer gardening game",
+  "note": "Set 'url' to your Pi's public domain/IP after running install-mainserver-pi.sh"
+}

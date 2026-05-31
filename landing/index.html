@@ -329,6 +329,73 @@
       font-size: 0.75rem;
     }
 
+    /* ── Play Now / Official server ──────────────────────────────────────── */
+    #play-now {
+      background: linear-gradient(140deg, #0d3b1e 0%, var(--green-dark) 55%, #1a6b3c 100%);
+      color: #fff; padding: 5rem 2rem;
+    }
+    #play-now .section-label { color: #a5d6a7; }
+    #play-now h2.section-title { color: #fff; }
+    #play-now .section-subtitle { color: rgba(255,255,255,0.8); }
+    .server-hero {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      padding: 2rem 2.5rem;
+      max-width: 680px; margin: 0 auto;
+      text-align: center;
+    }
+    .server-hero-name {
+      font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem;
+    }
+    .server-stat {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(255,255,255,0.1); border-radius: 99px;
+      padding: 0.3rem 0.85rem; font-size: 0.85rem;
+      margin: 0.25rem;
+    }
+    .stat-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #4caf50;
+      animation: pulse 2s infinite;
+    }
+    .stat-dot.offline { background: #f44336; animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    .btn-play-now {
+      display: inline-block;
+      background: #fff; color: var(--green-dark);
+      padding: 0.9rem 2.5rem; border-radius: 10px;
+      text-decoration: none; font-weight: 800; font-size: 1.1rem;
+      margin-top: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-play-now:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.35); }
+    .btn-play-now.disabled {
+      opacity: 0.5; pointer-events: none; cursor: default;
+    }
+    /* Server list */
+    .server-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    .server-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      text-decoration: none; color: #fff;
+      transition: background 0.2s, border-color 0.2s;
+      display: block;
+    }
+    .server-card:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.3); }
+    .server-card-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.3rem; }
+    .server-card-meta { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+    .server-card-players { font-size: 0.82rem; color: #a5d6a7; margin-top: 0.5rem; font-weight: 600; }
+
     /* ── Download ────────────────────────────────────────────────────────── */
     #download { background: #fff; }
     .download-grid {
@@ -400,7 +467,7 @@
     <li><a href="#mobile">Mobile</a></li>
     <li><a href="#open-source">Open Source</a></li>
   </ul>
-  <a class="nav-cta" href="#download">Download</a>
+  <a class="nav-cta" href="#play-now">Speel nu</a>
 </nav>
 
 <!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
@@ -432,6 +499,134 @@
     <div class="plot plot-soil">🟫</div>
   </div>
 </section>
+
+<!-- ── Play Now / Official server ────────────────────────────────────────────── -->
+<section id="play-now">
+  <div class="container">
+    <p class="section-label">Speel Direct</p>
+    <h2 class="section-title">Spring in de tuin</h2>
+    <p class="section-subtitle">
+      Verbind met de officiële server — altijd online, gratis, geen account vooraf nodig.
+    </p>
+
+    <div class="server-hero" id="main-server-card">
+      <div class="server-hero-name" id="ms-name">🌱 AllOne Garden</div>
+      <div style="margin: 0.75rem 0;">
+        <span class="server-stat" id="ms-status-badge">
+          <span class="stat-dot" id="ms-dot"></span>
+          <span id="ms-status">Controleren…</span>
+        </span>
+        <span class="server-stat" id="ms-players-badge" style="display:none">
+          👥 <span id="ms-players">0</span> online
+        </span>
+      </div>
+      <p style="font-size:0.88rem; color:rgba(255,255,255,0.7); margin-bottom:0;" id="ms-desc">
+        De centrale server van AllOne Garden, gehost op een Raspberry Pi.
+      </p>
+      <a class="btn-play-now disabled" id="ms-btn" href="#" target="_blank" rel="noopener">
+        ▶ Speel nu
+      </a>
+    </div>
+
+    <!-- Community server list (populated from /api/servers) -->
+    <div id="server-list-wrap" style="display:none;">
+      <h3 style="color:#a5d6a7; font-size:1rem; font-weight:700; margin: 2.5rem 0 1rem; text-align:center;">
+        🌍 Community servers
+      </h3>
+      <div class="server-list" id="server-list"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  // Main server URL — updated by install-mainserver-pi.sh
+  // Leave empty to hide the "Play Now" button.
+  var MAIN_SERVER = '';
+
+  var nameEl    = document.getElementById('ms-name');
+  var statusEl  = document.getElementById('ms-status');
+  var dotEl     = document.getElementById('ms-dot');
+  var pbadgeEl  = document.getElementById('ms-players-badge');
+  var playersEl = document.getElementById('ms-players');
+  var btnEl     = document.getElementById('ms-btn');
+  var listWrap  = document.getElementById('server-list-wrap');
+  var listEl    = document.getElementById('server-list');
+
+  function setOnline(name, url, players, motd) {
+    nameEl.textContent   = '🌱 ' + (name || 'AllOne Garden');
+    statusEl.textContent = 'Online';
+    dotEl.className      = 'stat-dot';
+    if (players > 0) {
+      pbadgeEl.style.display = '';
+      playersEl.textContent  = players;
+    }
+    if (motd) {
+      document.getElementById('ms-desc').textContent = motd;
+    }
+    btnEl.href      = url;
+    btnEl.className = 'btn-play-now';
+  }
+
+  function setOffline() {
+    statusEl.textContent = 'Offline';
+    dotEl.className = 'stat-dot offline';
+  }
+
+  function renderServers(servers) {
+    if (!servers || servers.length < 2) return;
+    var html = '';
+    servers.forEach(function (s) {
+      if (s.isMain) return; // already shown in hero
+      var href = s.url || '#';
+      html += '<a class="server-card" href="' + encodeURI(href) +
+              '" target="_blank" rel="noopener">' +
+              '<div class="server-card-name">' + escHtml(s.name) + '</div>' +
+              '<div class="server-card-meta">' + escHtml(s.description || '') + '</div>' +
+              '<div class="server-card-players">👥 ' + (s.playerCount || 0) + ' online</div>' +
+              '</a>';
+    });
+    if (html) {
+      listEl.innerHTML  = html;
+      listWrap.style.display = '';
+    }
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  if (!MAIN_SERVER) {
+    statusEl.textContent = 'Nog niet geconfigureerd';
+    dotEl.className = 'stat-dot offline';
+    return;
+  }
+
+  // Fetch stats + servers in parallel
+  var statsUrl   = MAIN_SERVER.replace(/\/$/, '') + '/api/world/stats';
+  var serversUrl = MAIN_SERVER.replace(/\/$/, '') + '/api/servers';
+
+  fetch(statsUrl, { signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (d) {
+        setOnline(d.serverName, MAIN_SERVER, d.onlineCount, d.serverMOTD);
+      } else {
+        setOffline();
+      }
+    })
+    .catch(setOffline);
+
+  fetch(serversUrl, { signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (d && d.servers) renderServers(d.servers);
+    })
+    .catch(function () {});
+})();
+</script>
 
 <!-- ── Download Launcher ─────────────────────────────────────────────────────── -->
 <section id="download">
