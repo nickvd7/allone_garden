@@ -213,10 +213,12 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
       await sendPasswordReset(email, user.username, token);
     }
 
-    // Never return reset tokens unless explicitly enabled (dev/tests only).
-    const exposeToken =
-      process.env.EXPOSE_RESET_TOKEN === 'true' && process.env.NODE_ENV !== 'production';
-    res.json({ success: true, ...(exposeToken && user ? { resetToken: token } : {}) });
+    // Log token to stdout only in non-production — never return it in the JSON
+    // response body, which could be captured by proxies, APM tools, or logs.
+    if (process.env.EXPOSE_RESET_TOKEN === 'true' && process.env.NODE_ENV !== 'production' && user) {
+      console.log(`[auth/forgot-password] DEV — reset token for ${email}: ${token}`);
+    }
+    res.json({ success: true });
   } catch (err) {
     console.error('[auth/forgot-password]', err.message);
     res.status(500).json({ error: 'Could not process reset request' });

@@ -22,6 +22,9 @@ const { assertSafeRemoteUrl } = require('../utils/pluginUrlSecurity');
 const PLUGINS_ROOT = path.resolve(__dirname, '../../../../../plugins/community');
 const REGISTRY_URL = process.env.PLUGIN_REGISTRY_URL || '';
 
+// Prevent concurrent installs of the same plugin (TOCTOU guard)
+const installInProgress = new Set();
+
 // ── GET /api/plugins ──────────────────────────────────────────────────────────
 
 router.get('/', (req, res) => {
@@ -80,31 +83,49 @@ router.post('/:name/install', requireAuth, requireAdmin, async (req, res) => {
   if (!entry.downloadUrl) return res.status(400).json({ error: 'No download URL for this plugin' });
 
   // SHA-256 checksum is mandatory for all installable plugins.
-  // A missing sha256 in the catalogue is treated as an untrusted entry.
-  if (!entry.sha256 || typeof entry.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(entry.sha256)) {
+  // Normalise to lowercase immediately to avoid case-sensitivity bypass.
+  const expectedHash = (entry.sha256 || '').toLowerCase();
+  if (!expectedHash || !/^[a-f0-9]{64}$/.test(expectedHash)) {
     return res.status(400).json({
       error: 'Plugin catalogue entry is missing a valid SHA-256 checksum — installation refused',
     });
   }
 
+  // Concurrency guard: reject simultaneous installs of the same plugin (TOCTOU).
+  if (installInProgress.has(name)) {
+    return res.status(409).json({ error: 'Installation of this plugin is already in progress' });
+  }
+  installInProgress.add(name);
+
   try {
     const source = await fetchText(entry.downloadUrl, 10000);
 
-    // Always verify the downloaded source against the catalogue checksum
+    // Verify downloaded source against the normalised catalogue checksum
     const actual = crypto.createHash('sha256').update(source).digest('hex');
-    if (actual !== entry.sha256.toLowerCase()) {
+    if (actual !== expectedHash) {
       return res.status(400).json({ error: 'Plugin checksum mismatch — installation aborted' });
     }
 
+    // Atomic write: write to a temp dir first, then rename into place so a
+    // failed mid-write cannot leave a partially-written plugin on disk.
     const pluginDir = path.join(PLUGINS_ROOT, name);
-    fs.mkdirSync(pluginDir, { recursive: true });
-    fs.writeFileSync(path.join(pluginDir, 'index.js'), source, 'utf8');
-
-    // Write metadata
-    fs.writeFileSync(
-      path.join(pluginDir, 'package.json'),
-      JSON.stringify({ name, version: entry.version || '0.0.0', description: entry.description }, null, 2)
-    );
+    const tmpDir    = path.join(PLUGINS_ROOT, `.installing-${name}-${Date.now()}`);
+    fs.mkdirSync(tmpDir, { recursive: true });
+    try {
+      fs.writeFileSync(path.join(tmpDir, 'index.js'), source, 'utf8');
+      fs.writeFileSync(
+        path.join(tmpDir, 'package.json'),
+        JSON.stringify({ name, version: entry.version || '0.0.0', description: entry.description }, null, 2)
+      );
+      // Remove old version if present, then atomically rename temp dir
+      if (fs.existsSync(pluginDir)) {
+        fs.rmSync(pluginDir, { recursive: true, force: true });
+      }
+      fs.renameSync(tmpDir, pluginDir);
+    } catch (writeErr) {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      throw writeErr;
+    }
 
     const db_ = require('../db');
     const meta = pluginLoader.loadPlugin(pluginDir, { db: db_, io: req.app.get('io') });
@@ -115,6 +136,8 @@ router.post('/:name/install', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('[plugins] Install error:', err.message);
     res.status(500).json({ error: 'Installation failed' });
+  } finally {
+    installInProgress.delete(name);
   }
 });
 

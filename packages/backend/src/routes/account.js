@@ -145,12 +145,24 @@ router.delete('/', accountLimiter, requireAuth, validateDeleteAccount, async (re
     await client.query('DELETE FROM trade_listings WHERE seller_id = $1', [userId]);
     await client.query('DELETE FROM inventory      WHERE user_id = $1',   [userId]);
     await client.query('DELETE FROM gardens        WHERE user_id = $1',   [userId]);
+    // Delete push-notification tokens if the table exists (GDPR Art. 17)
+    try {
+      await client.query('DELETE FROM push_notification_tokens WHERE user_id = $1', [userId]);
+    } catch { /* table may not exist in all deployments */ }
     await client.query('DELETE FROM users          WHERE id = $1',        [userId]);
 
     await client.query('COMMIT');
 
-    // Revoke all tokens for this user (belt-and-suspenders — account is gone anyway)
+    // Revoke all tokens for this user
     await revokeUserTokens(userId);
+
+    // Force-disconnect any active Socket.IO sessions so the deleted account
+    // cannot continue sending game events after deletion.
+    const io = req.app.get('io');
+    if (io) {
+      io.in(String(userId)).emit('auth:session_terminated', { reason: 'account_deleted' });
+      io.in(String(userId)).disconnectSockets(true);
+    }
 
     auditLog('gdpr_delete', req);
     res.json({ success: true, message: 'Account and all associated data have been permanently deleted.' });

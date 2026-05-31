@@ -40,6 +40,18 @@ POSTGRES_USER="garden"
 REDIS_PORT=6379
 BACKEND_PORT=5000
 
+# ── Validate user-supplied environment variables ──────────────────────────────
+# Prevents shell injection when values are later interpolated in commands.
+if [[ ! "$SERVICE_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+  error "GARDEN_USER '${SERVICE_USER}' is not a valid Linux username (a-z, 0-9, _, -, max 32 chars)"
+fi
+if [[ ! "$INSTALL_DIR" =~ ^/[a-zA-Z0-9/_.-]+$ ]]; then
+  error "GARDEN_DIR '${INSTALL_DIR}' must be an absolute path containing only a-z A-Z 0-9 / _ . -"
+fi
+if [[ -n "$DOMAIN" ]] && [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]{1,253}$ ]]; then
+  error "GARDEN_DOMAIN '${DOMAIN}' does not look like a valid hostname"
+fi
+
 echo -e "${BOLD}"
 echo "  ╔═══════════════════════════════════════╗"
 echo "  ║   🌱  AllOne Garden Installer          ║"

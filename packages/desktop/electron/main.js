@@ -428,8 +428,17 @@ ipcMain.handle('complete-setup', async (_event, config) => {
   }
 
   if (config.mode === 'remote') {
-    if (typeof config.serverUrl !== 'string' || !/^https?:\/\//i.test(config.serverUrl)) {
-      return { ok: false, error: 'serverUrl must start with http:// or https://' };
+    try {
+      const parsed = new URL(config.serverUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return { ok: false, error: 'serverUrl must use http:// or https://' };
+      }
+      // Reject URLs with embedded credentials — e.g. http://user:pass@evil.com
+      if (parsed.username || parsed.password) {
+        return { ok: false, error: 'serverUrl must not contain credentials' };
+      }
+    } catch {
+      return { ok: false, error: 'serverUrl is not a valid URL' };
     }
   }
 

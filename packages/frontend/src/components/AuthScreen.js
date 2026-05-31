@@ -164,7 +164,7 @@ function AuthScreen({ onLogin }) {
               value={form.password}
               onChange={update('password')}
               required
-              minLength={6}
+              minLength={8}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             />
           )}

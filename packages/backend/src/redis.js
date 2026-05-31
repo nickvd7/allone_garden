@@ -93,7 +93,16 @@ function strictJwtRevoke() {
 }
 
 async function isTokenRevoked(userId, iat) {
-  if (!isRedisReady()) return false;
+  if (!isRedisReady()) {
+    // Redis was configured but is currently disconnected.
+    // Fail closed in production so a revoked token (e.g. post-password-change)
+    // cannot sneak through during an outage.
+    if (process.env.REDIS_URL && strictJwtRevoke()) {
+      console.warn(`[redis] isTokenRevoked: Redis unavailable — rejecting token for user ${userId} (strict mode)`);
+      return true;
+    }
+    return false;
+  }
   try {
     const revokedBefore = await redisClient.get(`jwt_revoked:${userId}`);
     if (revokedBefore === null) return false;
