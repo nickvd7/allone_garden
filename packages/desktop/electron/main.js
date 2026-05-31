@@ -149,6 +149,9 @@ function readConfig() {
 function writeConfig(config) {
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  if (process.platform !== 'win32') {
+    try { fs.chmodSync(CONFIG_PATH, 0o600); } catch {}
+  }
 }
 
 // ── JWT secret generation ─────────────────────────────────────────────────────

@@ -69,11 +69,21 @@ info "Enabling main-server features…"
 
 set_env() {
   local key="$1" val="$2"
-  if grep -q "^${key}=" "$ENV_FILE" 2>/dev/null; then
-    sed -i "s|^${key}=.*|${key}=${val}|" "$ENV_FILE"
-  else
-    printf '\n%s=%s\n' "$key" "$val" >> "$ENV_FILE"
-  fi
+  # Use node (always available) to safely update the .env file.
+  # This avoids sed metacharacter injection when $val contains |, &, \, etc.
+  node - "$ENV_FILE" "$key" "$val" <<'JSEOF'
+const [,, file, key, val] = process.argv;
+const fs = require('fs');
+let lines = [];
+try { lines = fs.readFileSync(file, 'utf8').split('\n'); } catch {}
+let found = false;
+const updated = lines.map(line => {
+  if (line.startsWith(key + '=')) { found = true; return key + '=' + val; }
+  return line;
+});
+if (!found) updated.push(key + '=' + val);
+fs.writeFileSync(file, updated.join('\n'));
+JSEOF
 }
 
 set_env "IS_MAIN_SERVER"          "true"
@@ -105,23 +115,24 @@ if [[ -f "$CONFIG_FILE" ]]; then
 
   SERVER_NAME_VAL=$(grep -Po '(?<=^SERVER_NAME=).*' "$ENV_FILE" 2>/dev/null || echo 'AllOne Garden')
 
-  # Write updated config using Node (safe JSON serialisation)
-  su -c "node -e \"
-    const fs = require('fs');
-    const cfg = JSON.parse(fs.readFileSync('${CONFIG_FILE}', 'utf8'));
-    cfg.name = process.env.SERVER_NAME || 'AllOne Garden';
-    cfg.url  = '${PUBLIC_URL}';
-    fs.writeFileSync('${CONFIG_FILE}', JSON.stringify(cfg, null, 2));
-  \"" "$SERVICE_USER" || {
-    # Fallback: direct write
-    cat > "$CONFIG_FILE" <<JSONEOF
-{
-  "name": "${SERVER_NAME_VAL}",
-  "url": "${PUBLIC_URL}",
-  "description": "Community-hosted multiplayer gardening game"
+  # Write updated config using Node with process.argv — avoids shell/JSON injection
+  # when SERVER_NAME_VAL or PUBLIC_URL contain quotes, backslashes, or special chars.
+  node - "$CONFIG_FILE" "$SERVER_NAME_VAL" "$PUBLIC_URL" <<'JSEOF'
+const [,, file, name, url] = process.argv;
+const fs = require('fs');
+try {
+  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+  cfg.name = name;
+  cfg.url  = url;
+  fs.writeFileSync(file, JSON.stringify(cfg, null, 2));
+} catch {
+  fs.writeFileSync(file, JSON.stringify({
+    name,
+    url,
+    description: 'Community-hosted multiplayer gardening game',
+  }, null, 2));
 }
-JSONEOF
-  }
+JSEOF
   chown "${SERVICE_USER}:${SERVICE_USER}" "$CONFIG_FILE"
   success "config/main-server.json → ${PUBLIC_URL}"
 fi
@@ -268,6 +279,13 @@ info "Setting up health-check monitor…"
 HEALTHCHECK_LOG="/var/log/allone-garden-health.log"
 ALERT_EMAIL="${GARDEN_EMAIL:-}"
 
+# Validate email format — reject anything that could inject mail headers
+if [[ -n "$ALERT_EMAIL" ]] && \
+   ! [[ "$ALERT_EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
+  warn "GARDEN_EMAIL '${ALERT_EMAIL}' is not a valid address — health-check alerts disabled"
+  ALERT_EMAIL=""
+fi
+
 cat > /usr/local/bin/allone-garden-health <<HEALTHEOF
 #!/usr/bin/env bash
 # AllOne Garden health check — run every 5 minutes via cron
@@ -275,9 +293,11 @@ URL="http://localhost:${BACKEND_PORT}/health"
 if ! curl -sf "\${URL}" >/dev/null 2>&1; then
   echo "\$(date -Iseconds) WARN: AllOne Garden health check FAILED" >> "${HEALTHCHECK_LOG}"
   systemctl restart allone-garden 2>/dev/null || true
-  [[ -n "${ALERT_EMAIL}" ]] && \
+  ALERT_TO="${ALERT_EMAIL}"
+  if [[ -n "\${ALERT_TO}" ]]; then
     echo "AllOne Garden on \$(hostname) is DOWN — auto-restarted at \$(date)" | \
-    mail -s "🌱 AllOne Garden DOWN" "${ALERT_EMAIL}" 2>/dev/null || true
+      mail -s "AllOne Garden DOWN" -- "\${ALERT_TO}" 2>/dev/null || true
+  fi
 else
   echo "\$(date -Iseconds) OK" >> "${HEALTHCHECK_LOG}"
 fi

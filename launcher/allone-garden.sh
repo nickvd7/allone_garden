@@ -94,9 +94,9 @@ JSEOF
   fi
   chmod 600 "$CONFIG_FILE"
 
-  JWT_SECRET=$(node -e "process.stdout.write(require('$CONFIG_FILE').jwtSecret||'')")
-  SERVER_NAME=$(node -e "process.stdout.write(require('$CONFIG_FILE').serverName||'My Garden')")
-  PORT=$(node -e "process.stdout.write(String(require('$CONFIG_FILE').port||5000))")
+  JWT_SECRET=$(GARDEN_CFG="$CONFIG_FILE" node -e "process.stdout.write(require(process.env.GARDEN_CFG).jwtSecret||'')")
+  SERVER_NAME=$(GARDEN_CFG="$CONFIG_FILE" node -e "process.stdout.write(require(process.env.GARDEN_CFG).serverName||'My Garden')")
+  PORT=$(GARDEN_CFG="$CONFIG_FILE" node -e "process.stdout.write(String(require(process.env.GARDEN_CFG).port||5000))")
 
   # Re-generate if missing or too short
   if [ "${#JWT_SECRET}" -lt 32 ]; then
@@ -248,9 +248,9 @@ mode_host() {
 get_main_server_url() {
   local cfg="$INSTALL_DIR/config/main-server.json"
   [ -f "$cfg" ] || return 0
-  node -e "
+  GARDEN_CFG="$cfg" node -e "
     try {
-      const c = require('$cfg');
+      const c = require(process.env.GARDEN_CFG);
       if (c.url && c.url !== '' && !/localhost|127\./.test(c.url)) process.stdout.write(c.url);
     } catch {}
   " 2>/dev/null || true
@@ -259,8 +259,8 @@ get_main_server_url() {
 get_main_server_name() {
   local cfg="$INSTALL_DIR/config/main-server.json"
   [ -f "$cfg" ] || { echo "Official Server"; return; }
-  node -e "
-    try { process.stdout.write(require('$cfg').name || 'Official Server'); } catch {}
+  GARDEN_CFG="$cfg" node -e "
+    try { process.stdout.write(require(process.env.GARDEN_CFG).name || 'Official Server'); } catch {}
   " 2>/dev/null || echo "Official Server"
 }
 

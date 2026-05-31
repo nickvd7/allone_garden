@@ -47,9 +47,21 @@ const heartbeatLimiter = rateLimit({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Returns true when an IP address (v4 or v6) or hostname is private/loopback.
+// Used for both the pre-resolution hostname check and the post-resolution
+// socket.remoteAddress check (DNS-rebinding guard).
+function isPrivateIp(ip) {
+  const s = (ip || '').toLowerCase();
+  const v4 = s.replace(/^::ffff:/i, ''); // unwrap IPv4-mapped IPv6
+  if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.0\.0\.0|169\.254\.)/.test(v4)) return true;
+  if (/^fe80:/i.test(s) || s === '::1' || s === '0:0:0:0:0:0:0:1') return true;
+  return false;
+}
+
 /**
  * Attempt a health check against <rawUrl>/health.
  * Only allows http:// and https:// to prevent SSRF to internal services.
+ * Also checks the resolved socket IP (DNS-rebinding guard).
  * Returns true if the response is HTTP 200, false otherwise.
  */
 function checkHealth(rawUrl, timeoutMs = 5000) {
@@ -65,10 +77,8 @@ function checkHealth(rawUrl, timeoutMs = 5000) {
       return resolve(false);
     }
 
-    // Block requests to loopback / private ranges (SSRF guard)
-    const host = parsed.hostname.toLowerCase();
-    const privatePattern = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
-    if (privatePattern.test(host) || host === '::1') {
+    // Block private/loopback hostnames before DNS lookup (SSRF guard)
+    if (isPrivateIp(parsed.hostname)) {
       return resolve(false);
     }
 
@@ -77,6 +87,17 @@ function checkHealth(rawUrl, timeoutMs = 5000) {
       resolve(res.statusCode === 200);
       res.resume();
     });
+
+    // DNS-rebinding guard: reject if the resolved IP is private
+    req.on('socket', (socket) => {
+      socket.once('connect', () => {
+        if (isPrivateIp(socket.remoteAddress || '')) {
+          req.destroy(new Error('DNS rebinding: resolved to private address'));
+          resolve(false);
+        }
+      });
+    });
+
     req.on('error',   () => resolve(false));
     req.on('timeout', () => { req.destroy(); resolve(false); });
   });

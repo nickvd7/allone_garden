@@ -553,6 +553,14 @@
   var listWrap  = document.getElementById('server-list-wrap');
   var listEl    = document.getElementById('server-list');
 
+  function safeHref(url) {
+    try {
+      var p = new URL(url);
+      if (p.protocol !== 'http:' && p.protocol !== 'https:') return '#';
+      return url;
+    } catch (e) { return '#'; }
+  }
+
   function setOnline(name, url, players, motd) {
     nameEl.textContent   = '🌱 ' + (name || 'AllOne Garden');
     statusEl.textContent = 'Online';
@@ -564,7 +572,7 @@
     if (motd) {
       document.getElementById('ms-desc').textContent = motd;
     }
-    btnEl.href      = url;
+    btnEl.href      = safeHref(url);
     btnEl.className = 'btn-play-now';
   }
 
@@ -575,19 +583,30 @@
 
   function renderServers(servers) {
     if (!servers || servers.length < 2) return;
-    var html = '';
+    var fragment = document.createDocumentFragment();
     servers.forEach(function (s) {
-      if (s.isMain) return; // already shown in hero
-      var href = s.url || '#';
-      html += '<a class="server-card" href="' + encodeURI(href) +
-              '" target="_blank" rel="noopener">' +
-              '<div class="server-card-name">' + escHtml(s.name) + '</div>' +
-              '<div class="server-card-meta">' + escHtml(s.description || '') + '</div>' +
-              '<div class="server-card-players">👥 ' + (s.playerCount || 0) + ' online</div>' +
-              '</a>';
+      if (s.isMain) return;
+      var a = document.createElement('a');
+      a.className = 'server-card';
+      a.href      = safeHref(s.url || '');
+      a.target    = '_blank';
+      a.rel       = 'noopener';
+      var nameDiv = document.createElement('div');
+      nameDiv.className   = 'server-card-name';
+      nameDiv.textContent = s.name || '';
+      var metaDiv = document.createElement('div');
+      metaDiv.className   = 'server-card-meta';
+      metaDiv.textContent = s.description || '';
+      var playersDiv = document.createElement('div');
+      playersDiv.className   = 'server-card-players';
+      playersDiv.textContent = '👥 ' + (s.playerCount || 0) + ' online';
+      a.appendChild(nameDiv);
+      a.appendChild(metaDiv);
+      a.appendChild(playersDiv);
+      fragment.appendChild(a);
     });
-    if (html) {
-      listEl.innerHTML  = html;
+    if (fragment.childNodes.length > 0) {
+      listEl.appendChild(fragment);
       listWrap.style.display = '';
     }
   }
