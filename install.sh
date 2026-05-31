@@ -144,6 +144,12 @@ else
   git clone --depth=1 "$REPO_URL" "$INSTALL_DIR"
 fi
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR"
+# Prevent other local users from reading or modifying source/config files
+chmod 750 "$INSTALL_DIR"
+find "$INSTALL_DIR" -maxdepth 6 -type d -exec chmod 750 {} \;
+find "$INSTALL_DIR" -maxdepth 6 -type f -exec chmod 640 {} \;
+# Restore execute bit on shell scripts
+find "$INSTALL_DIR" -maxdepth 6 -name "*.sh" -exec chmod 750 {} \;
 success "Source code ready"
 
 # ── Install npm dependencies ──────────────────────────────────────────────────

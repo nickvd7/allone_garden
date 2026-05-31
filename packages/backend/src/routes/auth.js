@@ -10,7 +10,21 @@ const crypto  = require('crypto');
 const { body } = require('express-validator');
 const db      = require('../db');
 const { requireAuth }                              = require('../middleware/auth');
+const rateLimit                                    = require('express-rate-limit');
 const { authLimiter, auditLog }                    = require('../middleware/security');
+
+// Additional per-email limiter for password reset — 3 requests / email / hour.
+// Combined with the per-IP authLimiter above this stops both IP-based and
+// email-based enumeration from shared networks (office, university, proxy).
+const forgotPasswordEmailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  keyGenerator: (req) => `forgot:${(req.body?.email || '').toLowerCase().trim()}`,
+  message: { error: 'Too many reset requests for this address. Try again in 1 hour.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+});
 const { validateRegister, validateLogin,
         handleValidationErrors }                   = require('../middleware/validate');
 const { updateMemEntry }                           = require('./leaderboard');
@@ -178,7 +192,7 @@ router.get('/me', requireAuth, async (req, res) => {
 // With a real DB the token is never returned in JSON (only emailed / logged via sendPasswordReset).
 // In-memory dev: set EXPOSE_RESET_TOKEN=true and NODE_ENV≠production to include resetToken in JSON for tests.
 
-router.post('/forgot-password', authLimiter, async (req, res) => {
+router.post('/forgot-password', authLimiter, forgotPasswordEmailLimiter, async (req, res) => {
   const { email } = req.body;
   if (!email || typeof email !== 'string') {
     return res.status(400).json({ error: 'Email required' });

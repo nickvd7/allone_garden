@@ -200,8 +200,13 @@ router.post('/plant', recognitionLimiter, async (req, res) => {
       provider,
     });
   } catch (err) {
-    // Never echo apiKey in error messages
-    const message = err.message.replace(apiKey, '[REDACTED]');
+    // Redact the exact key and common API-key shapes so the value can't leak
+    // if the error message quotes it in a different context (URL, JSON, etc.)
+    const message = err.message
+      .replace(apiKey, '[REDACTED]')
+      .replace(/sk-[a-zA-Z0-9_-]{20,}/g, '[REDACTED]')
+      .replace(/AIza[a-zA-Z0-9_-]{35}/g, '[REDACTED]')
+      .replace(/Bearer\s+[a-zA-Z0-9_\-/.]{20,}/g, 'Bearer [REDACTED]');
     return res.status(502).json({ error: message });
   }
 });

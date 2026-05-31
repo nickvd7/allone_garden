@@ -23,13 +23,17 @@ async function requireAdmin(req, res, next) {
   if (ADMIN_USERS.includes(req.user.username)) return next();
 
   // DB path: level >= 99
-  if (db.isConnected()) {
-    const result = await db.query(
-      'SELECT level FROM users WHERE id = $1',
-      [req.user.userId]
-    );
-    if (result.rows[0]?.level >= 99) return next();
+  if (!db.isConnected()) {
+    // Cannot verify DB-level admin status — return 503 so a legitimate admin
+    // gets a clear "try again" signal rather than a misleading 403.
+    return res.status(503).json({ error: 'Database unavailable — cannot verify admin status' });
   }
+
+  const result = await db.query(
+    'SELECT level FROM users WHERE id = $1',
+    [req.user.userId]
+  );
+  if (result.rows[0]?.level >= 99) return next();
 
   res.status(403).json({ error: 'Admin access required' });
 }

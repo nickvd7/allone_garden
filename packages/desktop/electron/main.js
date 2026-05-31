@@ -274,9 +274,12 @@ function createWindow(url) {
     },
   });
 
-  // Open external links in system browser, not in the app window
+  // Open external links in system browser — only http/https to block
+  // file://, javascript:, and other dangerous schemes injected via links.
   mainWindow.webContents.setWindowOpenHandler(({ url: openUrl }) => {
-    shell.openExternal(openUrl);
+    if (/^https?:\/\//i.test(openUrl)) {
+      shell.openExternal(openUrl);
+    }
     return { action: 'deny' };
   });
 

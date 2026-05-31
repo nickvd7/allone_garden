@@ -68,6 +68,13 @@ function loadPlugin(pluginDir, deps) {
     return null;
   }
 
+  // Validate plugin name: only safe characters — prevents path traversal or
+  // injection if the name is ever used in a filesystem or DB context.
+  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(plugin.name)) {
+    console.error(`[plugins] Plugin in ${pluginDir} has invalid name "${plugin.name}" — skipping`);
+    return null;
+  }
+
   if (loaded[plugin.name]) {
     console.warn(`[plugins] Plugin "${plugin.name}" already loaded — skipping duplicate`);
     return null;
