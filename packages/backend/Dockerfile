@@ -3,8 +3,10 @@ FROM node:20.19-alpine AS builder
 WORKDIR /app
 # bcrypt / optional native addons may need a toolchain on musl
 RUN apk add --no-cache python3 make g++
+# This package is built from its own context (no workspace root lockfile here),
+# so npm install is used rather than npm ci, which requires a package-lock.json.
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # ── Runtime stage ───────────────────────────────────────────────────────────────
 FROM node:20.19-alpine

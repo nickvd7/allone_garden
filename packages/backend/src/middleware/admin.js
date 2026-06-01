@@ -24,9 +24,15 @@ async function requireAdmin(req, res, next) {
 
   // DB path: level >= 99
   if (!db.isConnected()) {
-    // Cannot verify DB-level admin status — return 503 so a legitimate admin
-    // gets a clear "try again" signal rather than a misleading 403.
-    return res.status(503).json({ error: 'Database unavailable — cannot verify admin status' });
+    // If a database is configured but currently unreachable we cannot verify a
+    // DB-level admin, so return 503 ("try again") rather than a misleading 403.
+    // In pure in-memory mode (no DATABASE_URL / SQLITE_PATH) there is no DB-level
+    // admin at all — access comes solely from the ADMIN_USERS allowlist checked
+    // above — so a non-allowlisted user is definitively not an admin → 403.
+    if (process.env.DATABASE_URL || process.env.SQLITE_PATH) {
+      return res.status(503).json({ error: 'Database unavailable — cannot verify admin status' });
+    }
+    return res.status(403).json({ error: 'Admin access required' });
   }
 
   const result = await db.query(

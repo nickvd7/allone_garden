@@ -10,8 +10,10 @@ ENV CI=false
 ENV GENERATE_SOURCEMAP=false
 ENV NODE_OPTIONS=--max-old-space-size=4096
 
+# Built from its own context (no workspace root lockfile here), so npm install
+# is used rather than npm ci, which requires a package-lock.json.
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 RUN npm run build
 

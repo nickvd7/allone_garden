@@ -230,10 +230,13 @@ router.post('/forgot-password', authLimiter, forgotPasswordEmailLimiter, async (
       await sendPasswordReset(email, user.username, token);
     }
 
-    // Log token to stdout only in non-production — never return it in the JSON
-    // response body, which could be captured by proxies, APM tools, or logs.
+    // Dev/test escape hatch: when EXPOSE_RESET_TOKEN=true AND not production,
+    // surface the token so local flows and integration tests can complete the
+    // reset without a mail server. The double guard (explicit opt-in flag +
+    // NODE_ENV check) keeps this off in any real deployment.
     if (process.env.EXPOSE_RESET_TOKEN === 'true' && process.env.NODE_ENV !== 'production' && user) {
       console.log(`[auth/forgot-password] DEV — reset token for ${email}: ${token}`);
+      return res.json({ success: true, resetToken: token });
     }
     res.json({ success: true });
   } catch (err) {
