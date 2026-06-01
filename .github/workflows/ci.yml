@@ -20,6 +20,7 @@ jobs:
       - name: Validate docker-compose.yml
         env:
           JWT_SECRET: ci-validate-only-min-32-characters-long-for-compose-config
+          POSTGRES_PASSWORD: ci-validate-only
         run: docker compose config
 
   # ── Lint ─────────────────────────────────────────────────────────────────────
