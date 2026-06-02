@@ -9,7 +9,7 @@
  */
 import React, { useState, useRef } from 'react';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE = process.env.REACT_APP_API_URL || '';
 
 const PROVIDERS = [
   { id: 'openai',    label: 'OpenAI (GPT-4o mini)',     storageKey: 'garden_apikey_openai',    docsUrl: 'https://platform.openai.com/api-keys' },

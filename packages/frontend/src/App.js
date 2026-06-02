@@ -47,7 +47,7 @@ import PlantRecognitionModal from './components/PlantRecognitionModal';
 import GardenConflictModal from './components/GardenConflictModal';
 import { GameContentProvider } from './context/GameContentContext';
 
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_API_URL || '';
 const WEATHER_ICONS = {
   sunny: '☀️',
   cloudy: '☁️',
@@ -810,6 +810,12 @@ function App() {
   if (window.location.pathname.startsWith('/home')) {
     document.title = 'AllOne Garden - Home';
     return <HomePage />;
+  }
+
+  // Root redirects to the landing page; /login (or any authenticated path) stays
+  if (window.location.pathname === '/' || window.location.pathname === '') {
+    window.location.replace('/home');
+    return null;
   }
 
   if (!authChecked) return null;

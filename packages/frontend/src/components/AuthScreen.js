@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { AUTH_HTTPONLY, persistGardenToken } from '../auth/session';
 import appLogo from '../assets/allone-garden-logo-transparent.png';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API = process.env.REACT_APP_API_URL || '';
 
 function AuthScreen({ onLogin }) {
   const { t } = useTranslation();

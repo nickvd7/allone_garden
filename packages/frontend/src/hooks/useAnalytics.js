@@ -11,7 +11,7 @@
 import { useCallback } from 'react';
 import { getBearerAuthHeader, getFetchCredentials } from '../auth/session';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE = process.env.REACT_APP_API_URL || '';
 
 // Persistent session ID for the browser tab lifetime
 let _sessionId = null;

@@ -79,7 +79,7 @@ export default function AccountSettings({ onClose, onDeleted }) {
     // Use native fetch for PATCH (api helper only covers get/post/delete)
     try {
       const res = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/account/password`,
+        `${process.env.REACT_APP_API_URL || ''}/api/account/password`,
         {
           method:      'PATCH',
           credentials: getFetchCredentials(),
@@ -107,7 +107,7 @@ export default function AccountSettings({ onClose, onDeleted }) {
     try {
       // Use raw fetch so we can handle the blob download
       const res = await fetch(
-        `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/account/export`,
+        `${process.env.REACT_APP_API_URL || ''}/api/account/export`,
         {
           credentials: getFetchCredentials(),
           headers:     { ...getBearerAuthHeader() },
@@ -139,7 +139,7 @@ export default function AccountSettings({ onClose, onDeleted }) {
       await api.delete('/api/account', { password: deletePassword });
       try {
         await fetch(
-          `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/logout`,
+          `${process.env.REACT_APP_API_URL || ''}/api/auth/logout`,
           { method: 'POST', credentials: getFetchCredentials() }
         );
       } catch { /* ignore */ }

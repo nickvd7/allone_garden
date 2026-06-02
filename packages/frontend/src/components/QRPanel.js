@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getBearerAuthHeader, getFetchCredentials } from '../auth/session';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE = process.env.REACT_APP_API_URL || '';
 
 // ── QR Scanner (uses html5-qrcode) ────────────────────────────────────────────
 function QRScanner({ onScanSuccess, onClose: _onClose }) {

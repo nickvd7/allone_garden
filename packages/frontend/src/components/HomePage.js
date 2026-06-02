@@ -52,7 +52,7 @@ function HomePage() {
             <option value="en">EN</option>
             <option value="nl">NL</option>
           </select>
-          <a className="lp-nav-cta" href="/">{t('home.nav.get_started', { defaultValue: 'Login / Register' })}</a>
+          <a className="lp-nav-cta" href="/login">{t('home.nav.get_started', { defaultValue: 'Login / Register' })}</a>
         </div>
       </nav>
 
@@ -63,7 +63,7 @@ function HomePage() {
           {t('home.hero.body', { defaultValue: 'AllOne Garden is a multiplayer gardening game you can self-host on any device - Raspberry Pi, Mac, Windows PC, Linux server, or Android phone. No central server. No subscriptions. Just community, plants, and good soil.' })}
         </p>
         <div className="lp-hero-actions">
-          <a className="lp-btn-primary" href="/">{t('home.hero.login_primary', { defaultValue: 'Login / Register' })}</a>
+          <a className="lp-btn-primary" href="/login">{t('home.hero.login_primary', { defaultValue: 'Login / Register' })}</a>
           <a className="lp-btn-secondary" href="#setup">{t('home.hero.cta_primary', { defaultValue: 'Plant your server' })}</a>
         </div>
         <div className="lp-garden-preview" aria-hidden="true">
@@ -272,7 +272,7 @@ function HomePage() {
             <a className="lp-btn-secondary" href="https://github.com/nickvd7/allone_garden/blob/main/INSTALL.md" target="_blank" rel="noopener noreferrer">{t('home.cta.secondary', { defaultValue: 'Read the docs' })}</a>
           </div>
           <div className="lp-back-wrap">
-            <a href="/" className="lp-back-link">{t('home.cta.back_login', { defaultValue: '← Back to Login' })}</a>
+            <a href="/login" className="lp-back-link">{t('home.cta.back_login', { defaultValue: '← Back to Login' })}</a>
           </div>
         </div>
       </section>

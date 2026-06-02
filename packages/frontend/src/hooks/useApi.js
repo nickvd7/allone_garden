@@ -4,7 +4,7 @@
  */
 import { getBearerAuthHeader, getFetchCredentials } from '../auth/session';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE = process.env.REACT_APP_API_URL || '';
 
 // Thrown when the server returns 429 Too Many Requests
 export class RateLimitError extends Error {

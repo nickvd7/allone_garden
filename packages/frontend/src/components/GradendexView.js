@@ -16,7 +16,7 @@ import { AUTH_HTTPONLY, getBearerAuthHeader, readGardenToken } from '../auth/ses
 import { localizeGradendexEntry, categoryLabel, companionDisplayName } from '../utils/gradendexI18n';
 import i18n from '../i18n/config';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API = process.env.REACT_APP_API_URL || '';
 
 // ── Simple Markdown renderer (bold, italic, newlines, bullet lists) ─────────
 function renderMarkdown(text) {

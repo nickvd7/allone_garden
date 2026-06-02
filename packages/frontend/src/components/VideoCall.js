@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE = process.env.REACT_APP_API_URL || '';
 
 // Default fallback ICE servers (Google STUN, public / no credentials).
 // The real list is fetched from /api/world/ice-servers on mount so that the

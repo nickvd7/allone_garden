@@ -361,16 +361,12 @@ fi
 chown "${SERVICE_USER}:${SERVICE_USER}" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
-# ── Build frontend (after .env so we know the correct API URL) ────────────────
-# REACT_APP_API_URL is baked into the JS bundle at build time, so it must point
-# at the real public URL — not localhost, which only the Pi itself can reach.
-if [[ -n "$DOMAIN" ]]; then
-  _REACT_API_URL="https://${DOMAIN}"
-else
-  _REACT_API_URL="http://${PI_IP}:${BACKEND_PORT}"
-fi
-info "Building frontend (API URL: ${_REACT_API_URL})…"
-su -c "cd '${INSTALL_DIR}/packages/frontend' && REACT_APP_API_URL='${_REACT_API_URL}' CI=false GENERATE_SOURCEMAP=false NODE_OPTIONS=--max-old-space-size=4096 npm run build" "$SERVICE_USER"
+# ── Build frontend ────────────────────────────────────────────────────────────
+# REACT_APP_API_URL is intentionally left unset so all API calls use relative
+# paths (/api/...). nginx proxies those to the backend on the same origin.
+# This avoids CORS entirely and works regardless of HTTP or HTTPS.
+info "Building frontend…"
+su -c "cd '${INSTALL_DIR}/packages/frontend' && CI=false GENERATE_SOURCEMAP=false NODE_OPTIONS=--max-old-space-size=4096 npm run build" "$SERVICE_USER"
 success "Frontend built"
 
 # ── Run DB migrations ─────────────────────────────────────────────────────────

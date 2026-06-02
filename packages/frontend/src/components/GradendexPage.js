@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import GradendexView from './GradendexView';
 import { readGardenToken } from '../auth/session';
 
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_API_URL || '';
 
 function GradendexPage() {
   const { t } = useTranslation();

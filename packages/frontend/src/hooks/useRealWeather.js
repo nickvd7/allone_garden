@@ -15,7 +15,7 @@
  */
 import { useState, useCallback } from 'react';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE = process.env.REACT_APP_API_URL || '';
 
 export function useRealWeather() {
   const [weather, setWeather] = useState(null);

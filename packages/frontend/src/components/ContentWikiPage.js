@@ -14,7 +14,7 @@ import api from '../hooks/useApi';
 import { AUTH_HTTPONLY, readGardenToken } from '../auth/session';
 import { BLANK, ItemForm, formStyles } from './ContentForms';
 
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_API_URL || '';
 
 // ── Content type tabs ─────────────────────────────────────────────────────────
 const CONTENT_TABS = [

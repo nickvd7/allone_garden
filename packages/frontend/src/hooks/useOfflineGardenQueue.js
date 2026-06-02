@@ -11,7 +11,7 @@ import {
   readGardenToken,
 } from '../auth/session';
 
-const BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const BASE = process.env.REACT_APP_API_URL || '';
 const QUEUE_KEY = 'allone_garden_offline_garden_queue';
 
 /** Sync with App.js — last known server `updated_at` for optimistic concurrency */
