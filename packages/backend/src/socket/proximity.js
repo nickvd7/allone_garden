@@ -3,16 +3,19 @@
  *
  * Handles three concerns for the walking world map:
  *   1. Position broadcasting   — players broadcast tile coords while walking
- *   2. Direct messages (DM)    — chat between nearby players
- *   3. WebRTC signaling relay  — offer / answer / ICE for video calls
+ *   2. Direct messages (DM)    — chat between nearby or searched players
+ *   3. WebRTC signaling relay  — offer / answer / ICE for video/audio calls
  *
- * Security hardening applied:
- *   - world:position rate-limited (max 10 updates/s) and coordinate-bounds checked
- *   - DM target validated as numeric; text XSS-sanitized + length-capped
+ * Security hardening:
+ *   - world:position rate-limited (max 10 updates/s) + coordinate-bounds checked
+ *   - dm:send requires authenticated sender (no guests), rate-limited (3/s, burst 8),
+ *     XSS-sanitized, and length-capped
+ *   - call:offer / call:reject / call:end require authenticated sender, rate-limited
+ *     (2 call events/s, burst 4) to prevent ring-spam harassment
  *   - WebRTC payloads validated as plain objects; serialized size capped at 64 KB
  *   - All relay 'to' fields validated as numeric strings (db user IDs)
- *   - 'from' field on relayed messages is ALWAYS set server-side from socket.userId
- *     (clients cannot spoof it)
+ *   - 'from' is ALWAYS set server-side from socket.userId — cannot be spoofed
+ *   - audioOnly flag is relayed as boolean so recipient shows correct UI
  */
 const xss = require('xss');
 
@@ -28,7 +31,7 @@ const MAX_DM_LEN = 300;
 const MAP_W = 32;
 const MAP_H = 20;
 
-// Max serialized size (bytes) for WebRTC payloads (SDP offers can be ~4 KB; 64 KB is generous)
+// Max serialized size (bytes) for WebRTC payloads (SDP offers ~4 KB; 64 KB is generous)
 const MAX_WEBRTC_BYTES = 64 * 1024;
 
 /**
@@ -54,10 +57,10 @@ function isSmallObject(value, maxBytes) {
 }
 
 /**
- * Simple token-bucket rate limiter (shared with chat.js logic).
+ * Simple token-bucket rate limiter.
  */
 function createRateLimiter(maxPerSecond = 10, burst = 20) {
-  let tokens    = burst;
+  let tokens     = burst;
   let lastRefill = Date.now();
   return function isAllowed() {
     const now   = Date.now();
@@ -74,10 +77,11 @@ function createRateLimiter(maxPerSecond = 10, burst = 20) {
 module.exports = function proximityHandler(socket, io) {
 
   const positionLimiter = createRateLimiter(10, 20);  // 10 moves/s max
+  const dmLimiter       = createRateLimiter(3, 8);    // 3 DMs/s, burst 8
+  const callLimiter     = createRateLimiter(2, 4);    // 2 call-signal events/s, burst 4
 
   // ── 1. Position broadcast ─────────────────────────────────────────────────
   socket.on('world:position', ({ x, y }) => {
-    // Rate limit
     if (!positionLimiter()) return;
 
     // Type + bounds check — reject floats, NaN, Infinity, and out-of-map coords
@@ -103,39 +107,59 @@ module.exports = function proximityHandler(socket, io) {
 
   // ── 2. Direct messages ────────────────────────────────────────────────────
   socket.on('dm:send', ({ to, text }) => {
+    // Guests (userId = null) cannot send DMs — no stable identity to reply to
+    if (!socket.userId) return;
+
+    if (!dmLimiter()) return;                           // rate limit
+
     const targetId = safeUserId(to);
-    if (!targetId) return;                          // invalid or missing target
+    if (!targetId) return;                              // invalid or missing target
+
+    // Prevent DMs to self
+    if (targetId === String(socket.userId)) return;
+
     if (typeof text !== 'string') return;
 
     const sanitized = xss(text.trim().slice(0, MAX_DM_LEN), XSS_OPTS);
     if (!sanitized) return;
 
     io.to(targetId).emit('dm:receive', {
-      from:         socket.userId,                  // set server-side — cannot be spoofed
-      fromUsername: socket.username || 'Guest',
+      from:         socket.userId,                      // set server-side — cannot be spoofed
+      fromUsername: socket.username,
       text:         sanitized,
       timestamp:    Date.now(),
     });
   });
 
   // ── 3. WebRTC signaling relay ─────────────────────────────────────────────
-  // The server never interprets SDP / ICE content — it only validates shape and size,
+  // The server never interprets SDP / ICE content — it only validates shape/size,
   // then routes to the correct socket room.
-  // Crucially, 'from' is always socket.userId — clients cannot forge it.
+  // 'from' is always socket.userId so clients cannot spoof caller identity.
+  // 'audioOnly' is relayed as a boolean so the recipient shows the correct UI.
 
-  socket.on('call:offer', ({ to, offer }) => {
+  socket.on('call:offer', ({ to, offer, audioOnly }) => {
+    // Only authenticated users may initiate calls
+    if (!socket.userId) return;
+
+    if (!callLimiter()) return;                         // prevent ring-spam
+
     const targetId = safeUserId(to);
     if (!targetId) return;
-    if (!isSmallObject(offer, MAX_WEBRTC_BYTES)) return;   // must be a plain object ≤ 64 KB
+    if (targetId === String(socket.userId)) return;     // no calls to self
+    if (!isSmallObject(offer, MAX_WEBRTC_BYTES)) return;
 
     io.to(targetId).emit('call:offer', {
       from:         socket.userId,
-      fromUsername: socket.username || 'Guest',
+      fromUsername: socket.username,
       offer,
+      audioOnly:    audioOnly === true,                 // strict boolean coercion
     });
   });
 
   socket.on('call:answer', ({ to, answer }) => {
+    if (!socket.userId) return;
+    if (!callLimiter()) return;
+
     const targetId = safeUserId(to);
     if (!targetId) return;
     if (!isSmallObject(answer, MAX_WEBRTC_BYTES)) return;
@@ -147,6 +171,10 @@ module.exports = function proximityHandler(socket, io) {
   });
 
   socket.on('call:ice-candidate', ({ to, candidate }) => {
+    // ICE candidates use position limiter budget (high frequency during setup)
+    if (!socket.userId) return;
+    if (!positionLimiter()) return;
+
     const targetId = safeUserId(to);
     if (!targetId) return;
     // candidate can be null (end-of-candidates marker) or a plain object ≤ 4 KB
@@ -159,12 +187,18 @@ module.exports = function proximityHandler(socket, io) {
   });
 
   socket.on('call:reject', ({ to }) => {
+    if (!socket.userId) return;
+    if (!callLimiter()) return;
+
     const targetId = safeUserId(to);
     if (!targetId) return;
     io.to(targetId).emit('call:reject', { from: socket.userId });
   });
 
   socket.on('call:end', ({ to }) => {
+    if (!socket.userId) return;
+    if (!callLimiter()) return;
+
     const targetId = safeUserId(to);
     if (!targetId) return;
     io.to(targetId).emit('call:end', { from: socket.userId });

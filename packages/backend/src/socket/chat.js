@@ -44,7 +44,8 @@ function createRateLimiter(maxPerSecond = 2, burst = 5) {
 }
 
 module.exports = function chatHandler(socket, io) {
-  const rateLimiter = createRateLimiter(2, 5);
+  const rateLimiter   = createRateLimiter(2, 5);   // messages: 2/s, burst 5
+  const typingLimiter = createRateLimiter(4, 8);   // typing indicators: separate bucket
 
   socket.on('chat:message', (data) => {
     // Rate limit check
@@ -88,8 +89,7 @@ module.exports = function chatHandler(socket, io) {
   });
 
   socket.on('chat:typing', () => {
-    // Re-use the same rate limiter — typing events count toward the same budget
-    if (!rateLimiter()) return;
+    if (!typingLimiter()) return;
     // Only broadcast the fact that someone is typing — no client-supplied data
     socket.broadcast.emit('chat:typing', {
       userId:    socket.userId,

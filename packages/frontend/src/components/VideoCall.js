@@ -170,6 +170,16 @@ function VideoCallInner({ socket, callState, onEnd }) {
     onEnd();
   }, [socket, callState.peerId, onEnd]);
 
+  // ── Cleanup on unmount — ensure tracks and PC are always released ─────────
+  useEffect(() => {
+    return () => {
+      pcRef.current?.close();
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      pcRef.current        = null;
+      localStreamRef.current = null;
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Start outgoing call ────────────────────────────────────────────────────
   useEffect(() => {
     if (callState.mode !== 'outgoing') return;

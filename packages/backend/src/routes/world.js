@@ -338,16 +338,16 @@ router.get('/stats', (req, res) => {
 // Keeps ICE config server-side so TURN credentials are never baked into the
 // frontend build.
 //
+// STUN servers are returned to everyone (no credentials, public infrastructure).
+// TURN credentials are only returned to authenticated users to prevent third
+// parties from abusing the TURN relay and running up bandwidth costs.
+//
 // Environment variables (all optional):
 //   WEBRTC_STUN_SERVERS  — comma-separated stun: URLs
-//                          default: stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
-//   WEBRTC_TURN_URL      — single turn: or turns: URL (e.g. turns:turn.example.com:5349)
+//   WEBRTC_TURN_URL      — single turn: or turns: URL
 //   WEBRTC_TURN_USERNAME — TURN credential username
 //   WEBRTC_TURN_PASSWORD — TURN credential password
-//
-// The frontend polls this endpoint once on mount and caches the result.
-// No auth required — TURN credentials are per-server, not per-user.
-router.get('/ice-servers', (req, res) => {
+router.get('/ice-servers', optionalAuth, (req, res) => {
   const stunList = (process.env.WEBRTC_STUN_SERVERS || 'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302')
     .split(',')
     .map((u) => u.trim())
@@ -356,15 +356,17 @@ router.get('/ice-servers', (req, res) => {
 
   const iceServers = [...stunList];
 
-  if (process.env.WEBRTC_TURN_URL) {
+  // Only provide TURN credentials to authenticated users
+  if (process.env.WEBRTC_TURN_URL && req.user) {
     const turnEntry = { urls: process.env.WEBRTC_TURN_URL };
     if (process.env.WEBRTC_TURN_USERNAME) turnEntry.username   = process.env.WEBRTC_TURN_USERNAME;
     if (process.env.WEBRTC_TURN_PASSWORD) turnEntry.credential = process.env.WEBRTC_TURN_PASSWORD;
     iceServers.push(turnEntry);
   }
 
-  // Cache for 5 minutes — clients re-fetch before creating a new peer connection
-  res.setHeader('Cache-Control', 'public, max-age=300');
+  // Auth users: short private cache. Anonymous: STUN-only, can cache longer.
+  const cacheHeader = req.user ? 'private, max-age=300' : 'public, max-age=3600';
+  res.setHeader('Cache-Control', cacheHeader);
   res.json({ iceServers });
 });
 

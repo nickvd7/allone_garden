@@ -435,9 +435,12 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   useEffect(() => {
     if (!socket) return;
     const onDm = (msg) => {
+      if (!msg.from && msg.from !== 0) return;
+      const fromId = String(msg.from);
+      if (!fromId || fromId === 'null' || fromId === 'undefined') return;
       setDmHistory(prev => ({
         ...prev,
-        [msg.from]: [...(prev[msg.from] || []), msg],
+        [fromId]: [...(prev[fromId] || []), msg],
       }));
     };
     socket.on('dm:receive', onDm);

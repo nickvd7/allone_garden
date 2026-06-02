@@ -102,7 +102,10 @@ function ChatPanel({ socket, username, currentUserId }) {
     if (!socket) return;
 
     const onDm = (msg) => {
+      // Discard messages with no valid sender (e.g. malformed payloads)
+      if (!msg.from && msg.from !== 0) return;
       const fromId = String(msg.from);
+      if (!fromId || fromId === 'null' || fromId === 'undefined') return;
       setDmHistory((prev) => ({
         ...prev,
         [fromId]: [...(prev[fromId] || []), msg],
