@@ -31,6 +31,36 @@ success() { echo -e "${GREEN}[OK]${RESET}   $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${RESET} $*"; }
 error()   { echo -e "${RED}[ERR]${RESET}  $*" >&2; exit 1; }
 
+# ── Network helpers (local-only — never contact a third-party service) ─────────
+# Detect the primary IPv4 address of THIS machine (the Raspberry Pi it runs on).
+#
+# Strategy: find the interface the default route uses to reach the internet,
+# then read that interface's own global-scope IPv4 address. This references no
+# external IP at all and sends no packets — it is a pure local lookup, so it
+# works offline and never leaks the install to a "what is my IP" echo service.
+# Falls back to `hostname -I` if the `ip` tooling is unavailable.
+detect_primary_ip() {
+  local ip="" iface=""
+  if command -v ip &>/dev/null; then
+    iface=$(ip -4 route show default 2>/dev/null \
+              | awk '{for (i = 1; i <= NF; i++) if ($i == "dev") { print $(i + 1); exit }}')
+    if [[ -n "$iface" ]]; then
+      ip=$(ip -4 -o addr show dev "$iface" scope global 2>/dev/null \
+             | awk '{print $4}' | cut -d/ -f1 | head -n1)
+    fi
+  fi
+  if [[ -z "$ip" ]]; then
+    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+  fi
+  printf '%s' "$ip"
+}
+
+# True when an IPv4 address is in a private / loopback / link-local range
+# (RFC 1918 + 127/8 + 169.254/16) — i.e. not directly reachable from the internet.
+is_private_ipv4() {
+  [[ "$1" =~ ^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.) ]]
+}
+
 # ── Config ────────────────────────────────────────────────────────────────────
 INSTALL_DIR="${GARDEN_DIR:-/opt/allone-garden}"
 SERVICE_USER="${GARDEN_USER:-garden}"
@@ -106,6 +136,10 @@ fi
 if [[ $EUID -ne 0 ]]; then
   error "Run with sudo: sudo bash install.sh"
 fi
+
+# ── This machine's own IP (detected locally — see detect_primary_ip) ───────────
+PI_IP="$(detect_primary_ip)"
+[[ -z "$PI_IP" ]] && PI_IP="127.0.0.1"
 
 # ── Interactive configuration ─────────────────────────────────────────────────
 # Prompts are shown when running interactively (stdin is a TTY).
@@ -308,7 +342,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   if [[ -n "$DOMAIN" ]]; then
     FRONTEND_URL_VALUE="https://${DOMAIN}"
   else
-    FRONTEND_URL_VALUE="http://$(hostname -I | awk '{print $1}')"
+    FRONTEND_URL_VALUE="http://${PI_IP}"
   fi
 
   cat > "$ENV_FILE" <<EOF
@@ -404,7 +438,7 @@ success "allone-garden.service started"
 
 # ── Nginx reverse proxy ───────────────────────────────────────────────────────
 info "Configuring Nginx…"
-LOCAL_IP=$(hostname -I | awk '{print $1}')
+LOCAL_IP="$PI_IP"
 
 # Use all domain variants in server_name — certbot needs this to find the right vhost
 if [[ -n "$DOMAIN" ]]; then
@@ -541,43 +575,53 @@ echo -e "  Config:       ${BOLD}${ENV_FILE}${RESET}"
 echo ""
 
 # ── DNS / IP info ──────────────────────────────────────────────────────────────
+# The A-record value is THIS Raspberry Pi's own IP address, detected locally
+# from the kernel routing table (no third-party "what is my IP" service is ever
+# contacted — see detect_primary_ip).
 echo -e "${BOLD}  ── Network ────────────────────────────────────────────────────────${RESET}"
 echo ""
-echo -e "  Server IP:    ${BOLD}${LOCAL_IP}${RESET}"
+echo -e "  This Raspberry Pi's IP:  ${BOLD}${PI_IP}${RESET}"
 
-# Try to show the public/WAN IP if available (non-fatal if offline)
-PUBLIC_IP=$(curl -sf --max-time 4 https://api.ipify.org 2>/dev/null || \
-            curl -sf --max-time 4 https://ipv4.icanhazip.com 2>/dev/null || \
-            echo "")
-if [[ -n "$PUBLIC_IP" && "$PUBLIC_IP" != "$LOCAL_IP" ]]; then
-  echo -e "  Public IP:    ${BOLD}${PUBLIC_IP}${RESET}"
+# Show every IPv4 the Pi holds (helpful on multi-homed setups: Wi-Fi + Ethernet)
+ALL_IPS=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.' | grep -v '^127\.' | paste -sd' ' -)
+if [[ -n "$ALL_IPS" && "$ALL_IPS" != "$PI_IP" ]]; then
+  echo -e "  All interfaces:          ${ALL_IPS}"
 fi
-
 echo ""
+
 if [[ -n "$DOMAIN" ]]; then
-  echo -e "  ${CYAN}DNS A-records for ${BOLD}${DOMAIN}${RESET}${CYAN}:${RESET}"
-  echo -e "  ┌──────────────────────────────────────────────────────────────────┐"
-  echo -e "  │  Type  Name                 Value                                │"
+  echo -e "  ${CYAN}DNS A-records to create for ${BOLD}${DOMAIN}${RESET}${CYAN}:${RESET}"
 
-  # Print all domain variants in the DNS table
+  # Fixed-width ASCII table (build content rows then pad to a constant inner
+  # width so the borders always line up regardless of domain/IP length).
+  _INNER_W=58
+  _BAR=$(printf '─%.0s' $(seq 1 "$_INNER_W"))
+  printf '  ┌%s┐\n' "$_BAR"
+  printf '  │%-*s│\n' "$_INNER_W" "$(printf '  %-5s %-30s %s' 'Type' 'Name' 'Value')"
+  printf '  ├%s┤\n' "$_BAR"
   for _DOM in "${CERT_DOMAINS[@]}"; do
-    _NAME_LEN=${#_DOM}
-    _IP="${PUBLIC_IP:-${LOCAL_IP}}"
-    _IP_LEN=${#_IP}
-    _NAME_PAD=$((24 - _NAME_LEN))
-    _IP_PAD=$((39 - _IP_LEN))
-    echo -e "  │  A     ${_DOM}$(printf '%*s' $_NAME_PAD '')  ${_IP}$(printf '%*s' $_IP_PAD '')│"
+    printf '  │%-*s│\n' "$_INNER_W" "$(printf '  %-5s %-30s %s' 'A' "$_DOM" "$PI_IP")"
   done
-
-  echo -e "  └──────────────────────────────────────────────────────────────────┘"
-  echo -e "  Point all of these A-records at ${BOLD}${PUBLIC_IP:-${LOCAL_IP}}${RESET} at your DNS provider."
+  printf '  └%s┘\n' "$_BAR"
+  echo -e "  Point all of these A-records at ${BOLD}${PI_IP}${RESET} at your DNS provider."
   echo -e "  ${CYAN}Propagation typically takes 1–15 minutes.${RESET}"
+
+  # If the Pi only has a private IP it is behind NAT — a public A-record can't
+  # reach it directly. Tell the user what to do without phoning home for the WAN IP.
+  if is_private_ipv4 "$PI_IP"; then
+    echo ""
+    echo -e "  ${YELLOW}⚠  ${PI_IP} is a private (LAN) address — not reachable from the internet.${RESET}"
+    echo -e "     • For internet access: forward router ports ${BOLD}80${RESET} and ${BOLD}443${RESET} (TCP) to ${BOLD}${PI_IP}${RESET},"
+    echo -e "       and set the public A-records to your router's WAN IP."
+    echo -e "       (Look it up safely on the Pi with: ${BOLD}curl -s https://ifconfig.co${RESET})"
+    echo -e "     • For LAN-only / split-horizon DNS: use ${BOLD}${PI_IP}${RESET} as shown above."
+  fi
   echo ""
   echo -e "  ${GREEN}Certificate auto-renewal:${RESET} active — no action needed."
   echo -e "  To check: ${BOLD}sudo certbot certificates${RESET}"
   echo -e "  To test renewal: ${BOLD}sudo certbot renew --dry-run${RESET}"
 else
-  echo -e "  To enable HTTPS, point a domain at ${BOLD}${PUBLIC_IP:-${LOCAL_IP}}${RESET} and re-run:"
+  echo -e "  To enable HTTPS, point a domain at ${BOLD}${PI_IP}${RESET} and re-run:"
   echo -e "  ${BOLD}sudo GARDEN_DOMAIN=allone.garden GARDEN_EMAIL=you@example.com bash install.sh${RESET}"
 fi
 echo ""
