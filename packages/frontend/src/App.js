@@ -165,6 +165,7 @@ function App() {
   const [socialUnread,     setSocialUnread]     = useState(0);
   const [, setContentWikiBadge] = useState(0);
   const [callState,        setCallState]        = useState(null);   // { mode, peerId, peerUsername, offer? }
+  const [dmTarget,         setDmTarget]         = useState(null);   // { id, username } — pre-select DM conversation
 
   // ── Tour & Help ───────────────────────────────────────────────────────────────
   // Show the tour automatically on first-ever login; persisted in localStorage
@@ -494,6 +495,22 @@ function App() {
     return () => socket.off('chat:message', onChatForBadge);
   }, [socket, showSocialMenu, authUser]);
 
+  // ── DM toast — shown when social menu is closed ────────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+    const onDmToast = (msg) => {
+      if (showSocialMenu) return; // user can see it in the panel
+      if (!msg.from && msg.from !== 0) return;
+      const fromId = String(msg.from);
+      if (!fromId || fromId === 'null') return;
+      const preview = msg.text?.slice(0, 60) + (msg.text?.length > 60 ? '…' : '');
+      showNotification(`✉️ ${msg.fromUsername}: ${preview}`);
+      setSocialUnread((n) => n + 1);
+    };
+    socket.on('dm:receive', onDmToast);
+    return () => socket.off('dm:receive', onDmToast);
+  }, [socket, showSocialMenu, showNotification]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleLogin = (user, token) => {
     setAuthUser(user);
@@ -514,6 +531,11 @@ function App() {
       setShowTour(true);
     }
   };
+
+  const handleStartDm = useCallback((player) => {
+    setShowSocialMenu(true);
+    setDmTarget(player);
+  }, []);
 
   const handleTourFinish = (dontShowAgain = true) => {
     if (dontShowAgain) {
@@ -927,8 +949,18 @@ function App() {
                     ✕
                   </button>
                 </div>
-                <ChatPanel socket={socket} username={authUser.username} currentUserId={authUser.id} />
-                <PlayersPanel socket={socket} currentUserId={authUser.id} />
+                <ChatPanel
+                  socket={socket}
+                  username={authUser.username}
+                  currentUserId={authUser.id}
+                  dmTarget={dmTarget}
+                  onDmTargetClear={() => setDmTarget(null)}
+                />
+                <PlayersPanel
+                  socket={socket}
+                  currentUserId={authUser.id}
+                  onDm={handleStartDm}
+                />
               </div>
             )}
             {showInventoryMenu && (

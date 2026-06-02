@@ -7,6 +7,7 @@
  */
 'use strict';
 
+const crypto        = require('crypto');
 const express       = require('express');
 const router        = express.Router();
 const db            = require('../db');
@@ -14,6 +15,22 @@ const worldMap      = require('../state/worldMap');
 const onlinePlayers = require('../state/onlinePlayers');
 const contentStore  = require('../state/contentStore');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+
+/**
+ * Generate short-lived TURN credentials using the coturn REST-API / HMAC-SHA1 scheme.
+ * username = "<expiryUnixTime>:<userId>"
+ * credential = base64(HMAC-SHA1(WEBRTC_TURN_SECRET, username))
+ * coturn verifies this server-side with the same shared secret, so static passwords
+ * are never exposed and each credential expires after TTL seconds.
+ */
+function generateTemporalTurnCredentials(userId, ttlSeconds = 3600) {
+  const secret = process.env.WEBRTC_TURN_SECRET;
+  if (!secret) return null;
+  const expiry     = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const username   = `${expiry}:${userId}`;
+  const credential = crypto.createHmac('sha1', secret).update(username).digest('base64');
+  return { username, credential };
+}
 
 const DEFAULT_WORLD = null;
 const DEFAULT_SLOTS = [
@@ -359,12 +376,22 @@ router.get('/ice-servers', optionalAuth, (req, res) => {
   // Only provide TURN credentials to authenticated users
   if (process.env.WEBRTC_TURN_URL && req.user) {
     const turnEntry = { urls: process.env.WEBRTC_TURN_URL };
-    if (process.env.WEBRTC_TURN_USERNAME) turnEntry.username   = process.env.WEBRTC_TURN_USERNAME;
-    if (process.env.WEBRTC_TURN_PASSWORD) turnEntry.credential = process.env.WEBRTC_TURN_PASSWORD;
+
+    // Prefer short-lived HMAC credentials (coturn REST-API / temporal credentials)
+    // over static passwords. Falls back to static env vars if no secret configured.
+    const temporal = generateTemporalTurnCredentials(req.user.id);
+    if (temporal) {
+      turnEntry.username   = temporal.username;
+      turnEntry.credential = temporal.credential;
+    } else {
+      if (process.env.WEBRTC_TURN_USERNAME) turnEntry.username   = process.env.WEBRTC_TURN_USERNAME;
+      if (process.env.WEBRTC_TURN_PASSWORD) turnEntry.credential = process.env.WEBRTC_TURN_PASSWORD;
+    }
     iceServers.push(turnEntry);
   }
 
-  // Auth users: short private cache. Anonymous: STUN-only, can cache longer.
+  // Auth users get a private short cache (credentials expire in 1 h).
+  // Unauthenticated users only receive STUN — safe to cache longer.
   const cacheHeader = req.user ? 'private, max-age=300' : 'public, max-age=3600';
   res.setHeader('Cache-Control', cacheHeader);
   res.json({ iceServers });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { api } from '../hooks/useApi';
 
 function formatTime(date) {
   return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -10,7 +11,7 @@ function avatarColor(userId) {
   return `hsl(${hue},60%,45%)`;
 }
 
-function ChatPanel({ socket, username, currentUserId }) {
+function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState('everyone'); // 'everyone' | 'direct'
 
@@ -26,12 +27,16 @@ function ChatPanel({ socket, username, currentUserId }) {
   const errorTimerRef  = useRef(null);
 
   // ── DM state ──────────────────────────────────────────────────────────────
-  const [onlinePlayers,   setOnlinePlayers]   = useState([]);
-  const [dmHistory,       setDmHistory]       = useState({}); // { userId: [msg, ...] }
-  const [selectedUser,    setSelectedUser]    = useState(null);
-  const [dmInput,         setDmInput]         = useState('');
-  const [dmSearch,        setDmSearch]        = useState('');
-  const [unreadDm,        setUnreadDm]        = useState({}); // { userId: count }
+  const [onlinePlayers,      setOnlinePlayers]      = useState([]);
+  const [dmHistory,          setDmHistory]          = useState({}); // { userId: [msg, ...] }
+  const [loadedHistories,    setLoadedHistories]    = useState(new Set()); // userId strings
+  const [conversations,      setConversations]      = useState([]); // from API
+  const [selectedUser,       setSelectedUser]       = useState(null);
+  const [dmInput,            setDmInput]            = useState('');
+  const [dmSearch,           setDmSearch]           = useState('');
+  const [unreadDm,           setUnreadDm]           = useState({}); // { userId: count }
+  const [historyLoading,     setHistoryLoading]     = useState(false);
+  const [convsLoading,       setConvsLoading]       = useState(false);
   const dmBottomRef = useRef(null);
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
@@ -43,12 +48,59 @@ function ChatPanel({ socket, username, currentUserId }) {
     dmBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [dmHistory, selectedUser]);
 
-  // Clear unread when opening a conversation
+  // ── dmTarget prop: switch to DM tab and pre-select user ───────────────────
+  useEffect(() => {
+    if (!dmTarget) return;
+    setTab('direct');
+    setSelectedUser(dmTarget);
+    setUnreadDm((prev) => {
+      const key = String(dmTarget.id);
+      return prev[key] ? { ...prev, [key]: 0 } : prev;
+    });
+    onDmTargetClear?.();
+  }, [dmTarget]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Clear unread when opening a conversation ──────────────────────────────
   useEffect(() => {
     if (!selectedUser) return;
     const key = String(selectedUser.id);
     setUnreadDm((prev) => prev[key] ? { ...prev, [key]: 0 } : prev);
   }, [selectedUser]);
+
+  // ── Fetch conversation list when DM tab opens ─────────────────────────────
+  useEffect(() => {
+    if (tab !== 'direct' || !currentUserId || convsLoading) return;
+    setConvsLoading(true);
+    api.get('/api/dm/conversations')
+      .then((data) => {
+        setConversations(data.conversations || []);
+      })
+      .catch(() => {})
+      .finally(() => setConvsLoading(false));
+  }, [tab, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Fetch message history when selecting a user (once per session) ────────
+  useEffect(() => {
+    if (!selectedUser || !currentUserId) return;
+    const key = String(selectedUser.id);
+    if (loadedHistories.has(key)) return;
+    setHistoryLoading(true);
+    api.get(`/api/dm/history/${selectedUser.id}`)
+      .then((data) => {
+        const msgs = data.messages || [];
+        if (msgs.length) {
+          setDmHistory((prev) => ({
+            ...prev,
+            [key]: msgs,
+          }));
+        }
+        setLoadedHistories((prev) => new Set([...prev, key]));
+      })
+      .catch(() => {
+        setLoadedHistories((prev) => new Set([...prev, key]));
+      })
+      .finally(() => setHistoryLoading(false));
+  }, [selectedUser, currentUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Socket: global chat ───────────────────────────────────────────────────
   useEffect(() => {
@@ -82,9 +134,9 @@ function ChatPanel({ socket, username, currentUserId }) {
   useEffect(() => {
     if (!socket) return;
 
-    const onList   = (list)     => setOnlinePlayers(list.filter((p) => String(p.id) !== String(currentUserId)));
-    const onJoined = (player)   => setOnlinePlayers((prev) => [...prev.filter((p) => p.id !== player.id), player]);
-    const onLeft   = ({ id })   => setOnlinePlayers((prev) => prev.filter((p) => p.id !== id));
+    const onList   = (list)   => setOnlinePlayers(list.filter((p) => String(p.id) !== String(currentUserId)));
+    const onJoined = (player) => setOnlinePlayers((prev) => [...prev.filter((p) => p.id !== player.id), player]);
+    const onLeft   = ({ id }) => setOnlinePlayers((prev) => prev.filter((p) => p.id !== id));
 
     socket.on('players:list',  onList);
     socket.on('player:joined', onJoined);
@@ -102,10 +154,11 @@ function ChatPanel({ socket, username, currentUserId }) {
     if (!socket) return;
 
     const onDm = (msg) => {
-      // Discard messages with no valid sender (e.g. malformed payloads)
+      // Discard messages with no valid sender
       if (!msg.from && msg.from !== 0) return;
       const fromId = String(msg.from);
       if (!fromId || fromId === 'null' || fromId === 'undefined') return;
+
       setDmHistory((prev) => ({
         ...prev,
         [fromId]: [...(prev[fromId] || []), msg],
@@ -151,14 +204,10 @@ function ChatPanel({ socket, username, currentUserId }) {
     if (!text || !selectedUser || !socket) return;
     socket.emit('dm:send', { to: selectedUser.id, text });
     const key = String(selectedUser.id);
+    const myMsg = { from: currentUserId, fromUsername: username || 'You', text, timestamp: Date.now() };
     setDmHistory((prev) => ({
       ...prev,
-      [key]: [...(prev[key] || []), {
-        from:         currentUserId,
-        fromUsername: username || 'You',
-        text,
-        timestamp:    Date.now(),
-      }],
+      [key]: [...(prev[key] || []), myMsg],
     }));
     setDmInput('');
   }, [dmInput, selectedUser, socket, currentUserId, username]);
@@ -166,19 +215,32 @@ function ChatPanel({ socket, username, currentUserId }) {
   // ── Derived ───────────────────────────────────────────────────────────────
   const totalUnread = Object.values(unreadDm).reduce((s, n) => s + n, 0);
 
-  // Players who match search, plus any we have DM history with (even if offline)
-  const knownDmUserIds = Object.keys(dmHistory);
-  const offlineWithHistory = knownDmUserIds
-    .filter((id) => !onlinePlayers.some((p) => String(p.id) === id))
-    .map((id) => ({ id, username: dmHistory[id]?.[0]?.fromUsername || `User ${id}`, offline: true }));
+  // Merge: online players + contacts from conversation history (even if offline)
+  const historyContacts = conversations
+    .filter((c) => !onlinePlayers.some((p) => String(p.id) === String(c.contact_id)))
+    .map((c) => ({ id: c.contact_id, username: c.contact_username, offline: true }));
 
-  const playerPool = [...onlinePlayers, ...offlineWithHistory];
+  const playerPool = [
+    ...onlinePlayers,
+    ...historyContacts,
+  ];
+
   const filteredPlayers = dmSearch.trim()
     ? playerPool.filter((p) => p.username?.toLowerCase().includes(dmSearch.trim().toLowerCase()))
     : playerPool;
 
-  const selectedKey = selectedUser ? String(selectedUser.id) : null;
+  const selectedKey       = selectedUser ? String(selectedUser.id) : null;
   const selectedDmMessages = selectedKey ? (dmHistory[selectedKey] || []) : [];
+
+  // Last-message snippet per user (from live history or conversations API)
+  function lastMsgFor(userId) {
+    const key = String(userId);
+    const live = dmHistory[key];
+    if (live?.length) return live[live.length - 1];
+    const conv = conversations.find((c) => String(c.contact_id) === key);
+    if (conv) return { text: conv.last_message, from: conv.from_user_id, timestamp: conv.created_at };
+    return null;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -281,15 +343,20 @@ function ChatPanel({ socket, username, currentUserId }) {
                 style={{ marginBottom: '0.5rem', width: '100%', boxSizing: 'border-box' }}
               />
               <div style={{ maxHeight: 240, overflowY: 'auto' }}>
-                {filteredPlayers.length === 0 && (
+                {convsLoading && (
+                  <div style={{ fontSize: '0.8rem', color: '#aaa', textAlign: 'center', padding: '0.5rem' }}>
+                    Laden…
+                  </div>
+                )}
+                {!convsLoading && filteredPlayers.length === 0 && (
                   <div style={{ fontSize: '0.82rem', color: '#aaa', textAlign: 'center', padding: '1rem 0' }}>
                     {onlinePlayers.length === 0 ? 'Geen andere spelers online' : 'Geen spelers gevonden'}
                   </div>
                 )}
                 {filteredPlayers.map((player) => {
-                  const key = String(player.id);
+                  const key    = String(player.id);
                   const unread = unreadDm[key] || 0;
-                  const lastMsg = dmHistory[key]?.slice(-1)[0];
+                  const last   = lastMsgFor(player.id);
                   return (
                     <button
                       key={key}
@@ -319,9 +386,9 @@ function ChatPanel({ socket, username, currentUserId }) {
                             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf50', display: 'inline-block' }} />
                           )}
                         </div>
-                        {lastMsg && (
+                        {last && (
                           <div style={{ fontSize: '0.75rem', color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
-                            {lastMsg.from === currentUserId ? 'Jij: ' : ''}{lastMsg.text}
+                            {String(last.from) === String(currentUserId) ? 'Jij: ' : ''}{last.text}
                           </div>
                         )}
                       </div>
@@ -365,35 +432,41 @@ function ChatPanel({ socket, username, currentUserId }) {
               </div>
 
               <div className="chat-messages" style={{ flex: 1 }}>
-                {selectedDmMessages.length === 0 && (
+                {historyLoading && (
+                  <div style={{ fontSize: '0.8rem', color: '#aaa', textAlign: 'center', padding: '0.75rem' }}>
+                    Geschiedenis laden…
+                  </div>
+                )}
+                {!historyLoading && selectedDmMessages.length === 0 && (
                   <div style={{ fontSize: '0.82rem', color: '#aaa', textAlign: 'center', padding: '1rem 0' }}>
                     Stuur een bericht aan {selectedUser.username}
                   </div>
                 )}
-                {selectedDmMessages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`chat-message${String(msg.from) === String(currentUserId) ? ' chat-message--own' : ''}`}
-                    style={{
-                      justifyContent: String(msg.from) === String(currentUserId) ? 'flex-end' : 'flex-start',
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: String(msg.from) === String(currentUserId) ? 'flex-end' : 'flex-start',
-                      marginBottom: '0.35rem',
-                    }}
-                  >
-                    <div style={{
-                      background: String(msg.from) === String(currentUserId) ? '#4caf50' : 'var(--surface2, #f0f0f0)',
-                      color: String(msg.from) === String(currentUserId) ? '#fff' : 'inherit',
-                      padding: '0.35rem 0.65rem', borderRadius: '12px',
-                      maxWidth: '80%', fontSize: '0.85rem', wordBreak: 'break-word',
-                    }}>
-                      {msg.text}
+                {selectedDmMessages.map((msg, i) => {
+                  const isOwn = String(msg.from) === String(currentUserId);
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: isOwn ? 'flex-end' : 'flex-start',
+                        marginBottom: '0.35rem',
+                      }}
+                    >
+                      <div style={{
+                        background: isOwn ? '#4caf50' : 'var(--surface2, #f0f0f0)',
+                        color: isOwn ? '#fff' : 'inherit',
+                        padding: '0.35rem 0.65rem', borderRadius: '12px',
+                        maxWidth: '80%', fontSize: '0.85rem', wordBreak: 'break-word',
+                      }}>
+                        {msg.text}
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#bbb', marginTop: '0.15rem' }}>
+                        {formatTime(msg.timestamp)}
+                      </span>
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: '#bbb', marginTop: '0.15rem' }}>
-                      {formatTime(msg.timestamp)}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={dmBottomRef} />
               </div>
 

@@ -12,7 +12,7 @@ function isVirtualUser(player) {
   return !!(player?.virtual || String(player?.id ?? '').startsWith('npc:'));
 }
 
-function PlayersPanel({ socket, currentUserId, onVisit, onHelp, onTrade }) {
+function PlayersPanel({ socket, currentUserId, onVisit, onHelp, onTrade, onDm }) {
   const { t } = useTranslation();
   const [players, setPlayers] = useState(() => (socket ? [] : DEMO_PLAYERS));
 
@@ -110,6 +110,16 @@ function PlayersPanel({ socket, currentUserId, onVisit, onHelp, onTrade }) {
               >
                 🔄 {t('trade')}
               </button>
+              {onDm && (
+                <button
+                  type="button"
+                  className="player-action-btn"
+                  onClick={() => onDm(player)}
+                  title="Stuur een direct bericht"
+                >
+                  ✉️ DM
+                </button>
+              )}
             </div>
           </div>
         ))}

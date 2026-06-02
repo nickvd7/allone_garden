@@ -161,6 +161,29 @@ function initSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_world_garden_slots_slot
     ON world_garden_slots (slot_index)
   `);
+
+  // Direct messages between authenticated users
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS direct_messages (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      to_user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message        TEXT    NOT NULL,
+      created_at     DATETIME NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_dm_pair
+    ON direct_messages (
+      MIN(from_user_id, to_user_id),
+      MAX(from_user_id, to_user_id),
+      created_at
+    )
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_dm_to_user
+    ON direct_messages (to_user_id, created_at DESC)
+  `);
 }
 
 // ── Public API (mirrors db.js) ─────────────────────────────────────────────────

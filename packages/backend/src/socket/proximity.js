@@ -18,6 +18,7 @@
  *   - audioOnly flag is relayed as boolean so recipient shows correct UI
  */
 const xss = require('xss');
+const db  = require('../db');
 
 const XSS_OPTS = {
   whiteList: {},
@@ -76,9 +77,10 @@ function createRateLimiter(maxPerSecond = 10, burst = 20) {
 
 module.exports = function proximityHandler(socket, io) {
 
-  const positionLimiter = createRateLimiter(10, 20);  // 10 moves/s max
-  const dmLimiter       = createRateLimiter(3, 8);    // 3 DMs/s, burst 8
-  const callLimiter     = createRateLimiter(2, 4);    // 2 call-signal events/s, burst 4
+  const positionLimiter = createRateLimiter(10, 20);  // 10 moves/s
+  const dmLimiter       = createRateLimiter(3,  8);   // 3 DMs/s, burst 8
+  const callLimiter     = createRateLimiter(2,  4);   // 2 call-signals/s, burst 4
+  const iceLimiter      = createRateLimiter(25, 50);  // ICE candidates are high-freq during setup
 
   // ── 1. Position broadcast ─────────────────────────────────────────────────
   socket.on('world:position', ({ x, y }) => {
@@ -123,12 +125,22 @@ module.exports = function proximityHandler(socket, io) {
     const sanitized = xss(text.trim().slice(0, MAX_DM_LEN), XSS_OPTS);
     if (!sanitized) return;
 
+    const timestamp = Date.now();
+
     io.to(targetId).emit('dm:receive', {
       from:         socket.userId,                      // set server-side — cannot be spoofed
       fromUsername: socket.username,
       text:         sanitized,
-      timestamp:    Date.now(),
+      timestamp,
     });
+
+    // Persist to DB (fire-and-forget)
+    if (db.isConnected()) {
+      db.query(
+        'INSERT INTO direct_messages (from_user_id, to_user_id, message) VALUES ($1, $2, $3)',
+        [socket.userId, targetId, sanitized]
+      ).catch((err) => console.error('[dm] DB write failed:', err.message));
+    }
   });
 
   // ── 3. WebRTC signaling relay ─────────────────────────────────────────────
@@ -171,9 +183,8 @@ module.exports = function proximityHandler(socket, io) {
   });
 
   socket.on('call:ice-candidate', ({ to, candidate }) => {
-    // ICE candidates use position limiter budget (high frequency during setup)
     if (!socket.userId) return;
-    if (!positionLimiter()) return;
+    if (!iceLimiter()) return;   // dedicated high-capacity bucket for ICE trickle
 
     const targetId = safeUserId(to);
     if (!targetId) return;
