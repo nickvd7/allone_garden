@@ -110,6 +110,7 @@ function calcCardStyle(targetRect, position) {
 function TourOverlay({ onFinish }) {
   const [step,       setStep]       = useState(0);
   const [targetRect, setTargetRect] = useState(null);
+  const [showAgain,  setShowAgain]  = useState(false);
   const rafRef = useRef(null);
 
   const current = TOUR_STEPS[step];
@@ -140,7 +141,7 @@ function TourOverlay({ onFinish }) {
 
   const handleNext = () => {
     if (step < TOUR_STEPS.length - 1) setStep((s) => s + 1);
-    else onFinish();
+    else onFinish(!showAgain);
   };
 
   const handlePrev = () => {
@@ -228,10 +229,21 @@ function TourOverlay({ onFinish }) {
           {step + 1} / {TOUR_STEPS.length}
         </div>
 
+        {/* "Show again" option */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#999', marginBottom: '0.6rem', cursor: 'pointer', userSelect: 'none' }}>
+          <input
+            type="checkbox"
+            checked={showAgain}
+            onChange={(e) => setShowAgain(e.target.checked)}
+            style={{ accentColor: '#4caf50', cursor: 'pointer' }}
+          />
+          Opnieuw tonen bij volgende inlog
+        </label>
+
         {/* Navigation */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <button
-            onClick={onFinish}
+            onClick={() => onFinish(!showAgain)}
             style={{
               border: 'none', background: 'none', color: '#bbb',
               cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0',

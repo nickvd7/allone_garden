@@ -438,13 +438,14 @@ function App() {
     socket.on('plugin:server-motd:data',    onMotd);
 
     // ── Incoming video call ────────────────────────────────────────────
-    const onCallOffer = ({ from, fromUsername, offer }) => {
+    const onCallOffer = ({ from, fromUsername, offer, audioOnly }) => {
       // Only show if not already in a call
       setCallState((prev) => prev ? prev : {
         mode:         'incoming',
         peerId:       from,
         peerUsername: fromUsername,
         offer,
+        audioOnly:    audioOnly || false,
       });
     };
 
@@ -514,8 +515,10 @@ function App() {
     }
   };
 
-  const handleTourFinish = () => {
-    localStorage.setItem('garden_tour_done', 'true');
+  const handleTourFinish = (dontShowAgain = true) => {
+    if (dontShowAgain) {
+      localStorage.setItem('garden_tour_done', 'true');
+    }
     setShowTour(false);
   };
 
@@ -821,7 +824,7 @@ function App() {
   if (!authChecked) return null;
   if (!authUser) {
     document.title = 'AllOne Garden - Login';
-    return <AuthScreen onLogin={handleLogin} />;
+    return <AuthScreen onLogin={handleLogin} allowGuest={!BACKEND_URL} />;
   }
   document.title = 'AllOne Garden';
   const isGuestMode = authUser.id === 0;
@@ -924,7 +927,7 @@ function App() {
                     ✕
                   </button>
                 </div>
-                <ChatPanel socket={socket} username={authUser.username} />
+                <ChatPanel socket={socket} username={authUser.username} currentUserId={authUser.id} />
                 <PlayersPanel socket={socket} currentUserId={authUser.id} />
               </div>
             )}

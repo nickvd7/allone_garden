@@ -107,6 +107,7 @@ function VideoCallInner({ socket, callState, onEnd }) {
   const remoteVideoRef = useRef(null);
   const pcRef          = useRef(null);
   const localStreamRef = useRef(null);
+  const audioOnly      = callState.audioOnly || false;
 
   const [status,     setStatus]     = useState(callState.mode); // incoming|outgoing|ringing|connecting|active|rejected|error
   const [mutedAudio, setMutedAudio] = useState(false);
@@ -145,13 +146,14 @@ function VideoCallInner({ socket, callState, onEnd }) {
     return pc;
   }, [socket, callState.peerId, iceServers]); // eslint-disable-line
 
-  // ── Get local camera + mic ─────────────────────────────────────────────────
+  // ── Get local camera + mic (or audio only) ────────────────────────────────
   const getLocalStream = useCallback(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    const audioOnly = callState.audioOnly || false;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: !audioOnly, audio: true });
     localStreamRef.current = stream;
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+    if (!audioOnly && localVideoRef.current) localVideoRef.current.srcObject = stream;
     return stream;
-  }, []);
+  }, [callState.audioOnly]);
 
   // ── Tear down everything ───────────────────────────────────────────────────
   const safeEnd = useCallback(() => {
@@ -181,7 +183,7 @@ function VideoCallInner({ socket, callState, onEnd }) {
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        socket.emit('call:offer', { to: callState.peerId, offer });
+        socket.emit('call:offer', { to: callState.peerId, offer, audioOnly: callState.audioOnly || false });
         setStatus('ringing');
       } catch (err) {
         if (!cancelled) {
@@ -318,31 +320,42 @@ function VideoCallInner({ socket, callState, onEnd }) {
 
         {/* Video feeds (outgoing / connecting / active) */}
         {!['incoming', 'error', 'rejected'].includes(status) && (
-          <div className="vc-videos">
-            {/* Remote (main) */}
-            <video
-              ref={remoteVideoRef}
-              className="vc-remote"
-              autoPlay
-              playsInline
-            />
-            {status !== 'active' && (
-              <div className="vc-waiting-overlay">
-                <span style={{ fontSize: '2.5rem', animation: 'pulse 1.5s infinite' }}>
-                  {status === 'ringing' ? '🔔' : '⏳'}
-                </span>
-                <span>{statusLabel}</span>
+          audioOnly ? (
+            <div className="vc-audio-only">
+              <div style={{ fontSize: '3.5rem', animation: status === 'active' ? 'pulse 1.5s infinite' : undefined }}>
+                {status === 'active' ? '🎙️' : status === 'ringing' ? '🔔' : '⏳'}
               </div>
-            )}
-            {/* Local (picture-in-picture) */}
-            <video
-              ref={localVideoRef}
-              className="vc-local"
-              autoPlay
-              playsInline
-              muted
-            />
-          </div>
+              <div style={{ fontWeight: 600, marginTop: '0.5rem' }}>
+                {status === 'active' ? `In gesprek met ${callState.peerUsername}` : statusLabel}
+              </div>
+            </div>
+          ) : (
+            <div className="vc-videos">
+              {/* Remote (main) */}
+              <video
+                ref={remoteVideoRef}
+                className="vc-remote"
+                autoPlay
+                playsInline
+              />
+              {status !== 'active' && (
+                <div className="vc-waiting-overlay">
+                  <span style={{ fontSize: '2.5rem', animation: 'pulse 1.5s infinite' }}>
+                    {status === 'ringing' ? '🔔' : '⏳'}
+                  </span>
+                  <span>{statusLabel}</span>
+                </div>
+              )}
+              {/* Local (picture-in-picture) */}
+              <video
+                ref={localVideoRef}
+                className="vc-local"
+                autoPlay
+                playsInline
+                muted
+              />
+            </div>
+          )
         )}
 
         {/* Controls (shown when not purely incoming / error) */}
@@ -355,13 +368,15 @@ function VideoCallInner({ socket, callState, onEnd }) {
             >
               {mutedAudio ? '🔇' : '🎤'}
             </button>
-            <button
-              className={`vc-ctrl${mutedVideo ? ' vc-ctrl--muted' : ''}`}
-              onClick={toggleVideo}
-              title={mutedVideo ? t('videoCall.cam_on') : t('videoCall.cam_off')}
-            >
-              {mutedVideo ? '📵' : '📷'}
-            </button>
+            {!audioOnly && (
+              <button
+                className={`vc-ctrl${mutedVideo ? ' vc-ctrl--muted' : ''}`}
+                onClick={toggleVideo}
+                title={mutedVideo ? t('videoCall.cam_on') : t('videoCall.cam_off')}
+              >
+                {mutedVideo ? '📵' : '📷'}
+              </button>
+            )}
             <button className="vc-ctrl vc-ctrl--end" onClick={safeEnd} title={t('videoCall.end_call_title')}>
               {t('videoCall.end_call')}
             </button>

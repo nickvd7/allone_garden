@@ -6,7 +6,7 @@ import appLogo from '../assets/allone-garden-logo-transparent.png';
 
 const API = process.env.REACT_APP_API_URL || '';
 
-function AuthScreen({ onLogin }) {
+function AuthScreen({ onLogin, allowGuest = true }) {
   const { t } = useTranslation();
   // mode: 'login' | 'register' | 'forgot' | 'reset'
   const [mode,    setMode]    = useState('login');
@@ -229,11 +229,11 @@ function AuthScreen({ onLogin }) {
           )}
         </form>
 
-        {(mode === 'login' || mode === 'register') && (
-        <div className="auth-divider">{t('auth.divider_or')}</div>
+        {allowGuest && (mode === 'login' || mode === 'register') && (
+          <div className="auth-divider">{t('auth.divider_or')}</div>
         )}
 
-        {(mode === 'login' || mode === 'register') && (
+        {allowGuest && (mode === 'login' || mode === 'register') && (
           <>
             <button type="button" className="auth-btn-guest" onClick={handleGuest}>
               🌿 {t('play_as_guest')}

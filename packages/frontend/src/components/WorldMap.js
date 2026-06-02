@@ -393,6 +393,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     const onLeft    = ({ id }) => {
       setPlayers(prev => prev.filter(p => p.id !== id));
       setPlayerPositions(prev => { const n = {...prev}; delete n[id]; return n; });
+      setWorldOccupants(prev => prev.filter(o => String(o.id) !== String(id)));
       scheduleProjectionRefresh(150);
     };
     socket.on('players:list',  onList);
@@ -1363,14 +1364,26 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                   </div>
                   <div className="prox-header__actions">
                     {!isNearbyVirtual && (
-                      <button
-                        type="button"
-                        className="btn prox-call-btn"
-                        onClick={() => onStartCall?.({ mode: 'outgoing', peerId: nearbyPlayer.id, peerUsername: nearbyPlayer.username })}
-                        title={t('worldMap.call_title')}
-                      >
-                        {t('worldMap.call')}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="btn prox-call-btn"
+                          onClick={() => onStartCall?.({ mode: 'outgoing', peerId: nearbyPlayer.id, peerUsername: nearbyPlayer.username, audioOnly: false })}
+                          title="Videogesprek starten"
+                          style={{ padding: '0.3rem 0.55rem', fontSize: '0.82rem' }}
+                        >
+                          📹
+                        </button>
+                        <button
+                          type="button"
+                          className="btn prox-call-btn"
+                          onClick={() => onStartCall?.({ mode: 'outgoing', peerId: nearbyPlayer.id, peerUsername: nearbyPlayer.username, audioOnly: true })}
+                          title="Audiogesprek starten"
+                          style={{ padding: '0.3rem 0.55rem', fontSize: '0.82rem' }}
+                        >
+                          📞
+                        </button>
+                      </>
                     )}
                     <button
                       type="button"
