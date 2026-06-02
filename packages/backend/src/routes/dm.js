@@ -14,20 +14,25 @@ const { requireAuth } = require('../middleware/auth');
 // ── GET /api/dm/conversations ─────────────────────────────────────────────────
 // Returns the most recent message per unique conversation partner, newest first.
 router.get('/conversations', requireAuth, async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user.userId;
 
   if (!db.isConnected()) {
     return res.json({ conversations: [] });
   }
 
   try {
-    // Find the latest message ID per (user_a, user_b) pair where current user
-    // is one of the participants, then return full row + contact details.
+    // Find the latest message per conversation partner where the current user
+    // is a participant, then return the full row + contact details.
+    //
+    // Placeholders are numbered sequentially in textual order and each appears
+    // exactly once so the query is portable to both PostgreSQL ($N by number)
+    // and SQLite (anonymous '?' bound positionally). All values are the same
+    // userId.
     const result = await db.query(
       `SELECT
          dm.id,
-         CASE WHEN dm.from_user_id = $1 THEN dm.to_user_id   ELSE dm.from_user_id END AS contact_id,
-         CASE WHEN dm.from_user_id = $1 THEN u_to.username    ELSE u_from.username END AS contact_username,
+         CASE WHEN dm.from_user_id = $1 THEN dm.to_user_id ELSE dm.from_user_id END AS contact_id,
+         CASE WHEN dm.from_user_id = $2 THEN u_to.username  ELSE u_from.username END AS contact_username,
          dm.message        AS last_message,
          dm.from_user_id,
          dm.created_at
@@ -37,13 +42,12 @@ router.get('/conversations', requireAuth, async (req, res) => {
        WHERE dm.id IN (
          SELECT MAX(id)
          FROM   direct_messages
-         WHERE  from_user_id = $1 OR to_user_id = $1
-         GROUP BY LEAST(from_user_id, to_user_id),
-                  GREATEST(from_user_id, to_user_id)
+         WHERE  from_user_id = $3 OR to_user_id = $4
+         GROUP BY (CASE WHEN from_user_id = $5 THEN to_user_id ELSE from_user_id END)
        )
        ORDER BY dm.created_at DESC
        LIMIT 50`,
-      [userId]
+      [userId, userId, userId, userId, userId]
     );
 
     res.json({ conversations: result?.rows || [] });
@@ -56,7 +60,7 @@ router.get('/conversations', requireAuth, async (req, res) => {
 // ── GET /api/dm/history/:userId ───────────────────────────────────────────────
 // Returns the last 50 messages between the current user and :userId, oldest first.
 router.get('/history/:userId', requireAuth, async (req, res) => {
-  const myId    = req.user.id;
+  const myId    = req.user.userId;
   const otherId = parseInt(req.params.userId, 10);
 
   if (!otherId || Number.isNaN(otherId) || otherId === myId) {
@@ -68,22 +72,27 @@ router.get('/history/:userId', requireAuth, async (req, res) => {
   }
 
   try {
-    // Return in ascending order (oldest first) for rendering in chat UI.
+    // Only rows where the current user is a participant are returned, so a user
+    // can never read someone else's conversation (no IDOR).
+    //
+    // Placeholders numbered in textual order, each used once — portable to both
+    // PostgreSQL and SQLite. Returned DESC then reversed to ascending (oldest
+    // first) for the chat UI.
     const result = await db.query(
       `SELECT
-         id,
-         from_user_id                                                 AS "from",
-         to_user_id                                                   AS "to",
-         CASE WHEN from_user_id = $1 THEN $3 ELSE u.username END     AS "fromUsername",
-         message                                                       AS text,
-         created_at                                                    AS timestamp
+         dm.id,
+         dm.from_user_id                                            AS "from",
+         dm.to_user_id                                              AS "to",
+         CASE WHEN dm.from_user_id = $1 THEN $2 ELSE u.username END AS "fromUsername",
+         dm.message                                                 AS text,
+         dm.created_at                                              AS timestamp
        FROM   direct_messages dm
        JOIN   users u ON u.id = dm.from_user_id
-       WHERE  (from_user_id = $1 AND to_user_id = $2)
-          OR  (from_user_id = $2 AND to_user_id = $1)
-       ORDER BY created_at DESC
+       WHERE  (dm.from_user_id = $3 AND dm.to_user_id = $4)
+          OR  (dm.from_user_id = $5 AND dm.to_user_id = $6)
+       ORDER BY dm.created_at DESC
        LIMIT  50`,
-      [myId, otherId, req.user.username]
+      [myId, req.user.username, myId, otherId, otherId, myId]
     );
 
     const messages = (result?.rows || []).reverse();

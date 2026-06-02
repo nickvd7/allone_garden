@@ -173,16 +173,12 @@ function initSchema() {
     )
   `);
   db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_dm_pair
-    ON direct_messages (
-      MIN(from_user_id, to_user_id),
-      MAX(from_user_id, to_user_id),
-      created_at
-    )
+    CREATE INDEX IF NOT EXISTS idx_dm_from_user
+    ON direct_messages (from_user_id, created_at)
   `);
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_dm_to_user
-    ON direct_messages (to_user_id, created_at DESC)
+    ON direct_messages (to_user_id, created_at)
   `);
 }
 

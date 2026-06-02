@@ -379,7 +379,7 @@ router.get('/ice-servers', optionalAuth, (req, res) => {
 
     // Prefer short-lived HMAC credentials (coturn REST-API / temporal credentials)
     // over static passwords. Falls back to static env vars if no secret configured.
-    const temporal = generateTemporalTurnCredentials(req.user.id);
+    const temporal = generateTemporalTurnCredentials(req.user.userId);
     if (temporal) {
       turnEntry.username   = temporal.username;
       turnEntry.credential = temporal.credential;

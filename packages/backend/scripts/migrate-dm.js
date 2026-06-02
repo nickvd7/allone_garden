@@ -23,16 +23,12 @@ async function migrate() {
       )
     `);
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_dm_pair
-      ON direct_messages (
-        LEAST(from_user_id, to_user_id),
-        GREATEST(from_user_id, to_user_id),
-        created_at
-      )
+      CREATE INDEX IF NOT EXISTS idx_dm_from_user
+      ON direct_messages (from_user_id, created_at)
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_dm_to_user
-      ON direct_messages (to_user_id, created_at DESC)
+      ON direct_messages (to_user_id, created_at)
     `);
     console.log('✅  direct_messages table ready');
   } finally {
