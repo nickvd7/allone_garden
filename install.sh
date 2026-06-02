@@ -138,7 +138,9 @@ fi
 # ── Clone / update repo ───────────────────────────────────────────────────────
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   info "Updating existing installation in ${INSTALL_DIR}…"
-  git -C "$INSTALL_DIR" pull --ff-only
+  # Run as SERVICE_USER: on re-runs the directory is already owned by that user,
+  # so git (2.35+) refuses to run as root on a dir owned by someone else.
+  su -c "git -C '${INSTALL_DIR}' pull --ff-only" "$SERVICE_USER"
 else
   info "Cloning AllOne Garden into ${INSTALL_DIR}…"
   git clone --depth=1 "$REPO_URL" "$INSTALL_DIR"
