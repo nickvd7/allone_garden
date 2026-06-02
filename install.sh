@@ -217,16 +217,19 @@ fi
 # git 2.35+ refuses to operate as root on a dir owned by someone else.
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   info "Updating existing installation in ${INSTALL_DIR}…"
-  # Make sure the service user is allowed to operate on the repo regardless of
-  # how ownership ended up (belt-and-suspenders for the dubious-ownership check).
-  su -c "git config --global --add safe.directory '${INSTALL_DIR}'" "$SERVICE_USER" 2>/dev/null || true
+  # Pass safe.directory directly via -c so no writable gitconfig is needed.
+  # Also own the directory as the service user first so git agrees on ownership.
+  chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || true
 
-  if su -c "env GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false git -C '${INSTALL_DIR}' -c credential.helper='' -c core.askPass='' pull --ff-only" "$SERVICE_USER"; then
+  if su -c "env GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false git \
+      -C '${INSTALL_DIR}' \
+      -c safe.directory='${INSTALL_DIR}' \
+      -c credential.helper='' \
+      -c core.askPass='' \
+      pull --ff-only" "$SERVICE_USER"; then
     success "Repository updated"
   else
-    # A failed update (auth required, no network, diverged history) must not
-    # abort the whole install — continue with the existing checkout.
-    warn "Could not update the repository (auth/network/diverged) — continuing with the existing code in ${INSTALL_DIR}."
+    warn "Could not update the repository — continuing with existing code in ${INSTALL_DIR}."
   fi
 else
   info "Cloning AllOne Garden into ${INSTALL_DIR}…"
