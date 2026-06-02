@@ -218,7 +218,7 @@ if [[ -d "$INSTALL_DIR/.git" ]]; then
   # how ownership ended up (belt-and-suspenders for the dubious-ownership check).
   su -c "git config --global --add safe.directory '${INSTALL_DIR}'" "$SERVICE_USER" 2>/dev/null || true
 
-  if su -c "GIT_TERMINAL_PROMPT=0 git -C '${INSTALL_DIR}' pull --ff-only" "$SERVICE_USER"; then
+  if su -c "env GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false git -C '${INSTALL_DIR}' -c credential.helper='' -c core.askPass='' pull --ff-only" "$SERVICE_USER"; then
     success "Repository updated"
   else
     # A failed update (auth required, no network, diverged history) must not
@@ -356,7 +356,7 @@ chmod 600 "$ENV_FILE"
 
 # ── Run DB migrations ─────────────────────────────────────────────────────────
 info "Running database setup…"
-su -c "cd '${INSTALL_DIR}' && node packages/backend/scripts/setup-db.js" "$SERVICE_USER"
+su -c "cd '${INSTALL_DIR}/packages/backend' && node scripts/setup-db.js" "$SERVICE_USER"
 success "Database schema ready"
 
 # ── Systemd service ───────────────────────────────────────────────────────────
