@@ -90,9 +90,13 @@ app.use((req, res, next) => {
 });
 
 // ── REST routes ───────────────────────────────────────────────────────────────
-app.get('/health', (req, res) =>
-  res.json({ status: 'ok', timestamp: new Date(), version: '1.0.0' })
-);
+// Health check. Exposed both at /health (direct) and /api/health so it is
+// reachable through the nginx reverse proxy, which only forwards /api/* and
+// /socket.io/* to the backend (everything else falls through to the SPA).
+const healthHandler = (req, res) =>
+  res.json({ status: 'ok', timestamp: new Date(), version: '1.0.0' });
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 app.use('/api/auth',         bodyLimitSmall, authRoutes);
 app.use('/api/garden',       bodyLimitLarge, gardenRoutes);

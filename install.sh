@@ -13,9 +13,9 @@
 #   -- or locally --
 #   sudo bash install.sh
 #
-# Environment variables (override interactive prompts):
-#   GARDEN_DOMAIN=allone.garden        — domain for HTTPS via Let's Encrypt
-#   GARDEN_SUBDOMAINS=api,admin,www    — extra subdomains (comma-separated, optional)
+# The domain is fixed to allone.garden (with www. and api. covered by the cert).
+#
+# Environment variables:
 #   GARDEN_EMAIL=you@example.com       — email for Let's Encrypt notifications
 #   GARDEN_DIR=/opt/allone-garden
 #   GARDEN_USER=garden
@@ -67,7 +67,9 @@ SERVICE_USER="${GARDEN_USER:-garden}"
 REPO_URL="https://github.com/nickvd7/allone_garden.git"
 NODE_MAJOR=20
 POSTGRES_DB="allone_garden"
-DOMAIN="${GARDEN_DOMAIN:-}"
+# Domain is fixed. The certificate covers the apex plus www. and api. subdomains.
+DOMAIN="allone.garden"
+CERT_DOMAINS=("allone.garden" "www.allone.garden" "api.allone.garden")
 EMAIL="${GARDEN_EMAIL:-}"
 POSTGRES_USER="garden"
 REDIS_PORT=6379
@@ -79,9 +81,6 @@ if [[ ! "$SERVICE_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
 fi
 if [[ ! "$INSTALL_DIR" =~ ^/[a-zA-Z0-9/_.-]+$ ]]; then
   error "GARDEN_DIR '${INSTALL_DIR}' must be an absolute path containing only a-z A-Z 0-9 / _ . -"
-fi
-if [[ -n "$DOMAIN" ]] && [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]{1,253}$ ]]; then
-  error "GARDEN_DOMAIN '${DOMAIN}' does not look like a valid hostname"
 fi
 if [[ -n "$EMAIL" ]] && [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
   error "GARDEN_EMAIL '${EMAIL}' does not look like a valid email address"
@@ -142,95 +141,37 @@ PI_IP="$(detect_primary_ip)"
 [[ -z "$PI_IP" ]] && PI_IP="127.0.0.1"
 
 # ── Interactive configuration ─────────────────────────────────────────────────
-# Prompts are shown when running interactively (stdin is a TTY).
-# When piped (curl | bash) they are skipped — set GARDEN_DOMAIN / GARDEN_EMAIL
-# as environment variables before running in that case.
-if [[ -t 0 ]]; then
+# The domain is fixed (allone.garden + www. + api.). The only thing we may ask
+# for is the Let's Encrypt contact email. When piped (curl | bash) the prompt is
+# skipped — set GARDEN_EMAIL beforehand, otherwise we fall back to admin@DOMAIN.
+if [[ -t 0 && -z "$EMAIL" ]]; then
   echo ""
   echo -e "${BOLD}  ── Configuration ──────────────────────────────────────────────────${RESET}"
   echo ""
-
-  # ── Domain ──
-  if [[ -z "$DOMAIN" ]]; then
-    echo -e "  Enter your domain name to enable HTTPS via Let's Encrypt."
-    echo -e "  ${CYAN}Make sure your DNS A-record already points to this server's IP.${RESET}"
-    echo -e "  Leave blank to run on the local IP only (HTTP, no certificate)."
-    echo ""
-    read -rp "  Domain [allone.garden]: " _INPUT_DOMAIN
-    # Default to allone.garden if the user just pressed Enter
-    DOMAIN="${_INPUT_DOMAIN:-allone.garden}"
-    # Treat a literal '-' or 'skip' as "no domain"
-    [[ "$DOMAIN" == "-" || "$DOMAIN" == "skip" ]] && DOMAIN=""
-    echo ""
-  fi
-
-  # ── Additional subdomains (optional) ──
-  if [[ -n "$DOMAIN" && -z "${GARDEN_SUBDOMAINS:-}" ]]; then
-    echo -e "  Additional subdomains (comma-separated, optional)."
-    echo -e "  ${CYAN}Example: api,admin,ws (or leave blank for www only)${RESET}"
-    echo ""
-    read -rp "  Subdomains []: " _INPUT_SUBDOMAINS
-    GARDEN_SUBDOMAINS="${_INPUT_SUBDOMAINS:-}"
-    echo ""
-  fi
-
-  # ── Email (only needed when a domain was entered) ──
-  if [[ -n "$DOMAIN" && -z "$EMAIL" ]]; then
-    _DEFAULT_EMAIL="admin@${DOMAIN}"
-    echo -e "  Email address for Let's Encrypt certificate notifications."
-    echo -e "  You will receive expiry warnings here (renewal is automatic)."
-    echo ""
-    read -rp "  Email [${_DEFAULT_EMAIL}]: " _INPUT_EMAIL
-    EMAIL="${_INPUT_EMAIL:-${_DEFAULT_EMAIL}}"
-    echo ""
-  fi
+  _DEFAULT_EMAIL="admin@${DOMAIN}"
+  echo -e "  Email address for Let's Encrypt certificate notifications."
+  echo -e "  You will receive expiry warnings here (renewal is automatic)."
+  echo ""
+  read -rp "  Email [${_DEFAULT_EMAIL}]: " _INPUT_EMAIL
+  EMAIL="${_INPUT_EMAIL:-${_DEFAULT_EMAIL}}"
+  echo ""
 fi
 
-# ── Build domain list with subdomains ──────────────────────────────────────────
-CERT_DOMAINS=()
-if [[ -n "$DOMAIN" ]]; then
-  CERT_DOMAINS+=("$DOMAIN" "www.${DOMAIN}")
+# Non-interactive (curl | bash) without GARDEN_EMAIL → use a sensible default.
+[[ -z "$EMAIL" ]] && EMAIL="admin@${DOMAIN}"
 
-  # Parse additional subdomains from GARDEN_SUBDOMAINS (comma-separated)
-  if [[ -n "${GARDEN_SUBDOMAINS:-}" ]]; then
-    while IFS=',' read -r _SUBDOMAIN; do
-      _SUBDOMAIN=$(echo "$_SUBDOMAIN" | xargs)  # trim whitespace
-      if [[ -n "$_SUBDOMAIN" ]]; then
-        # Validate subdomain (alphanumeric + hyphen only, no wildcards)
-        if [[ "$_SUBDOMAIN" =~ ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$ ]]; then
-          CERT_DOMAINS+=("${_SUBDOMAIN}.${DOMAIN}")
-        else
-          error "Invalid subdomain: '${_SUBDOMAIN}' (use lowercase alphanumeric and hyphens only)"
-        fi
-      fi
-    done <<< "$GARDEN_SUBDOMAINS"
-  fi
-fi
-
-# ── Validate inputs from prompts ──────────────────────────────────────────────
-if [[ -n "$DOMAIN" ]] && [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]{1,253}$ ]]; then
-  error "Domain '${DOMAIN}' does not look like a valid hostname"
-fi
-if [[ -n "$EMAIL" ]] && [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
+# ── Validate email ─────────────────────────────────────────────────────────────
+if [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
   error "Email '${EMAIL}' does not look like a valid address"
-fi
-if [[ -n "$DOMAIN" && -z "$EMAIL" ]]; then
-  error "An email address is required for Let's Encrypt. Set GARDEN_EMAIL or re-run interactively."
 fi
 
 # ── Summary before install starts ─────────────────────────────────────────────
 echo -e "${BOLD}  ── Install summary ────────────────────────────────────────────────${RESET}"
 echo -e "  Install dir:  ${INSTALL_DIR}"
 echo -e "  Service user: ${SERVICE_USER}"
-if [[ -n "$DOMAIN" ]]; then
-  echo -e "  Domain:       ${DOMAIN}  (HTTPS via Let's Encrypt)"
-  if [[ ${#CERT_DOMAINS[@]} -gt 1 ]]; then
-    echo -e "  Variants:     $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
-  fi
-  echo -e "  Email:        ${EMAIL}"
-else
-  echo -e "  Domain:       (none — HTTP only on local IP)"
-fi
+echo -e "  Domain:       ${DOMAIN}  (HTTPS via Let's Encrypt)"
+echo -e "  Cert covers:  $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+echo -e "  Email:        ${EMAIL}"
 echo ""
 
 # ── System update ─────────────────────────────────────────────────────────────
@@ -267,14 +208,27 @@ if ! id "$SERVICE_USER" &>/dev/null; then
 fi
 
 # ── Clone / update repo ───────────────────────────────────────────────────────
+# GIT_TERMINAL_PROMPT=0 makes git fail fast instead of hanging on a credential
+# prompt (e.g. if the repo is private or temporarily returns 401). We run as
+# SERVICE_USER because on re-runs the directory is owned by that user, and
+# git 2.35+ refuses to operate as root on a dir owned by someone else.
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   info "Updating existing installation in ${INSTALL_DIR}…"
-  # Run as SERVICE_USER: on re-runs the directory is owned by that user,
-  # so git 2.35+ refuses to run as root on a dir owned by someone else.
-  su -c "git -C '${INSTALL_DIR}' pull --ff-only" "$SERVICE_USER"
+  # Make sure the service user is allowed to operate on the repo regardless of
+  # how ownership ended up (belt-and-suspenders for the dubious-ownership check).
+  su -c "git config --global --add safe.directory '${INSTALL_DIR}'" "$SERVICE_USER" 2>/dev/null || true
+
+  if su -c "GIT_TERMINAL_PROMPT=0 git -C '${INSTALL_DIR}' pull --ff-only" "$SERVICE_USER"; then
+    success "Repository updated"
+  else
+    # A failed update (auth required, no network, diverged history) must not
+    # abort the whole install — continue with the existing checkout.
+    warn "Could not update the repository (auth/network/diverged) — continuing with the existing code in ${INSTALL_DIR}."
+  fi
 else
   info "Cloning AllOne Garden into ${INSTALL_DIR}…"
-  git clone --depth=1 "$REPO_URL" "$INSTALL_DIR"
+  GIT_TERMINAL_PROMPT=0 git clone --depth=1 "$REPO_URL" "$INSTALL_DIR" \
+    || error "Could not clone ${REPO_URL}. If the repository is private, clone it manually into ${INSTALL_DIR} first, then re-run."
 fi
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR"
 # Prevent other local users from reading or modifying source/config files
@@ -490,8 +444,8 @@ success "Nginx configured (HTTP)"
 
 # ── HTTPS via Let's Encrypt ───────────────────────────────────────────────────
 if [[ -n "$DOMAIN" ]]; then
-  info "Requesting Let's Encrypt certificate for ${DOMAIN}…"
-  info "  (Make sure ${DOMAIN} already resolves to ${LOCAL_IP})"
+  info "Requesting Let's Encrypt certificate for: $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+  info "  (Make sure each of those names already resolves to ${LOCAL_IP})"
 
   # certbot --nginx rewrites the nginx config to add the HTTPS server block
   # Build comma-separated domain list for certbot
@@ -539,8 +493,8 @@ if [[ -n "$DOMAIN" ]]; then
     warn "To retry later: sudo certbot --nginx $(printf ' -d %s' "${CERT_DOMAINS[@]}") --email ${EMAIL} --agree-tos --redirect"
   fi
 else
-  warn "No domain configured — running HTTP only."
-  warn "To add HTTPS later, re-run: sudo GARDEN_DOMAIN=allone.garden GARDEN_EMAIL=you@example.com bash install.sh"
+  # DOMAIN is fixed, so this branch is not expected; kept as a safety net.
+  warn "No domain configured — running HTTP only. Re-run: sudo bash install.sh"
 fi
 
 # ── Firewall ──────────────────────────────────────────────────────────────────
@@ -621,8 +575,8 @@ if [[ -n "$DOMAIN" ]]; then
   echo -e "  To check: ${BOLD}sudo certbot certificates${RESET}"
   echo -e "  To test renewal: ${BOLD}sudo certbot renew --dry-run${RESET}"
 else
-  echo -e "  To enable HTTPS, point a domain at ${BOLD}${PI_IP}${RESET} and re-run:"
-  echo -e "  ${BOLD}sudo GARDEN_DOMAIN=allone.garden GARDEN_EMAIL=you@example.com bash install.sh${RESET}"
+  # DOMAIN is fixed, so this branch is not expected; kept as a safety net.
+  echo -e "  To enable HTTPS, point the domain at ${BOLD}${PI_IP}${RESET} and re-run: ${BOLD}sudo bash install.sh${RESET}"
 fi
 echo ""
 echo -e "  Enable P2P federation: edit ${ENV_FILE}"
