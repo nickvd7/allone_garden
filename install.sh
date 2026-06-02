@@ -11,10 +11,11 @@
 # Usage:
 #   curl -fsSL https://get.allonegarden.org/install.sh | bash
 #   -- or locally --
-#   bash install.sh
+#   sudo bash install.sh
 #
-# Environment variables:
-#   GARDEN_DOMAIN=your.domain   — enable HTTPS via Let's Encrypt
+# Environment variables (override interactive prompts):
+#   GARDEN_DOMAIN=allone.garden  — domain for HTTPS via Let's Encrypt
+#   GARDEN_EMAIL=you@example.com — email for Let's Encrypt notifications
 #   GARDEN_DIR=/opt/allone-garden
 #   GARDEN_USER=garden
 # =============================================================================
@@ -36,12 +37,12 @@ REPO_URL="https://github.com/nickvd7/allone_garden.git"
 NODE_MAJOR=20
 POSTGRES_DB="allone_garden"
 DOMAIN="${GARDEN_DOMAIN:-}"
+EMAIL="${GARDEN_EMAIL:-}"
 POSTGRES_USER="garden"
 REDIS_PORT=6379
 BACKEND_PORT=5000
 
-# ── Validate user-supplied environment variables ──────────────────────────────
-# Prevents shell injection when values are later interpolated in commands.
+# ── Validate environment-variable overrides ───────────────────────────────────
 if [[ ! "$SERVICE_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
   error "GARDEN_USER '${SERVICE_USER}' is not a valid Linux username (a-z, 0-9, _, -, max 32 chars)"
 fi
@@ -50,6 +51,9 @@ if [[ ! "$INSTALL_DIR" =~ ^/[a-zA-Z0-9/_.-]+$ ]]; then
 fi
 if [[ -n "$DOMAIN" ]] && [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]{1,253}$ ]]; then
   error "GARDEN_DOMAIN '${DOMAIN}' does not look like a valid hostname"
+fi
+if [[ -n "$EMAIL" ]] && [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
+  error "GARDEN_EMAIL '${EMAIL}' does not look like a valid email address"
 fi
 
 echo -e "${BOLD}"
@@ -97,10 +101,68 @@ if [[ -f /proc/device-tree/model ]]; then
   info "Hardware: ${PI_MODEL}"
 fi
 
-# ── Root check (Linux only) ───────────────────────────────────────────────────
+# ── Root check ────────────────────────────────────────────────────────────────
 if [[ $EUID -ne 0 ]]; then
   error "Run with sudo: sudo bash install.sh"
 fi
+
+# ── Interactive configuration ─────────────────────────────────────────────────
+# Prompts are shown when running interactively (stdin is a TTY).
+# When piped (curl | bash) they are skipped — set GARDEN_DOMAIN / GARDEN_EMAIL
+# as environment variables before running in that case.
+if [[ -t 0 ]]; then
+  echo ""
+  echo -e "${BOLD}  ── Configuration ──────────────────────────────────────────────────${RESET}"
+  echo ""
+
+  # ── Domain ──
+  if [[ -z "$DOMAIN" ]]; then
+    echo -e "  Enter your domain name to enable HTTPS via Let's Encrypt."
+    echo -e "  ${CYAN}Make sure your DNS A-record already points to this server's IP.${RESET}"
+    echo -e "  Leave blank to run on the local IP only (HTTP, no certificate)."
+    echo ""
+    read -rp "  Domain [allone.garden]: " _INPUT_DOMAIN
+    # Default to allone.garden if the user just pressed Enter
+    DOMAIN="${_INPUT_DOMAIN:-allone.garden}"
+    # Treat a literal '-' or 'skip' as "no domain"
+    [[ "$DOMAIN" == "-" || "$DOMAIN" == "skip" ]] && DOMAIN=""
+    echo ""
+  fi
+
+  # ── Email (only needed when a domain was entered) ──
+  if [[ -n "$DOMAIN" && -z "$EMAIL" ]]; then
+    _DEFAULT_EMAIL="admin@${DOMAIN}"
+    echo -e "  Email address for Let's Encrypt certificate notifications."
+    echo -e "  You will receive expiry warnings here (renewal is automatic)."
+    echo ""
+    read -rp "  Email [${_DEFAULT_EMAIL}]: " _INPUT_EMAIL
+    EMAIL="${_INPUT_EMAIL:-${_DEFAULT_EMAIL}}"
+    echo ""
+  fi
+fi
+
+# ── Validate inputs from prompts ──────────────────────────────────────────────
+if [[ -n "$DOMAIN" ]] && [[ ! "$DOMAIN" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]{1,253}$ ]]; then
+  error "Domain '${DOMAIN}' does not look like a valid hostname"
+fi
+if [[ -n "$EMAIL" ]] && [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
+  error "Email '${EMAIL}' does not look like a valid address"
+fi
+if [[ -n "$DOMAIN" && -z "$EMAIL" ]]; then
+  error "An email address is required for Let's Encrypt. Set GARDEN_EMAIL or re-run interactively."
+fi
+
+# ── Summary before install starts ─────────────────────────────────────────────
+echo -e "${BOLD}  ── Install summary ────────────────────────────────────────────────${RESET}"
+echo -e "  Install dir:  ${INSTALL_DIR}"
+echo -e "  Service user: ${SERVICE_USER}"
+if [[ -n "$DOMAIN" ]]; then
+  echo -e "  Domain:       ${DOMAIN}  (HTTPS via Let's Encrypt)"
+  echo -e "  Email:        ${EMAIL}"
+else
+  echo -e "  Domain:       (none — HTTP only on local IP)"
+fi
+echo ""
 
 # ── System update ─────────────────────────────────────────────────────────────
 info "Updating package lists…"
@@ -138,8 +200,8 @@ fi
 # ── Clone / update repo ───────────────────────────────────────────────────────
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   info "Updating existing installation in ${INSTALL_DIR}…"
-  # Run as SERVICE_USER: on re-runs the directory is already owned by that user,
-  # so git (2.35+) refuses to run as root on a dir owned by someone else.
+  # Run as SERVICE_USER: on re-runs the directory is owned by that user,
+  # so git 2.35+ refuses to run as root on a dir owned by someone else.
   su -c "git -C '${INSTALL_DIR}' pull --ff-only" "$SERVICE_USER"
 else
   info "Cloning AllOne Garden into ${INSTALL_DIR}…"
@@ -198,7 +260,7 @@ info "Enabling Redis…"
 systemctl enable --now redis-server
 success "Redis running on port ${REDIS_PORT}"
 
-# ── Environment file (DATABASE_URL always matches DB_PASS) ──────────────────
+# ── Environment file ──────────────────────────────────────────────────────────
 ENV_FILE="${INSTALL_DIR}/packages/backend/.env"
 DATABASE_URL="postgresql://${POSTGRES_USER}:${DB_PASS}@127.0.0.1:${PGPORT}/${POSTGRES_DB}"
 
@@ -208,7 +270,6 @@ if [[ ! -f "$ENV_FILE" ]]; then
   JWT_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
   SERVER_NAME="Garden Server $(hostname)"
 
-  # Use HTTPS URL if a domain was provided
   if [[ -n "$DOMAIN" ]]; then
     FRONTEND_URL_VALUE="https://${DOMAIN}"
   else
@@ -220,6 +281,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 NODE_ENV=production
 PORT=${BACKEND_PORT}
 FRONTEND_URL=${FRONTEND_URL_VALUE}
+APP_URL=${FRONTEND_URL_VALUE}
 
 # Database
 DATABASE_URL=${DATABASE_URL}
@@ -246,12 +308,25 @@ EOF
 
   success ".env created (JWT secret + DATABASE_URL)"
 else
+  # Update DATABASE_URL and FRONTEND_URL/APP_URL to match current domain setting
   if grep -q '^DATABASE_URL=' "$ENV_FILE" 2>/dev/null; then
     sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${DATABASE_URL}|" "$ENV_FILE"
   else
     printf '\nDATABASE_URL=%s\n' "${DATABASE_URL}" >> "$ENV_FILE"
   fi
-  success ".env updated (DATABASE_URL)"
+
+  if [[ -n "$DOMAIN" ]]; then
+    _NEW_URL="https://${DOMAIN}"
+    for _KEY in FRONTEND_URL APP_URL; do
+      if grep -q "^${_KEY}=" "$ENV_FILE" 2>/dev/null; then
+        sed -i "s|^${_KEY}=.*|${_KEY}=${_NEW_URL}|" "$ENV_FILE"
+      else
+        printf '\n%s=%s\n' "$_KEY" "$_NEW_URL" >> "$ENV_FILE"
+      fi
+    done
+  fi
+
+  success ".env updated"
 fi
 chown "${SERVICE_USER}:${SERVICE_USER}" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
@@ -296,11 +371,14 @@ success "allone-garden.service started"
 info "Configuring Nginx…"
 LOCAL_IP=$(hostname -I | awk '{print $1}')
 
+# Use the domain in server_name when set — certbot needs this to find the right vhost
+_NGINX_SERVER_NAME="${DOMAIN:-_}"
+
 cat > /etc/nginx/sites-available/allone-garden <<EOF
 # AllOne Garden — Nginx reverse proxy
 server {
     listen 80;
-    server_name _;
+    server_name ${_NGINX_SERVER_NAME};
 
     # Serve built React frontend
     root ${INSTALL_DIR}/packages/frontend/build;
@@ -337,28 +415,56 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 success "Nginx configured (HTTP)"
 
-# ── HTTPS via Let's Encrypt (optional, requires a domain) ─────────────────────
+# ── HTTPS via Let's Encrypt ───────────────────────────────────────────────────
 if [[ -n "$DOMAIN" ]]; then
   info "Requesting Let's Encrypt certificate for ${DOMAIN}…"
+  info "  (Make sure ${DOMAIN} already resolves to ${LOCAL_IP})"
 
-  EMAIL="${GARDEN_EMAIL:-admin@${DOMAIN}}"
+  # certbot --nginx rewrites the nginx config to add the HTTPS server block
+  if certbot --nginx \
+      --non-interactive \
+      --agree-tos \
+      --email "$EMAIL" \
+      --domains "$DOMAIN" \
+      --redirect \
+      2>&1 | tail -8; then
 
-  # certbot --nginx rewrites the nginx config to add HTTPS automatically
-  certbot --nginx \
-    --non-interactive \
-    --agree-tos \
-    --email "$EMAIL" \
-    --domains "$DOMAIN" \
-    --redirect \
-    2>&1 | tail -5
+    success "SSL certificate issued for ${DOMAIN}"
 
-  # Enable automatic renewal (certbot installs a systemd timer by default)
-  systemctl enable --now certbot.timer 2>/dev/null || true
+    # ── Automatic renewal ──────────────────────────────────────────────────
+    # Certbot installs a systemd timer (certbot.timer) on modern Debian/Ubuntu.
+    # We also ensure the legacy cron job is enabled as a fallback.
 
-  success "HTTPS certificate issued for ${DOMAIN} (auto-renews via certbot.timer)"
+    # systemd timer (preferred)
+    if systemctl list-timers --all 2>/dev/null | grep -q certbot; then
+      systemctl enable --now certbot.timer 2>/dev/null || true
+      success "Auto-renewal active via certbot.timer (systemd)"
+    fi
+
+    # cron fallback — certbot installs /etc/cron.d/certbot automatically;
+    # if it exists, cron handles renewal even without the systemd timer.
+    if [[ -f /etc/cron.d/certbot ]]; then
+      success "Auto-renewal cron job present at /etc/cron.d/certbot"
+    fi
+
+    # Dry-run to verify the renewal config is valid
+    info "Verifying renewal config (dry-run)…"
+    if certbot renew --dry-run --quiet 2>&1; then
+      success "Renewal dry-run passed — certificate will renew automatically"
+    else
+      warn "Renewal dry-run reported a warning. Check: sudo certbot renew --dry-run"
+    fi
+
+  else
+    warn "certbot did not issue a certificate."
+    warn "Possible reasons:"
+    warn "  • ${DOMAIN} DNS A-record does not yet point to ${LOCAL_IP}"
+    warn "  • Port 80 is blocked by an upstream firewall"
+    warn "To retry later: sudo certbot --nginx -d ${DOMAIN} --email ${EMAIL} --agree-tos --redirect"
+  fi
 else
-  warn "No DOMAIN set — skipping HTTPS setup."
-  warn "To enable HTTPS later: GARDEN_DOMAIN=your.domain sudo bash install.sh"
+  warn "No domain configured — running HTTP only."
+  warn "To add HTTPS later, re-run: sudo GARDEN_DOMAIN=allone.garden GARDEN_EMAIL=you@example.com bash install.sh"
 fi
 
 # ── Firewall ──────────────────────────────────────────────────────────────────
@@ -378,18 +484,50 @@ echo -e "${GREEN}${BOLD}╔═════════════════�
 echo -e "${GREEN}${BOLD}║   🌱  AllOne Garden is running!                  ║${RESET}"
 echo -e "${GREEN}${BOLD}╚═══════════════════════════════════════════════════╝${RESET}"
 echo ""
+
 if [[ -n "$DOMAIN" ]]; then
   echo -e "  Game URL:     ${BOLD}https://${DOMAIN}/${RESET}"
   echo -e "  API health:   ${BOLD}https://${DOMAIN}/api/health${RESET}"
 else
   echo -e "  Game URL:     ${BOLD}http://${LOCAL_IP}/${RESET}"
   echo -e "  API health:   ${BOLD}http://${LOCAL_IP}/api/health${RESET}"
-  echo -e "  Add HTTPS:    ${BOLD}GARDEN_DOMAIN=your.domain sudo bash install.sh${RESET}"
 fi
 echo ""
 echo -e "  Service:      ${BOLD}sudo systemctl status allone-garden${RESET}"
 echo -e "  Logs:         ${BOLD}sudo journalctl -u allone-garden -f${RESET}"
 echo -e "  Config:       ${BOLD}${ENV_FILE}${RESET}"
+echo ""
+
+# ── DNS / IP info ──────────────────────────────────────────────────────────────
+echo -e "${BOLD}  ── Network ────────────────────────────────────────────────────────${RESET}"
+echo ""
+echo -e "  Server IP:    ${BOLD}${LOCAL_IP}${RESET}"
+
+# Try to show the public/WAN IP if available (non-fatal if offline)
+PUBLIC_IP=$(curl -sf --max-time 4 https://api.ipify.org 2>/dev/null || \
+            curl -sf --max-time 4 https://ipv4.icanhazip.com 2>/dev/null || \
+            echo "")
+if [[ -n "$PUBLIC_IP" && "$PUBLIC_IP" != "$LOCAL_IP" ]]; then
+  echo -e "  Public IP:    ${BOLD}${PUBLIC_IP}${RESET}"
+fi
+
+echo ""
+if [[ -n "$DOMAIN" ]]; then
+  echo -e "  ${CYAN}DNS checklist for ${BOLD}${DOMAIN}${RESET}${CYAN}:${RESET}"
+  echo -e "  ┌─────────────────────────────────────────────────────────────────┐"
+  echo -e "  │  Type  Name               Value                                 │"
+  echo -e "  │  A     ${DOMAIN}$(printf '%*s' $((20 - ${#DOMAIN})) '')  ${PUBLIC_IP:-${LOCAL_IP}}$(printf '%*s' $((38 - ${#PUBLIC_IP:-${LOCAL_IP}})) '')│"
+  echo -e "  └─────────────────────────────────────────────────────────────────┘"
+  echo -e "  Set this A-record at your DNS provider (e.g. Cloudflare, TransIP)."
+  echo -e "  Propagation typically takes 1–15 minutes."
+  echo ""
+  echo -e "  ${GREEN}Certificate auto-renewal:${RESET} active — no action needed."
+  echo -e "  To check: ${BOLD}sudo certbot certificates${RESET}"
+  echo -e "  To test renewal: ${BOLD}sudo certbot renew --dry-run${RESET}"
+else
+  echo -e "  To enable HTTPS, point a domain at ${BOLD}${PUBLIC_IP:-${LOCAL_IP}}${RESET} and re-run:"
+  echo -e "  ${BOLD}sudo GARDEN_DOMAIN=allone.garden GARDEN_EMAIL=you@example.com bash install.sh${RESET}"
+fi
 echo ""
 echo -e "  Enable P2P federation: edit ${ENV_FILE}"
 echo -e "  set P2P_ENABLED=true and restart: ${BOLD}sudo systemctl restart allone-garden${RESET}"
