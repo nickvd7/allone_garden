@@ -446,7 +446,10 @@ EOF
 
 ln -sf /etc/nginx/sites-available/allone-garden /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
+# Use restart (not reload): if www-data was just added to the service group,
+# only a full restart makes the nginx master pick up the new supplementary
+# group, which it needs to read the frontend build dir.
+nginx -t && systemctl restart nginx
 success "Nginx configured (HTTP)"
 
 # ── HTTPS via Let's Encrypt ───────────────────────────────────────────────────
