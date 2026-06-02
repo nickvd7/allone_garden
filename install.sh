@@ -471,54 +471,129 @@ success "Nginx configured (HTTP)"
 
 # ── HTTPS via Let's Encrypt ───────────────────────────────────────────────────
 if [[ -n "$DOMAIN" ]]; then
-  info "Requesting Let's Encrypt certificate for: $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
-  info "  (Make sure each of those names already resolves to ${LOCAL_IP})"
 
-  # certbot --nginx rewrites the nginx config to add the HTTPS server block
-  # Build comma-separated domain list for certbot
-  _CERT_DOMAINS_CSV=$(IFS=','; echo "${CERT_DOMAINS[*]}")
+  # ── Pre-flight: DNS + DNSSEC checks before running certbot ────────────────
+  # Uses Cloudflare DoH so no dig/host tool is needed (jq is already installed).
+  # All checks are non-fatal: they warn and skip certbot but don't abort the
+  # install — the site keeps running on HTTP while you fix DNS.
 
-  if certbot --nginx \
-      --non-interactive \
-      --agree-tos \
-      --email "$EMAIL" \
-      --domains "${_CERT_DOMAINS_CSV}" \
-      --redirect \
-      2>&1 | tail -8; then
+  _ssl_ok=true
 
-    success "SSL certificate issued for: $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+  # Query a DNS type via Cloudflare DNS-over-HTTPS; returns space-separated data.
+  _doh() {
+    curl -sf --max-time 8       "https://cloudflare-dns.com/dns-query?name=${1}&type=${2}"       -H 'Accept: application/dns-json'       | jq -r '.Answer[]?.data // empty' 2>/dev/null || true
+  }
 
-    # ── Automatic renewal ──────────────────────────────────────────────────
-    # Certbot installs a systemd timer (certbot.timer) on modern Debian/Ubuntu.
-    # We also ensure the legacy cron job is enabled as a fallback.
-
-    # systemd timer (preferred)
-    if systemctl list-timers --all 2>/dev/null | grep -q certbot; then
-      systemctl enable --now certbot.timer 2>/dev/null || true
-      success "Auto-renewal active via certbot.timer (systemd)"
-    fi
-
-    # cron fallback — certbot installs /etc/cron.d/certbot automatically;
-    # if it exists, cron handles renewal even without the systemd timer.
-    if [[ -f /etc/cron.d/certbot ]]; then
-      success "Auto-renewal cron job present at /etc/cron.d/certbot"
-    fi
-
-    # Dry-run to verify the renewal config is valid
-    info "Verifying renewal config (dry-run)…"
-    if certbot renew --dry-run --quiet 2>&1; then
-      success "Renewal dry-run passed — certificate will renew automatically"
+  # 1. DNSSEC check — DS in parent zone means DNSSEC is "on".
+  #    Let's Encrypt then requires valid RRSIGs; broken DNSSEC → certbot fails.
+  info "Checking DNSSEC for ${DOMAIN}…"
+  _ds=$(_doh "$DOMAIN" DS)
+  if [[ -n "$_ds" ]]; then
+    _rrsig=$(_doh "$DOMAIN" RRSIG)
+    if [[ -z "$_rrsig" ]]; then
+      warn "⚠  DNSSEC is BROKEN for ${DOMAIN}."
+      warn "   Your registrar has DS records set but the zone has no RRSIGs."
+      warn "   Let's Encrypt will refuse a certificate until this is fixed."
+      warn ""
+      warn "   Fix — choose one:"
+      warn "     A) Disable DNSSEC at your registrar (delete DS records). Wait 1–2 h."
+      warn "     B) Ask your DNS provider to correctly sign the zone."
+      _ssl_ok=false
     else
-      warn "Renewal dry-run reported a warning. Check: sudo certbot renew --dry-run"
+      success "DNSSEC OK — zone is signed"
+    fi
+  else
+    success "DNSSEC not enabled (no DS records) — fine for Let's Encrypt"
+  fi
+
+  # 2. A-record check — every domain must resolve to a public IP.
+  if [[ "$_ssl_ok" == true ]]; then
+    info "Checking DNS A-records for ${CERT_DOMAINS[*]}…"
+    for _d in "${CERT_DOMAINS[@]}"; do
+      _ip=$(_doh "$_d" A | head -1)
+      if [[ -z "$_ip" ]]; then
+        warn "⚠  No A record found for ${_d}."
+        warn "   Add an A record → your router's public WAN IP."
+        warn "   Find it: curl -s https://api.ipify.org"
+        _ssl_ok=false
+      elif is_private_ipv4 "$_ip"; then
+        warn "⚠  ${_d} → ${_ip} (private / LAN address)."
+        warn "   Let's Encrypt cannot reach LAN IPs from the internet."
+        warn "   Set the A record to your public WAN IP, then enable"
+        warn "   port forwarding on your router: 80 + 443 TCP → ${PI_IP}"
+        warn "   Find your public IP: curl -s https://api.ipify.org"
+        _ssl_ok=false
+      else
+        success "  ${_d} → ${_ip} (public)"
+      fi
+    done
+    [[ "$_ssl_ok" == true ]] && success "DNS A-records look good"
+  fi
+
+  # 3. Port-80 reachability — Let's Encrypt HTTP-01 challenge needs it open.
+  if [[ "$_ssl_ok" == true ]]; then
+    info "Checking port 80 reachability from the internet…"
+    _port_open=$(curl -sf --max-time 12 \
+      "https://portchecker.io/api/v1/query" \
+      -H 'Content-Type: application/json' \
+      -d '{"host":"'"${DOMAIN}"'","ports":[80]}' \
+      | jq -r '.results[0].status // empty' 2>/dev/null || true)
+    if [[ "$_port_open" == "open" ]]; then
+      success "Port 80 is reachable from the internet"
+    else
+      warn "⚠  Port 80 on ${DOMAIN} appears unreachable from the internet."
+      warn "   Enable port forwarding on your router: 80 + 443 TCP → ${PI_IP}"
+      _ssl_ok=false
+    fi
+  fi
+
+  if [[ "$_ssl_ok" != true ]]; then
+    warn ""
+    warn "One or more pre-flight checks failed — skipping Let's Encrypt."
+    warn "The site runs on HTTP. Fix the issues above, then run:"
+    warn "  sudo certbot --nginx $(printf ' -d %s' "${CERT_DOMAINS[@]}") --email ${EMAIL} --agree-tos --redirect"
+  else
+
+    info "Requesting Let's Encrypt certificate for: $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+
+    _CERT_DOMAINS_CSV=$(IFS=','; echo "${CERT_DOMAINS[*]}")
+
+    if certbot --nginx \
+        --non-interactive \
+        --agree-tos \
+        --email "$EMAIL" \
+        --domains "${_CERT_DOMAINS_CSV}" \
+        --redirect \
+        2>&1 | tail -8; then
+
+      success "SSL certificate issued for: $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+
+      # systemd timer (preferred on modern Debian/Ubuntu/Pi OS)
+      if systemctl list-timers --all 2>/dev/null | grep -q certbot; then
+        systemctl enable --now certbot.timer 2>/dev/null || true
+        success "Auto-renewal active via certbot.timer (systemd)"
+      fi
+
+      # cron fallback — certbot installs /etc/cron.d/certbot automatically
+      if [[ -f /etc/cron.d/certbot ]]; then
+        success "Auto-renewal cron job present at /etc/cron.d/certbot"
+      fi
+
+      info "Verifying renewal config (dry-run)…"
+      if certbot renew --dry-run --quiet 2>&1; then
+        success "Renewal dry-run passed — certificate will renew automatically"
+      else
+        warn "Renewal dry-run had a warning. Check: sudo certbot renew --dry-run"
+      fi
+
+    else
+      warn "certbot failed despite pre-flight passing."
+      warn "Check the log: sudo cat /var/log/letsencrypt/letsencrypt.log"
+      warn "To retry: sudo certbot --nginx $(printf ' -d %s' "${CERT_DOMAINS[@]}") --email ${EMAIL} --agree-tos --redirect"
     fi
 
-  else
-    warn "certbot did not issue a certificate."
-    warn "Possible reasons:"
-    warn "  • ${DOMAIN} DNS A-record does not yet point to ${LOCAL_IP}"
-    warn "  • Port 80 is blocked by an upstream firewall"
-    warn "To retry later: sudo certbot --nginx $(printf ' -d %s' "${CERT_DOMAINS[@]}") --email ${EMAIL} --agree-tos --redirect"
-  fi
+  fi  # end _ssl_ok block
+
 else
   # DOMAIN is fixed, so this branch is not expected; kept as a safety net.
   warn "No domain configured — running HTTP only. Re-run: sudo bash install.sh"
