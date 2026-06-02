@@ -74,6 +74,9 @@ EMAIL="${GARDEN_EMAIL:-}"
 POSTGRES_USER="garden"
 REDIS_PORT=6379
 BACKEND_PORT=5000
+# If this TransIP credentials file exists, SSL is issued via DNS-01 (no open
+# ports needed) instead of the HTTP-01 / port-80 route. Override with GARDEN_TRANSIP_INI.
+TRANSIP_INI="${GARDEN_TRANSIP_INI:-/etc/letsencrypt/transip.ini}"
 
 # ── Validate environment-variable overrides ───────────────────────────────────
 if [[ ! "$SERVICE_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
@@ -470,7 +473,68 @@ nginx -t && systemctl restart nginx
 success "Nginx configured (HTTP)"
 
 # ── HTTPS via Let's Encrypt ───────────────────────────────────────────────────
-if [[ -n "$DOMAIN" ]]; then
+if [[ -n "$DOMAIN" && -f "$TRANSIP_INI" ]]; then
+  # ── DNS-01 via TransIP API (no inbound ports needed) ──────────────────────
+  # Chosen automatically when a TransIP credentials file is present. This works
+  # behind CGNAT, blocked port 80, or any firewall, and auto-renews.
+  info "TransIP credentials found at ${TRANSIP_INI} — using DNS-01 (no open ports needed)."
+  chmod 600 "$TRANSIP_INI" 2>/dev/null || true
+
+  # Ensure the certbot DNS-TransIP plugin is installed
+  if ! certbot plugins 2>/dev/null | grep -q 'dns-transip'; then
+    info "Installing certbot-dns-transip plugin…"
+    apt-get install -y -qq python3-pip >/dev/null 2>&1 || true
+    pip3 install --break-system-packages certbot-dns-transip >/dev/null 2>&1 \
+      || pip3 install certbot-dns-transip >/dev/null 2>&1 \
+      || warn "Could not install certbot-dns-transip automatically — install it manually: sudo pip3 install certbot-dns-transip --break-system-packages"
+  fi
+
+  if certbot plugins 2>/dev/null | grep -q 'dns-transip'; then
+    info "Requesting Let's Encrypt certificate via TransIP DNS-01 for: $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+    _CERT_D_ARGS=()
+    for _d in "${CERT_DOMAINS[@]}"; do _CERT_D_ARGS+=( -d "$_d" ); done
+
+    if certbot certonly -n \
+        -a dns-transip \
+        --dns-transip-credentials "$TRANSIP_INI" \
+        --dns-transip-propagation-seconds 300 \
+        "${_CERT_D_ARGS[@]}" \
+        -m "$EMAIL" --agree-tos 2>&1 | tail -10; then
+
+      success "SSL certificate issued via TransIP DNS-01"
+
+      # Wire the cert into nginx (adds the 443 vhost + HTTP→HTTPS redirect)
+      certbot install --nginx --cert-name "$DOMAIN" --redirect 2>&1 | tail -5 \
+        || warn "certbot install --nginx reported an issue — check: sudo nginx -t"
+
+      # Reload nginx automatically after each future auto-renewal
+      mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+      printf '#!/bin/sh\nsystemctl reload nginx\n' > /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+      chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+
+      # certbot.timer drives auto-renewal; the renewal conf already stores the
+      # dns-transip authenticator + credentials path, so renew is hands-off.
+      if systemctl list-timers --all 2>/dev/null | grep -q certbot; then
+        systemctl enable --now certbot.timer 2>/dev/null || true
+        success "Auto-renewal active via certbot.timer (DNS-01, hands-off)"
+      fi
+
+      info "Verifying renewal config (dry-run)…"
+      if certbot renew --dry-run --quiet 2>&1; then
+        success "Renewal dry-run passed — certificate will renew automatically"
+      else
+        warn "Renewal dry-run had a warning. Check: sudo certbot renew --dry-run"
+      fi
+    else
+      warn "certbot (TransIP DNS-01) failed. Common causes:"
+      warn "  • Wrong dns_transip_username or key file in ${TRANSIP_INI}"
+      warn "  • API not enabled, or key has IP-whitelisting on (disable it)"
+      warn "  • DNSSEC broken on the zone"
+      warn "Check the log: sudo cat /var/log/letsencrypt/letsencrypt.log"
+    fi
+  fi
+
+elif [[ -n "$DOMAIN" ]]; then
 
   # ── Pre-flight: DNS + DNSSEC checks before running certbot ────────────────
   # Uses Cloudflare DoH so no dig/host tool is needed (jq is already installed).
@@ -671,6 +735,9 @@ if [[ -n "$DOMAIN" ]]; then
     echo -e "       and set the public A-records to your router's WAN IP."
     echo -e "       (Look it up safely on the Pi with: ${BOLD}curl -s https://ifconfig.co${RESET})"
     echo -e "     • For LAN-only / split-horizon DNS: use ${BOLD}${PI_IP}${RESET} as shown above."
+    echo -e "     • ${CYAN}If port 80/443 is blocked (CGNAT/ISP): use DNS-01.${RESET}"
+    echo -e "       Place TransIP credentials at ${BOLD}${TRANSIP_INI}${RESET} and re-run the installer —"
+    echo -e "       SSL is then issued and auto-renewed without any open ports."
   fi
   echo ""
   echo -e "  ${GREEN}Certificate auto-renewal:${RESET} active — no action needed."
