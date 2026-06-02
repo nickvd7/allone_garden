@@ -237,6 +237,13 @@ find "$INSTALL_DIR" -maxdepth 6 -type d -exec chmod 750 {} \;
 find "$INSTALL_DIR" -maxdepth 6 -type f -exec chmod 640 {} \;
 # Restore execute bit on shell scripts
 find "$INSTALL_DIR" -maxdepth 6 -name "*.sh" -exec chmod 750 {} \;
+
+# Nginx (www-data) needs read+execute access to the frontend build dir.
+# Adding www-data to the service group is the least-privilege option:
+# .env stays 600 (owner-only), so www-data cannot read secrets.
+if id www-data &>/dev/null && ! groups www-data | grep -qw "$SERVICE_USER"; then
+  usermod -aG "$SERVICE_USER" www-data
+fi
 success "Source code ready"
 
 # ── Install npm dependencies ──────────────────────────────────────────────────
