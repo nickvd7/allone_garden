@@ -449,6 +449,15 @@ server {
         proxy_read_timeout 86400;
     }
 
+    # One-line installer — lets users run:
+    #   curl -fsSL https://${DOMAIN}/install.sh | sudo bash
+    # so they can spin up an additional server that joins this one.
+    location = /install.sh {
+        alias ${INSTALL_DIR}/install.sh;
+        default_type text/x-shellscript;
+        add_header Content-Disposition 'attachment; filename="install.sh"';
+    }
+
     # React SPA — serve index.html for all other routes
     location / {
         try_files \$uri /index.html;

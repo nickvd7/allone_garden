@@ -7,6 +7,24 @@ function HomePage() {
   const { t, i18n } = useTranslation();
   const currentLang = (i18n.resolvedLanguage || i18n.language || 'en').split('-')[0];
 
+  // Build the one-line installer command from whatever host serves this page,
+  // so it always points at the right server (no hard-coded domain, no GitHub).
+  const origin =
+    typeof window !== 'undefined' && window.location && window.location.origin
+      ? window.location.origin
+      : 'https://allone.garden';
+  const installCmd = `curl -fsSL ${origin}/install.sh | sudo bash`;
+  const [copied, setCopied] = React.useState(false);
+  const copyInstall = async () => {
+    try {
+      await navigator.clipboard.writeText(installCmd);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (_) {
+      /* clipboard unavailable — user can select the text manually */
+    }
+  };
+
   return (
     <div className="landing-page-scroll-root">
     <div className="landing-page">
@@ -46,7 +64,7 @@ function HomePage() {
         </p>
         <div className="lp-hero-actions">
           <a className="lp-btn-primary" href="/">{t('home.hero.login_primary', { defaultValue: 'Login / Register' })}</a>
-          <a className="lp-btn-secondary" href="https://github.com/nickvd7/allone_garden" target="_blank" rel="noopener noreferrer">{t('home.hero.cta_primary', { defaultValue: 'Plant your server' })}</a>
+          <a className="lp-btn-secondary" href="#setup">{t('home.hero.cta_primary', { defaultValue: 'Plant your server' })}</a>
         </div>
         <div className="lp-garden-preview" aria-hidden="true">
           <div className="lp-plot lp-plot-tilled">🌱</div>
@@ -157,24 +175,38 @@ function HomePage() {
           <p className="lp-subtitle">
             {t('home.setup.subtitle', { defaultValue: 'Start your server on any platform, then join instantly from desktop or phone.' })}
           </p>
-          <h3 className="lp-subgroup-title">{t('home.setup.host_title', { defaultValue: 'Host your server' })}</h3>
+          <h3 className="lp-subgroup-title">{t('home.setup.host_title', { defaultValue: 'Host your own server' })}</h3>
+          <p className="lp-install-intro">
+            {t('home.setup.install_intro', { defaultValue: 'One command installs a full server on a Raspberry Pi, Linux box, or Mac. It can run standalone or join this main server as an extra node.' })}
+          </p>
+          <div className="lp-install-cmd">
+            <code>{installCmd}</code>
+            <button type="button" className="lp-install-copy" onClick={copyInstall}>
+              {copied
+                ? t('home.setup.copied', { defaultValue: 'Copied!' })
+                : t('home.setup.copy', { defaultValue: 'Copy' })}
+            </button>
+          </div>
+          <p className="lp-install-note">
+            {t('home.setup.install_note', { defaultValue: 'Requires a Debian/Ubuntu-based system (Raspberry Pi OS, Ubuntu, Debian) or macOS with Homebrew. The installer sets up HTTPS, the database, and a reverse proxy automatically.' })}
+          </p>
           <div className="lp-grid lp-grid-setup">
-            <a className="lp-card" href="https://github.com/nickvd7/allone_garden/blob/main/INSTALL.md" target="_blank" rel="noopener noreferrer">
+            <div className="lp-card">
               <h3>🫐 {t('home.setup.cards.pi.title', { defaultValue: 'Raspberry Pi / Linux' })}</h3>
-              <p>{t('home.setup.cards.pi.body', { defaultValue: 'Production-ready setup with HTTPS and reverse proxy support.' })}</p>
-            </a>
-            <a className="lp-card" href="https://github.com/nickvd7/allone_garden" target="_blank" rel="noopener noreferrer">
+              <p>{t('home.setup.cards.pi.body', { defaultValue: 'Run the command above for a production-ready server with HTTPS and auto-renewing SSL.' })}</p>
+            </div>
+            <div className="lp-card">
               <h3>🍎 {t('home.setup.cards.macos.title', { defaultValue: 'macOS' })}</h3>
-              <p>{t('home.setup.cards.macos.body', { defaultValue: 'Homebrew based local/server setup flow.' })}</p>
-            </a>
-            <a className="lp-card" href="https://github.com/nickvd7/allone_garden/blob/main/INSTALL.md" target="_blank" rel="noopener noreferrer">
-              <h3>🤖 {t('home.setup.cards.android.title', { defaultValue: 'Android (Termux)' })}</h3>
-              <p>{t('home.setup.cards.android.body', { defaultValue: 'Run a full local multiplayer setup from your phone.' })}</p>
-            </a>
-            <a className="lp-card" href="https://github.com/nickvd7/allone_garden/blob/main/INSTALL.md" target="_blank" rel="noopener noreferrer">
-              <h3>🐳 {t('home.setup.cards.docker.title', { defaultValue: 'Docker' })}</h3>
-              <p>{t('home.setup.cards.docker.body', { defaultValue: 'Quickest cross-platform route for local or hosted setups.' })}</p>
-            </a>
+              <p>{t('home.setup.cards.macos.body', { defaultValue: 'Same one-line installer — works on macOS with Homebrew installed.' })}</p>
+            </div>
+            <div className="lp-card">
+              <h3>🔗 {t('home.setup.cards.extra.title', { defaultValue: 'Extra server (join main)' })}</h3>
+              <p>{t('home.setup.cards.extra.body', { defaultValue: 'Enable federation in the installed .env (P2P_ENABLED=true) to connect your node to this main server.' })}</p>
+            </div>
+            <div className="lp-card lp-card-highlight">
+              <h3>💻 {t('home.setup.cards.desktop.title', { defaultValue: 'Windows / Mac desktop app' })}</h3>
+              <p>{t('home.setup.cards.desktop.body', { defaultValue: 'No download needed — open this site in your browser and choose “Install app” (address-bar icon or browser menu) to get a desktop app.' })}</p>
+            </div>
           </div>
           <h3 className="lp-subgroup-title">{t('home.setup.mobile_title', { defaultValue: 'Join from mobile' })}</h3>
           <div className="lp-grid lp-grid-setup-mobile">

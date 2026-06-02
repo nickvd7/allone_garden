@@ -214,6 +214,57 @@
   letter-spacing: 0.01em;
 }
 
+.lp-install-intro {
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 0.85rem;
+  max-width: 720px;
+}
+
+.lp-install-cmd {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  max-width: 720px;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.lp-install-cmd code {
+  flex: 1 1 320px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92rem;
+  color: #e8f5e9;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.lp-install-copy {
+  flex: 0 0 auto;
+  background: #a5d6a7;
+  color: #1b5e20;
+  border: none;
+  border-radius: 8px;
+  padding: 0 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lp-install-copy:hover {
+  background: #c8e6c9;
+}
+
+.lp-install-note {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.88rem;
+  margin: 0 0 1.4rem;
+  max-width: 720px;
+}
+
 .lp-grid-setup {
   margin-bottom: 1rem;
 }
