@@ -14,8 +14,9 @@
 #   sudo bash install.sh
 #
 # Environment variables (override interactive prompts):
-#   GARDEN_DOMAIN=allone.garden  — domain for HTTPS via Let's Encrypt
-#   GARDEN_EMAIL=you@example.com — email for Let's Encrypt notifications
+#   GARDEN_DOMAIN=allone.garden        — domain for HTTPS via Let's Encrypt
+#   GARDEN_SUBDOMAINS=api,admin,www    — extra subdomains (comma-separated, optional)
+#   GARDEN_EMAIL=you@example.com       — email for Let's Encrypt notifications
 #   GARDEN_DIR=/opt/allone-garden
 #   GARDEN_USER=garden
 # =============================================================================
@@ -129,6 +130,16 @@ if [[ -t 0 ]]; then
     echo ""
   fi
 
+  # ── Additional subdomains (optional) ──
+  if [[ -n "$DOMAIN" && -z "${GARDEN_SUBDOMAINS:-}" ]]; then
+    echo -e "  Additional subdomains (comma-separated, optional)."
+    echo -e "  ${CYAN}Example: api,admin,ws (or leave blank for www only)${RESET}"
+    echo ""
+    read -rp "  Subdomains []: " _INPUT_SUBDOMAINS
+    GARDEN_SUBDOMAINS="${_INPUT_SUBDOMAINS:-}"
+    echo ""
+  fi
+
   # ── Email (only needed when a domain was entered) ──
   if [[ -n "$DOMAIN" && -z "$EMAIL" ]]; then
     _DEFAULT_EMAIL="admin@${DOMAIN}"
@@ -138,6 +149,27 @@ if [[ -t 0 ]]; then
     read -rp "  Email [${_DEFAULT_EMAIL}]: " _INPUT_EMAIL
     EMAIL="${_INPUT_EMAIL:-${_DEFAULT_EMAIL}}"
     echo ""
+  fi
+fi
+
+# ── Build domain list with subdomains ──────────────────────────────────────────
+CERT_DOMAINS=()
+if [[ -n "$DOMAIN" ]]; then
+  CERT_DOMAINS+=("$DOMAIN" "www.${DOMAIN}")
+
+  # Parse additional subdomains from GARDEN_SUBDOMAINS (comma-separated)
+  if [[ -n "${GARDEN_SUBDOMAINS:-}" ]]; then
+    while IFS=',' read -r _SUBDOMAIN; do
+      _SUBDOMAIN=$(echo "$_SUBDOMAIN" | xargs)  # trim whitespace
+      if [[ -n "$_SUBDOMAIN" ]]; then
+        # Validate subdomain (alphanumeric + hyphen only, no wildcards)
+        if [[ "$_SUBDOMAIN" =~ ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$|^[a-z0-9]$ ]]; then
+          CERT_DOMAINS+=("${_SUBDOMAIN}.${DOMAIN}")
+        else
+          error "Invalid subdomain: '${_SUBDOMAIN}' (use lowercase alphanumeric and hyphens only)"
+        fi
+      fi
+    done <<< "$GARDEN_SUBDOMAINS"
   fi
 fi
 
@@ -158,6 +190,9 @@ echo -e "  Install dir:  ${INSTALL_DIR}"
 echo -e "  Service user: ${SERVICE_USER}"
 if [[ -n "$DOMAIN" ]]; then
   echo -e "  Domain:       ${DOMAIN}  (HTTPS via Let's Encrypt)"
+  if [[ ${#CERT_DOMAINS[@]} -gt 1 ]]; then
+    echo -e "  Variants:     $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+  fi
   echo -e "  Email:        ${EMAIL}"
 else
   echo -e "  Domain:       (none — HTTP only on local IP)"
@@ -371,8 +406,12 @@ success "allone-garden.service started"
 info "Configuring Nginx…"
 LOCAL_IP=$(hostname -I | awk '{print $1}')
 
-# Use the domain in server_name when set — certbot needs this to find the right vhost
-_NGINX_SERVER_NAME="${DOMAIN:-_}"
+# Use all domain variants in server_name — certbot needs this to find the right vhost
+if [[ -n "$DOMAIN" ]]; then
+  _NGINX_SERVER_NAME=$(IFS=' '; echo "${CERT_DOMAINS[*]}")
+else
+  _NGINX_SERVER_NAME="_"
+fi
 
 cat > /etc/nginx/sites-available/allone-garden <<EOF
 # AllOne Garden — Nginx reverse proxy
@@ -421,15 +460,18 @@ if [[ -n "$DOMAIN" ]]; then
   info "  (Make sure ${DOMAIN} already resolves to ${LOCAL_IP})"
 
   # certbot --nginx rewrites the nginx config to add the HTTPS server block
+  # Build comma-separated domain list for certbot
+  _CERT_DOMAINS_CSV=$(IFS=','; echo "${CERT_DOMAINS[*]}")
+
   if certbot --nginx \
       --non-interactive \
       --agree-tos \
       --email "$EMAIL" \
-      --domains "$DOMAIN" \
+      --domains "${_CERT_DOMAINS_CSV}" \
       --redirect \
       2>&1 | tail -8; then
 
-    success "SSL certificate issued for ${DOMAIN}"
+    success "SSL certificate issued for: $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
 
     # ── Automatic renewal ──────────────────────────────────────────────────
     # Certbot installs a systemd timer (certbot.timer) on modern Debian/Ubuntu.
@@ -460,7 +502,7 @@ if [[ -n "$DOMAIN" ]]; then
     warn "Possible reasons:"
     warn "  • ${DOMAIN} DNS A-record does not yet point to ${LOCAL_IP}"
     warn "  • Port 80 is blocked by an upstream firewall"
-    warn "To retry later: sudo certbot --nginx -d ${DOMAIN} --email ${EMAIL} --agree-tos --redirect"
+    warn "To retry later: sudo certbot --nginx $(printf ' -d %s' "${CERT_DOMAINS[@]}") --email ${EMAIL} --agree-tos --redirect"
   fi
 else
   warn "No domain configured — running HTTP only."
@@ -513,13 +555,23 @@ fi
 
 echo ""
 if [[ -n "$DOMAIN" ]]; then
-  echo -e "  ${CYAN}DNS checklist for ${BOLD}${DOMAIN}${RESET}${CYAN}:${RESET}"
-  echo -e "  ┌─────────────────────────────────────────────────────────────────┐"
-  echo -e "  │  Type  Name               Value                                 │"
-  echo -e "  │  A     ${DOMAIN}$(printf '%*s' $((20 - ${#DOMAIN})) '')  ${PUBLIC_IP:-${LOCAL_IP}}$(printf '%*s' $((38 - ${#PUBLIC_IP:-${LOCAL_IP}})) '')│"
-  echo -e "  └─────────────────────────────────────────────────────────────────┘"
-  echo -e "  Set this A-record at your DNS provider (e.g. Cloudflare, TransIP)."
-  echo -e "  Propagation typically takes 1–15 minutes."
+  echo -e "  ${CYAN}DNS A-records for ${BOLD}${DOMAIN}${RESET}${CYAN}:${RESET}"
+  echo -e "  ┌──────────────────────────────────────────────────────────────────┐"
+  echo -e "  │  Type  Name                 Value                                │"
+
+  # Print all domain variants in the DNS table
+  for _DOM in "${CERT_DOMAINS[@]}"; do
+    _NAME_LEN=${#_DOM}
+    _IP="${PUBLIC_IP:-${LOCAL_IP}}"
+    _IP_LEN=${#_IP}
+    _NAME_PAD=$((24 - _NAME_LEN))
+    _IP_PAD=$((39 - _IP_LEN))
+    echo -e "  │  A     ${_DOM}$(printf '%*s' $_NAME_PAD '')  ${_IP}$(printf '%*s' $_IP_PAD '')│"
+  done
+
+  echo -e "  └──────────────────────────────────────────────────────────────────┘"
+  echo -e "  Point all of these A-records at ${BOLD}${PUBLIC_IP:-${LOCAL_IP}}${RESET} at your DNS provider."
+  echo -e "  ${CYAN}Propagation typically takes 1–15 minutes.${RESET}"
   echo ""
   echo -e "  ${GREEN}Certificate auto-renewal:${RESET} active — no action needed."
   echo -e "  To check: ${BOLD}sudo certbot certificates${RESET}"
