@@ -59,10 +59,12 @@ fi
 run_as() {
   local cmd="$1"
   if [[ "$(id -un)" == "$SERVICE_USER" ]]; then
-    bash -lc "$cmd"
+    bash -c "$cmd"
+  elif [[ $EUID -eq 0 ]] && command -v sudo &>/dev/null; then
+    sudo -u "$SERVICE_USER" -H bash -c "$cmd"
   else
     [[ $EUID -eq 0 ]] || die "Run met sudo of als ${SERVICE_USER}"
-    su -c "$cmd" "$SERVICE_USER"
+    su - "$SERVICE_USER" -c "$cmd"
   fi
 }
 
@@ -83,14 +85,14 @@ info "Installatie: ${INSTALL_DIR}"
 info "Gebruiker:    ${SERVICE_USER}"
 
 if [[ "${UPDATE_SKIP_GIT_PULL:-}" == 1 ]]; then
-  warn "Git pull overgeslagen (UPDATE_SKIP_GIT_PULL=1)"
+  warn "Git overgeslagen (UPDATE_SKIP_GIT_PULL=1)"
 else
   info "Repository bijwerken…"
   if ! bash "$GIT_PULL" "$INSTALL_DIR" "$SERVICE_USER"; then
-    die "git pull mislukt in ${INSTALL_DIR}
-Handmatig: cd ${INSTALL_DIR} && git pull
-Daarna:     UPDATE_SKIP_GIT_PULL=1 sudo bash update.sh
-Of zet origin op SSH: git remote set-url origin git@github.com:nickvd7/allone_garden.git"
+    warn "Git-update mislukt — build, migraties en herstart gaan door met de code die al op schijf staat."
+    warn "Fix remote: git remote set-url origin https://github.com/nickvd7/allone_garden.git"
+    warn "Bootstrap scripts zonder git: bash scripts/bootstrap-update-from-github.sh"
+    warn "Of overslaan: UPDATE_SKIP_GIT_PULL=1 sudo bash update.sh"
   fi
 fi
 success "Code bijgewerkt ($(run_as "git -C '${INSTALL_DIR}' rev-parse --short HEAD"))"
