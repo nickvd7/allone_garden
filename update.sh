@@ -51,15 +51,19 @@ INSTALL_DIR="$(resolve_install_dir)"
 HAS_GIT=false
 [[ -d "${INSTALL_DIR}/.git" ]] && HAS_GIT=true
 
-# Wie voert git/npm uit?
+# Wie voert git/npm uit? Moet kunnen schrijven in INSTALL_DIR → eigenaar van die map.
+DIR_OWNER="$(stat -c '%U' "${INSTALL_DIR}" 2>/dev/null || echo '')"
 if [[ -n "${GARDEN_USER:-}" ]]; then
   SERVICE_USER="$GARDEN_USER"
+elif [[ -n "$DIR_OWNER" && "$DIR_OWNER" != root ]]; then
+  # Eigenaar van de install-map (bv. 'garden' op /opt) — voorkomt EACCES bij npm install
+  SERVICE_USER="$DIR_OWNER"
 elif [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != root ]]; then
   SERVICE_USER="$SUDO_USER"
 elif [[ $EUID -ne 0 ]]; then
   SERVICE_USER="$(whoami)"
 else
-  SERVICE_USER="$(stat -c '%U' "${INSTALL_DIR}" 2>/dev/null || echo garden)"
+  SERVICE_USER="garden"
 fi
 
 run_as() {
@@ -100,7 +104,11 @@ elif [[ -x "$GIT_PULL" ]]; then
   bash "$GIT_PULL" "$INSTALL_DIR" "$SERVICE_USER" \
     || warn "Git-update mislukt — build/migraties gaan door met code op schijf."
 fi
-success "Code bijgewerkt ($(run_as "git -C '${INSTALL_DIR}' rev-parse --short HEAD"))"
+if [[ "$HAS_GIT" == true ]]; then
+  success "Code bijgewerkt ($(run_as "git -C '${INSTALL_DIR}' rev-parse --short HEAD" 2>/dev/null || echo '?'))"
+else
+  success "Code klaar in ${INSTALL_DIR}"
+fi
 
 info "Backend dependencies…"
 run_as "cd '${INSTALL_DIR}/packages/backend' && npm install --production"
@@ -149,5 +157,7 @@ fi
 echo ""
 echo -e "${GREEN}${BOLD}✅  Update voltooid${RESET}"
 echo -e "  Pad:    ${INSTALL_DIR}"
-echo -e "  Commit: ${BOLD}$(run_as "git -C '${INSTALL_DIR}' log -1 --oneline")${RESET}"
+if [[ "$HAS_GIT" == true ]]; then
+  echo -e "  Commit: ${BOLD}$(run_as "git -C '${INSTALL_DIR}' log -1 --oneline" 2>/dev/null || echo '?')${RESET}"
+fi
 echo -e "  Tip: harde refresh in de browser of PWA-cache legen als de UI nog oud lijkt."
