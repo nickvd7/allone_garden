@@ -5,9 +5,13 @@
 # Doet: git pull → npm install → frontend build (incl. SW cache-bust) →
 #       alle DB-migraties → herstart allone-garden + nginx (indien aanwezig).
 #
-# Gebruik (na git pull in je clone):
+# Productie op /opt bijwerken (aanbevolen):
+#   cd ~/coding/allone_garden && git pull
+#   sudo bash scripts/deploy-to-production.sh
+#   sudo bash /opt/allone-garden/update.sh
+#
+# Of alles in de clone:
 #   cd ~/coding/allone_garden && git pull && sudo bash update.sh
-#   GARDEN_DIR=/opt/allone-garden sudo bash update.sh
 #
 # Detecteert automatisch de map waarin dit script staat (bijv. ~/coding/allone_garden).
 # Bij sudo wordt git/npm gedraaid als de oorspronkelijke gebruiker (SUDO_USER), niet als

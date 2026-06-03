@@ -141,9 +141,14 @@ bash start-android.sh
 
 Tested on Pi 3B+, Pi 4, Pi 5 running Raspberry Pi OS Bookworm (64-bit).
 
-### Volledige herinstallatie Pi → `/opt/allone-garden` (aanbevolen)
+### Pi: twee mappen (structureel)
 
-Alles in één keer: backup oude `/opt`, verse code, Postgres, `.env`, build, migraties, nginx, systemd.
+| Map | Rol |
+|-----|-----|
+| `~/coding/allone_garden` | Git working copy — hier doe je `git pull` |
+| `/opt/allone-garden` | Productie — rsync + nginx + systemd (geen `git clone` nodig) |
+
+### Volledige herinstallatie → `/opt/allone-garden`
 
 ```bash
 cd ~/coding/allone_garden
@@ -151,9 +156,11 @@ git pull
 sudo bash reinstall-pi.sh
 ```
 
-Duurt ~15–30 min. Oude installatie: `/opt/allone-garden.bak.<datum>`.
+Stappen: `git-pull.sh` → rsync naar `/opt` → `install.sh` (Postgres, `.env`, build, migraties, nginx).  
+Geen `git clone` op `/opt` (omzeilt GitHub-login op de Pi).  
+Backup: `/opt/allone-garden.bak.<datum>`.
 
-**Let op het pad:** `/opt/allone-garden` (met **streepje**), niet `allone_garden`.
+**Pad:** `/opt/allone-garden` (streepje `-`), niet `allone_garden`.
 
 Na afloop testen:
 
