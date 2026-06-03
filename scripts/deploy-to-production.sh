@@ -5,12 +5,11 @@
 #   ~/coding/allone_garden  = git working copy (git pull / git-pull.sh)
 #   /opt/allone-garden      = productie (rsync, geen .git nodig)
 #
+# Behoudt in productie: packages/backend/.env, node_modules, frontend/build.
 # Usage:
-#   cd ~/coding/allone_garden && git pull
 #   sudo bash scripts/deploy-to-production.sh
-#
-# Optioneel:
-#   SOURCE_DIR=... PRODUCTION_DIR=/opt/allone-garden PRODUCTION_USER=garden
+# Optioneel: SOURCE_DIR=... PRODUCTION_DIR=/opt/allone-garden PRODUCTION_USER=garden
+#            DEPLOY_GIT_PULL=0  (sla git-pull over)
 set -euo pipefail
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
@@ -31,25 +30,24 @@ GIT_USER="${SUDO_USER:-$(stat -c '%U' "$SOURCE_DIR" 2>/dev/null || echo "$PRODUC
 
 echo -e "${BOLD}Deploy: ${SOURCE_DIR} → ${PRODUCTION_DIR}${RESET}"
 
-if [[ -x "${SOURCE_DIR}/scripts/git-pull.sh" ]]; then
+if [[ "${DEPLOY_GIT_PULL:-1}" == 1 && -x "${SOURCE_DIR}/scripts/git-pull.sh" ]]; then
   info "Bron bijwerken (git-pull.sh)…"
-  bash "${SOURCE_DIR}/scripts/git-pull.sh" "$SOURCE_DIR" "$GIT_USER" || warn "git-pull mislukt — gebruik huidige bron op schijf"
+  bash "${SOURCE_DIR}/scripts/git-pull.sh" "$SOURCE_DIR" "$GIT_USER" \
+    || warn "git-pull mislukt — gebruik huidige bron op schijf (auth: bash scripts/setup-git-auth.sh)"
 fi
 
-if [[ -d "$PRODUCTION_DIR" ]]; then
-  BACKUP="${PRODUCTION_DIR}.bak.$(date +%Y%m%d%H%M%S)"
-  info "Backup productie → ${BACKUP}"
-  mv "$PRODUCTION_DIR" "$BACKUP"
-fi
 mkdir -p "$PRODUCTION_DIR"
 
-info "Rsync bron → productie…"
+# Rsync in-place met --delete, maar BEHOUD productie-specifieke bestanden:
+#   .env (DB-wachtwoord/JWT), node_modules en build (worden door update.sh ververst).
+info "Rsync bron → productie (behoud .env, node_modules, build)…"
 rsync -a --delete \
-  --exclude node_modules \
-  --exclude packages/backend/node_modules \
-  --exclude packages/frontend/node_modules \
-  --exclude packages/frontend/build \
   --exclude '.git' \
+  --exclude 'node_modules' \
+  --exclude 'packages/backend/node_modules' \
+  --exclude 'packages/frontend/node_modules' \
+  --exclude 'packages/frontend/build' \
+  --exclude 'packages/backend/.env' \
   "${SOURCE_DIR}/" "${PRODUCTION_DIR}/"
 
 chown -R "${PRODUCTION_USER}:${PRODUCTION_USER}" "$PRODUCTION_DIR"

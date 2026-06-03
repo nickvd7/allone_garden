@@ -183,6 +183,15 @@ sudo systemctl status allone-garden
 
 Updates daarna: `sudo bash /opt/allone-garden/update.sh`
 
+### Dagelijks deployen — één commando
+
+```bash
+cd ~/coding/allone_garden
+sudo bash deploy.sh
+```
+
+Doet: `git pull` → rsync naar `/opt/allone-garden` (behoudt `.env`, node_modules, build) → `update.sh` (npm, frontend build, DB-migraties, herstart, SSL). Eerst eenmalig `bash scripts/setup-git-auth.sh` voor wachtwoordloze pull.
+
 ### Andere opties
 
 **Alleen updaten (geen herinstall):** `git pull && sudo bash update.sh` in je clone.
