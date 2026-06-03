@@ -82,11 +82,16 @@ echo -e "${BOLD}🌱 AllOne Garden — update${RESET}"
 info "Installatie: ${INSTALL_DIR}"
 info "Gebruiker:    ${SERVICE_USER}"
 
-info "Repository bijwerken…"
-if ! bash "$GIT_PULL" "$INSTALL_DIR" "$SERVICE_USER"; then
-  die "git pull mislukt in ${INSTALL_DIR}
-Tip: test handmatig: cd ${INSTALL_DIR} && git pull
-Bij een private repo: SSH-remote of een deploy key / PAT configureren."
+if [[ "${UPDATE_SKIP_GIT_PULL:-}" == 1 ]]; then
+  warn "Git pull overgeslagen (UPDATE_SKIP_GIT_PULL=1)"
+else
+  info "Repository bijwerken…"
+  if ! bash "$GIT_PULL" "$INSTALL_DIR" "$SERVICE_USER"; then
+    die "git pull mislukt in ${INSTALL_DIR}
+Handmatig: cd ${INSTALL_DIR} && git pull
+Daarna:     UPDATE_SKIP_GIT_PULL=1 sudo bash update.sh
+Of zet origin op SSH: git remote set-url origin git@github.com:nickvd7/allone_garden.git"
+  fi
 fi
 success "Code bijgewerkt ($(run_as "git -C '${INSTALL_DIR}' rev-parse --short HEAD"))"
 
