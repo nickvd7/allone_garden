@@ -264,7 +264,7 @@ success "Source code ready"
 
 # ── Install npm dependencies ──────────────────────────────────────────────────
 info "Installing backend dependencies…"
-su -c "cd '${INSTALL_DIR}/packages/backend' && npm install --production" "$SERVICE_USER"
+su -c "cd '${INSTALL_DIR}/packages/backend' && npm install --omit=dev" "$SERVICE_USER"
 
 info "Installing frontend npm packages…"
 su -c "cd '${INSTALL_DIR}/packages/frontend' && npm install" "$SERVICE_USER"

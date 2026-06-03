@@ -103,7 +103,10 @@ if [[ -z "$REMOTE_SHA" && "$BRANCH" != main ]]; then
 fi
 
 if [[ -z "$REMOTE_SHA" ]]; then
-  echo "[git-pull] Kon remote HEAD niet bepalen (netwerk, private repo, of oude git-pull.sh)." >&2
+  echo "[git-pull] Kon remote HEAD niet bepalen." >&2
+  echo "[git-pull] Dit is een PRIVÉ-repo: anonieme toegang werkt niet." >&2
+  echo "[git-pull] Eenmalig auth instellen:  bash scripts/setup-git-auth.sh" >&2
+  echo "[git-pull] (daarna werkt 'git pull' zonder wachtwoord)" >&2
   exit 1
 fi
 

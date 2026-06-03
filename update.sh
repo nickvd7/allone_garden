@@ -111,7 +111,7 @@ else
 fi
 
 info "Backend dependencies…"
-run_as "cd '${INSTALL_DIR}/packages/backend' && npm install --production"
+run_as "cd '${INSTALL_DIR}/packages/backend' && npm install --omit=dev"
 
 info "Frontend dependencies…"
 run_as "cd '${INSTALL_DIR}/packages/frontend' && npm install"

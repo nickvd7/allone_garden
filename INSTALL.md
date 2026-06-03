@@ -141,6 +141,17 @@ bash start-android.sh
 
 Tested on Pi 3B+, Pi 4, Pi 5 running Raspberry Pi OS Bookworm (64-bit).
 
+### Eenmalig: GitHub-toegang op de Pi (privé-repo)
+
+De repo is privé, dus `git pull` vraagt anders telkens om inloggegevens. Stel één keer SSH in:
+
+```bash
+cd ~/coding/allone_garden
+bash scripts/setup-git-auth.sh
+```
+
+Het script genereert een SSH-key, toont de public key en de GitHub-URL om die als **Deploy Key (read-only)** toe te voegen. Daarna werkt `git pull` zonder wachtwoord. Alternatief met token: `GIT_AUTH=token bash scripts/setup-git-auth.sh`.
+
 ### Pi: twee mappen (structureel)
 
 | Map | Rol |
