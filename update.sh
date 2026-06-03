@@ -107,6 +107,17 @@ info "Frontend build (service worker cache wordt vernieuwd)…"
 run_as "cd '${INSTALL_DIR}/packages/frontend' && CI=false GENERATE_SOURCEMAP=false NODE_OPTIONS=--max-old-space-size=4096 npm run build"
 success "Frontend gebouwd"
 
+info "Database verbinding…"
+SYNC_DB="${INSTALL_DIR}/scripts/sync-postgres-env.sh"
+if ! run_as "cd '${INSTALL_DIR}/packages/backend' && node scripts/check-db-connection.js" 2>/dev/null; then
+  if [[ $EUID -eq 0 && -x "$SYNC_DB" ]]; then
+    warn "DATABASE_URL klopt niet met PostgreSQL — synchroniseer wachtwoord…"
+    bash "$SYNC_DB" "$INSTALL_DIR" "$SERVICE_USER" || die "PostgreSQL sync mislukt. Zie scripts/sync-postgres-env.sh"
+  else
+    die "PostgreSQL login mislukt (user garden). Run: sudo bash scripts/sync-postgres-env.sh"
+  fi
+fi
+
 info "Database migraties…"
 run_as "cd '${INSTALL_DIR}/packages/backend' && npm run db:migrate"
 success "Database up-to-date"

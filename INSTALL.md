@@ -178,7 +178,9 @@ cd /opt/allone-garden   # of jouw clone, bijv. ~/coding/allone_garden
 sudo bash update.sh
 ```
 
-`update.sh` detecteert de map waarin het script staat (niet alleen `/opt/allone-garden`). Bij `sudo` draait git/npm als jouw gebruiker (`SUDO_USER`). Git gebruikt anonieme `ls-remote`/`fetch` tegen GitHub (geen wachtwoordprompt). Het script doet: code bijwerken → dependencies → frontend build (nieuwe service-worker cache) → `npm run db:migrate` → herstart `allone-garden` + nginx (als die units bestaan).
+`update.sh` detecteert de map waarin het script staat (niet alleen `/opt/allone-garden`). Bij `sudo` draait git/npm als jouw gebruiker (`SUDO_USER`). Git gebruikt anonieme `ls-remote`/`fetch` tegen GitHub (geen wachtwoordprompt). Het script doet: code bijwerken → dependencies → frontend build (nieuwe service-worker cache) → PostgreSQL-wachtwoord sync (indien nodig) → `npm run db:migrate` → herstart `allone-garden` + nginx (als die units bestaan).
+
+**`password authentication failed for user "garden"`:** het wachtwoord in `packages/backend/.env` komt niet overeen met PostgreSQL. Oplossing: `sudo bash scripts/sync-postgres-env.sh` (in de repo-root), daarna opnieuw `sudo bash update.sh`.
 
 Als `git pull` op de Pi om een wachtwoord vraagt, kun je de remote omzetten naar SSH (`git remote set-url origin git@github.com:nickvd7/allone_garden.git`) of na een handmatige `git pull`: `UPDATE_SKIP_GIT_PULL=1 sudo bash update.sh`.
 
