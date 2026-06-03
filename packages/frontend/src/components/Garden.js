@@ -219,6 +219,16 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, curren
   const { track }  = useAnalytics();
   const { unlock } = useSteamAchievements();
 
+  // Floating reward labels state
+  const [floatingRewards, setFloatingRewards] = React.useState([]);
+  const plotGridRef = React.useRef(null);
+
+  const addFloatReward = React.useCallback((label, type, plotIndex) => {
+    const id = Date.now() + Math.random();
+    setFloatingRewards((prev) => [...prev, { id, label, type, plotIndex }]);
+    setTimeout(() => setFloatingRewards((prev) => prev.filter((r) => r.id !== id)), 1200);
+  }, []);
+
   // Pre-compute companion icons for all plots
   const companionIcons = plots.map((_, i) => getCompanionEffect(plots, i, companions).icon);
 
@@ -236,6 +246,19 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, curren
         // Steam: first-ever harvest
         unlock('FIRST_HARVEST');
       }
+    }
+
+    // Determine reward feedback before state update
+    let rewardLabel = null;
+    let rewardType = 'xp';
+    const preClickPlot = plots[index];
+    if (selectedTool === 'till' && !preClickPlot.tilled) { rewardLabel = '+5 XP'; rewardType = 'xp'; }
+    else if (selectedTool === 'plant' && preClickPlot.tilled && !preClickPlot.planted) { rewardLabel = '+10 XP'; rewardType = 'xp'; }
+    else if (selectedTool === 'water' && preClickPlot.tilled && (preClickPlot.waterLevel||0) < 3) { rewardLabel = '+2 XP'; rewardType = 'xp'; }
+    else if (selectedTool === 'harvest' && preClickPlot.planted) {
+      const { isReady } = getGrowthStage(preClickPlot.plantType, preClickPlot.daysPlanted||0, growthStages);
+      if (isReady) { rewardLabel = `🧺 +${(cropCoins[preClickPlot.plantType]||10)}🪙`; rewardType = 'coins'; }
+      else { rewardLabel = '⏳ Nog niet klaar'; rewardType = 'warn'; }
     }
 
     onUpdateGame((prev) => {
@@ -360,6 +383,7 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, curren
         },
       };
     });
+    if (rewardLabel) addFloatReward(rewardLabel, rewardType, index);
   };
 
   // Advance the game by one day
@@ -502,7 +526,12 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, curren
         </button>
       </div>
 
-      <div className="garden-grid">
+      <div
+        className="garden-grid"
+        ref={plotGridRef}
+        data-season={season.id || 'spring'}
+        style={{ position: 'relative' }}
+      >
         {plots.map((plot, i) => (
           <Plot
             key={i}
@@ -515,6 +544,22 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, curren
             plantEmojis={plantEmojis}
           />
         ))}
+        {floatingRewards.map((r) => {
+          const col = r.plotIndex % GRID_W;
+          const row = Math.floor(r.plotIndex / GRID_W);
+          return (
+            <div
+              key={r.id}
+              className={`reward-float reward-float--${r.type}`}
+              style={{
+                left: `calc(${col} * (100% / ${GRID_W}) + 1rem)`,
+                top: `calc(${row} * (100% / 4) + 0.5rem)`,
+              }}
+            >
+              {r.label}
+            </div>
+          );
+        })}
       </div>
 
       {/* Companion planting legend */}

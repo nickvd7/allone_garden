@@ -185,6 +185,18 @@ function App() {
     gameStateRef.current = gameState;
   }, [gameState]);
 
+  // ── Level-up celebration ──────────────────────────────────────────────────────
+  const [levelUpOverlay, setLevelUpOverlay] = useState(null);
+  const prevLevelRef = useRef(null);
+  useEffect(() => {
+    const level = gameState.playerStats?.level;
+    if (prevLevelRef.current !== null && level > prevLevelRef.current) {
+      setLevelUpOverlay(level);
+      setTimeout(() => setLevelUpOverlay(null), 2600);
+    }
+    prevLevelRef.current = level;
+  }, [gameState.playerStats?.level]);
+
   const [gardenConflict, setGardenConflict] = useState(null);
 
   useCapacitorPreferencesMirror({
@@ -1222,6 +1234,16 @@ function App() {
       )}
 
       {notification && <div className="notification">{notification}</div>}
+
+      {levelUpOverlay && (
+        <div className="level-up-overlay">
+          <div className="level-up-card">
+            <div className="level-up-card__emoji">🎉</div>
+            <div className="level-up-card__title">LEVEL {levelUpOverlay}!</div>
+            <div className="level-up-card__sub">Je tuin groeit — goed bezig! 🌱</div>
+          </div>
+        </div>
+      )}
 
       {gardenConflict && (
         <GardenConflictModal
