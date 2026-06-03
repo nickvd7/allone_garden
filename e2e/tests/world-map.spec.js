@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register, dismissWebpackOverlay } = require('./helpers');
+const { uniqueUser, register, dismissWebpackOverlay, guestOrRegister } = require('./helpers');
 
 test.describe('World Map (embedded)', () => {
   let user;
@@ -39,15 +39,9 @@ test.describe('World Map (embedded)', () => {
   });
 });
 
-test.describe('World Map (Guest)', () => {
-  test('guest sees embedded world after Play as Guest', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('garden_tour_done', 'true');
-    });
-    await page.goto('/');
-    await dismissWebpackOverlay(page);
-    await page.getByRole('button', { name: /Play as Guest/i }).click();
-    await page.waitForSelector('.header', { timeout: 10_000 });
+test.describe('World Map (Guest or registered)', () => {
+  test('user sees embedded world map after entering game', async ({ page }) => {
+    await guestOrRegister(page);
     await expect(page.locator('.world-map-embedded')).toBeVisible();
     await expect(page.locator('.walk-player-char').first()).toBeVisible({ timeout: 15_000 });
   });

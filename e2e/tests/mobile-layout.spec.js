@@ -1,18 +1,11 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { dismissWebpackOverlay } = require('./helpers');
+const { guestOrRegister } = require('./helpers');
 
 test.describe('Mobile layout', () => {
   async function assertMobileLayout(page, width, height, maxVerticalRatio) {
     await page.setViewportSize({ width, height });
-    await page.addInitScript(() => {
-      localStorage.setItem('garden_tour_done', 'true');
-    });
-
-    await page.goto('/');
-    await dismissWebpackOverlay(page);
-    await page.getByRole('button', { name: /Play as Guest/i }).click();
-    await page.waitForSelector('.header', { timeout: 15_000 });
+    await guestOrRegister(page);
 
     const layout = await page.evaluate(() => {
       const doc = document.documentElement;

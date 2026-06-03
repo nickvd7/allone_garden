@@ -9,9 +9,13 @@ let _seq = Date.now();
 
 /** CRA/webpack dev overlay blokkeert clicks in e2e — verwijderen na load */
 export async function dismissWebpackOverlay(page) {
-  await page.evaluate(() => {
-    document.getElementById('webpack-dev-server-client-overlay')?.remove();
-  });
+  try {
+    await page.evaluate(() => {
+      document.getElementById('webpack-dev-server-client-overlay')?.remove();
+    });
+  } catch {
+    // Navigation may have been in progress; overlay will not appear
+  }
 }
 
 export function uniqueUser() {
@@ -31,7 +35,7 @@ export async function register(page, user) {
   await page.addInitScript(() => {
     localStorage.setItem('garden_tour_done', 'true');
   });
-  await page.goto('/');
+  await page.goto('/login');
   await dismissWebpackOverlay(page);
   await page.getByRole('tab', { name: 'Register' }).click();
   await page.getByPlaceholder('Username').fill(user.username);
@@ -50,7 +54,7 @@ export async function login(page, user) {
   await page.addInitScript(() => {
     localStorage.setItem('garden_tour_done', 'true');
   });
-  await page.goto('/');
+  await page.goto('/login');
   await dismissWebpackOverlay(page);
   // Default tab is Login
   await page.getByPlaceholder('Username').fill(user.username);
@@ -87,6 +91,32 @@ export async function assertLoggedInAs(page, username) {
     timeout: 10_000,
   });
   await page.keyboard.press('Escape');
+}
+
+/**
+ * Enter the game as a guest if the button is available, otherwise register a
+ * fresh user. This handles both local dev (guest enabled) and CI (guest hidden
+ * because REACT_APP_API_URL is baked into the static build).
+ */
+export async function guestOrRegister(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('garden_tour_done', 'true');
+  });
+  await page.goto('/login');
+  await dismissWebpackOverlay(page);
+  const guestBtn = page.getByRole('button', { name: /Play as Guest/i });
+  const hasGuest = await guestBtn.isVisible({ timeout: 3_000 }).catch(() => false);
+  if (hasGuest) {
+    await guestBtn.click();
+  } else {
+    const user = uniqueUser();
+    await page.getByRole('tab', { name: 'Register' }).click();
+    await page.getByPlaceholder('Username').fill(user.username);
+    await page.getByPlaceholder('Email').fill(user.email);
+    await page.getByPlaceholder('Password').fill(user.password);
+    await page.getByRole('button', { name: /Create account/i }).click();
+  }
+  await page.waitForSelector('.header', { timeout: 15_000 });
 }
 
 /**
