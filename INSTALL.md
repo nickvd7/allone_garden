@@ -212,6 +212,15 @@ sudo bash update.sh
 
 **`password authentication failed for user "garden"`:** het wachtwoord in `packages/backend/.env` komt niet overeen met PostgreSQL. Oplossing: `sudo bash scripts/sync-postgres-env.sh` (in de repo-root), daarna opnieuw `sudo bash update.sh`.
 
+**500 Internal Server Error na deploy:**
+
+```bash
+sudo bash scripts/diagnose-server.sh
+sudo journalctl -u allone-garden -n 50 --no-pager
+```
+
+Veelvoorkomend: backend niet gestart (check `.env`: `ADMIN_USERS`, `JWT_SECRET`), nginx kan `packages/frontend/build` niet lezen (`sudo chmod -R a+rX packages/frontend/build`), of PostgreSQL-wachtwoord (`sync-postgres-env.sh`).
+
 Als `git pull` op de Pi om een wachtwoord vraagt, kun je de remote omzetten naar SSH (`git remote set-url origin git@github.com:nickvd7/allone_garden.git`) of na een handmatige `git pull`: `UPDATE_SKIP_GIT_PULL=1 sudo bash update.sh`.
 
 ---

@@ -105,6 +105,9 @@ run_as "cd '${INSTALL_DIR}/packages/frontend' && npm install"
 
 info "Frontend build (service worker cache wordt vernieuwd)…"
 run_as "cd '${INSTALL_DIR}/packages/frontend' && CI=false GENERATE_SOURCEMAP=false NODE_OPTIONS=--max-old-space-size=4096 npm run build"
+if [[ $EUID -eq 0 ]]; then
+  chmod -R a+rX "${INSTALL_DIR}/packages/frontend/build" 2>/dev/null || true
+fi
 success "Frontend gebouwd"
 
 info "Database verbinding…"
