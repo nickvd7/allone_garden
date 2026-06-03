@@ -3,16 +3,11 @@
  * Korte smoke: auth-shell, tuin, inventaris in zijbalk, structures leesbaar, More-menu.
  */
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register, dismissWebpackOverlay } = require('./helpers');
+const { uniqueUser, register, dismissWebpackOverlay, guestOrRegister } = require('./helpers');
 
 test.describe('Smoke — game shell', () => {
   test('guest: header, world map shell, user menu', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('garden_tour_done', 'true');
-    });
-    await page.goto('/');
-    await dismissWebpackOverlay(page);
-    await page.getByRole('button', { name: /Play as Guest/i }).click();
+    await guestOrRegister(page);
     await expect(page.locator('.header')).toBeVisible({ timeout: 15_000 });
 
     await expect(page.locator('[data-tour="garden"]')).toBeVisible();

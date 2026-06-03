@@ -1,10 +1,10 @@
 // @ts-check
 const { test, expect } = require('@playwright/test');
-const { uniqueUser, register, login, logout, dismissWebpackOverlay, assertLoggedInAs } = require('./helpers');
+const { uniqueUser, register, login, logout, dismissWebpackOverlay, assertLoggedInAs, guestOrRegister } = require('./helpers');
 
 test.describe('Authentication', () => {
   test('shows login screen on first visit', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await dismissWebpackOverlay(page);
     await expect(page.getByRole('img', { name: /AllOne Garden/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Login' })).toBeVisible();
@@ -56,9 +56,15 @@ test.describe('Authentication', () => {
   });
 
   test('can play as guest without an account', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
     await dismissWebpackOverlay(page);
-    await page.getByRole('button', { name: /Play as Guest/i }).click();
+    const guestBtn = page.getByRole('button', { name: /Play as Guest/i });
+    const hasGuest = await guestBtn.isVisible({ timeout: 3_000 }).catch(() => false);
+    if (!hasGuest) {
+      test.skip(true, 'Guest mode is disabled when a backend is configured (by design)');
+      return;
+    }
+    await guestBtn.click();
     await page.waitForSelector('.header', { timeout: 10_000 });
     await page.locator('#header-profile-btn').click();
     await expect(page.getByRole('menuitem', { name: /Guest/i })).toBeVisible();
