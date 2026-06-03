@@ -7,7 +7,8 @@
  *  - Static assets (icons, fonts): Cache-first, long TTL.
  */
 
-const CACHE_NAME = 'allone-garden-v1';
+// Replaced at build time by scripts/stamp-sw-cache.js (git short SHA or BUILD_CACHE_REV).
+const CACHE_NAME = 'allone-garden-dev';
 
 const APP_SHELL = [
   '/',

@@ -35,8 +35,8 @@ cd packages/backend
 cp .env.example .env
 # Edit .env: set DATABASE_URL, REDIS_URL, JWT_SECRET
 
-# 3. Create database tables
-npm run db:setup
+# 3. Create database tables (+ incremental migrations)
+npm run db:migrate
 
 # 4. (Optional) Seed demo data
 npm run db:seed
@@ -155,6 +155,8 @@ What the script does:
 - Clones the repo to `/opt/allone-garden`
 - Enables PostgreSQL, waits until `pg_isready` succeeds, then ensures the DB user exists with a random password (`CREATE` or `ALTER USER` on re-runs)
 - Writes **`packages/backend/.env`**: first run creates it (including `JWT_SECRET`); every run sets or updates **`DATABASE_URL`** so it matches PostgreSQL
+- Builds the frontend (service worker cache id = git commit — clients pick up new UI after refresh)
+- Runs all PostgreSQL migrations (`npm run db:migrate`, incl. DM tables)
 - Creates a `systemd` service (`allone-garden`) that starts on boot
 - Configures Nginx as a reverse proxy
 - Optionally requests a Let's Encrypt TLS certificate
@@ -170,7 +172,12 @@ sudo journalctl -u allone-garden -f
 
 # Restart
 sudo systemctl restart allone-garden
+
+# Update na een nieuwe release (zonder apt — sneller dan install.sh opnieuw)
+sudo bash update.sh
 ```
+
+`update.sh` doet: `git pull` → dependencies → frontend build (nieuwe service-worker cache) → `npm run db:migrate` → herstart `allone-garden` + nginx.
 
 ---
 
@@ -189,6 +196,8 @@ Services started:
 | Backend  | 5000 |
 | Postgres | 5432 |
 | Redis    | 6379 |
+
+The backend container runs `npm run db:migrate` on start (via `docker-entrypoint.sh`) before serving traffic.
 
 ---
 

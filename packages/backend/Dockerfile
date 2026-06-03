@@ -19,9 +19,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 
 # plugins directory is mounted at runtime via docker-compose volume
-RUN mkdir -p /app/plugins && chown -R garden:garden /app
+RUN mkdir -p /app/plugins && chown -R garden:garden /app \
+  && chmod +x /app/scripts/docker-entrypoint.sh
 
 USER garden
 
 EXPOSE 5000
+ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 CMD ["node", "src/index.js"]

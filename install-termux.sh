@@ -122,8 +122,8 @@ else
 fi
 
 # ── DB schema ─────────────────────────────────────────────────────────────────
-info "Running database setup…"
-node "${SCRIPT_DIR}/packages/backend/scripts/setup-db.js"
+info "Running database migrations…"
+(cd "${SCRIPT_DIR}/packages/backend" && npm run db:migrate)
 success "Database schema ready"
 
 # ── Start script ──────────────────────────────────────────────────────────────
@@ -144,9 +144,10 @@ pg_ctl -D "$PREFIX/var/lib/postgresql" status &>/dev/null || \
 redis-cli ping &>/dev/null || \
   redis-server --daemonize yes --logfile "$PREFIX/var/log/redis.log"
 
-# Start backend
+# Start backend (migrations are idempotent — safe on every start)
 cd "${SCRIPT_DIR}/packages/backend"
 source .env 2>/dev/null || true
+node scripts/migrate-all.js
 node src/index.js
 STARTEOF
 chmod +x "${SCRIPT_DIR}/start-android.sh"

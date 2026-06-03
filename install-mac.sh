@@ -134,8 +134,8 @@ else
 fi
 
 # ── DB schema ─────────────────────────────────────────────────────────────────
-info "Running database setup…"
-node "${SCRIPT_DIR}/packages/backend/scripts/setup-db.js"
+info "Running database migrations…"
+(cd "${SCRIPT_DIR}/packages/backend" && npm run db:migrate)
 success "Database schema ready"
 
 # ── Start with pm2 ────────────────────────────────────────────────────────────

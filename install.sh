@@ -376,8 +376,8 @@ su -c "cd '${INSTALL_DIR}/packages/frontend' && CI=false GENERATE_SOURCEMAP=fals
 success "Frontend built"
 
 # ── Run DB migrations ─────────────────────────────────────────────────────────
-info "Running database setup…"
-su -c "cd '${INSTALL_DIR}/packages/backend' && node scripts/setup-db.js" "$SERVICE_USER"
+info "Running database migrations (schema + incremental)…"
+su -c "cd '${INSTALL_DIR}/packages/backend' && npm run db:migrate" "$SERVICE_USER"
 success "Database schema ready"
 
 # ── Systemd service ───────────────────────────────────────────────────────────
@@ -695,6 +695,7 @@ echo ""
 echo -e "  Service:      ${BOLD}sudo systemctl status allone-garden${RESET}"
 echo -e "  Logs:         ${BOLD}sudo journalctl -u allone-garden -f${RESET}"
 echo -e "  Config:       ${BOLD}${ENV_FILE}${RESET}"
+echo -e "  Later update: ${BOLD}sudo bash ${INSTALL_DIR}/update.sh${RESET}"
 echo ""
 
 # ── DNS / IP info ──────────────────────────────────────────────────────────────
