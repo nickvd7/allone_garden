@@ -3,64 +3,125 @@
 # AllOne Garden — snelle productie-update (zonder apt/system packages)
 #
 # Doet: git pull → npm install → frontend build (incl. SW cache-bust) →
-#       alle DB-migraties → herstart allone-garden + nginx.
+#       alle DB-migraties → herstart allone-garden + nginx (indien aanwezig).
 #
-# Gebruik op Raspberry Pi / Linux (na eerste install.sh):
-#   sudo bash update.sh
+# Gebruik:
+#   cd /pad/naar/allone_garden && sudo bash update.sh
+#   GARDEN_DIR=/opt/allone-garden sudo bash update.sh
 #
-# Zelfde paden als install.sh: GARDEN_DIR, GARDEN_USER.
+# Detecteert automatisch de map waarin dit script staat (bijv. ~/coding/allone_garden).
+# Bij sudo wordt git/npm gedraaid als de oorspronkelijke gebruiker (SUDO_USER), niet als
+# een vaste "garden"-user — tenzij je GARDEN_USER=zet.
 # =============================================================================
 set -euo pipefail
 
-RED='\033[0;31m'; GREEN='\033[0;32m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
 info()    { echo -e "${CYAN}[INFO]${RESET} $*"; }
 success() { echo -e "${GREEN}[OK]${RESET}   $*"; }
+warn()    { echo -e "${YELLOW}[WARN]${RESET} $*"; }
 die()     { echo -e "${RED}[ERR]${RESET}  $*" >&2; exit 1; }
 
-[[ $EUID -ne 0 ]] && die "Run met sudo: sudo bash update.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GIT_PULL="${SCRIPT_DIR}/scripts/git-pull.sh"
 
-INSTALL_DIR="${GARDEN_DIR:-/opt/allone-garden}"
-SERVICE_USER="${GARDEN_USER:-garden}"
-REPO_URL="${GARDEN_REPO:-https://github.com/nickvd7/allone_garden.git}"
+resolve_install_dir() {
+  if [[ -n "${GARDEN_DIR:-}" ]]; then
+    echo "$GARDEN_DIR"
+    return
+  fi
+  if [[ -d "${SCRIPT_DIR}/.git" ]]; then
+    echo "$SCRIPT_DIR"
+    return
+  fi
+  if [[ -d /opt/allone-garden/.git ]]; then
+    echo /opt/allone-garden
+    return
+  fi
+  echo "$SCRIPT_DIR"
+}
 
-[[ -d "${INSTALL_DIR}/.git" ]] || die "Geen installatie in ${INSTALL_DIR}. Eerst: sudo bash install.sh"
+INSTALL_DIR="$(resolve_install_dir)"
+[[ -d "${INSTALL_DIR}/.git" ]] || die "Geen git-repo in ${INSTALL_DIR}. Zet GARDEN_DIR of run vanuit de clone."
+
+# Wie voert git/npm uit?
+if [[ -n "${GARDEN_USER:-}" ]]; then
+  SERVICE_USER="$GARDEN_USER"
+elif [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != root ]]; then
+  SERVICE_USER="$SUDO_USER"
+elif [[ $EUID -ne 0 ]]; then
+  SERVICE_USER="$(whoami)"
+else
+  SERVICE_USER="$(stat -c '%U' "${INSTALL_DIR}" 2>/dev/null || echo garden)"
+fi
+
+[[ -x "$GIT_PULL" ]] || die "Ontbreekt: ${GIT_PULL} (eerst git pull vanaf GitHub)"
+
+run_as() {
+  local cmd="$1"
+  if [[ "$(id -un)" == "$SERVICE_USER" ]]; then
+    bash -lc "$cmd"
+  else
+    [[ $EUID -eq 0 ]] || die "Run met sudo of als ${SERVICE_USER}"
+    su -c "$cmd" "$SERVICE_USER"
+  fi
+}
+
+# Root alleen nodig voor systemctl/nginx; git/npm kan als gewone user
+NEED_ROOT=false
+if systemctl list-unit-files 'allone-garden.service' &>/dev/null 2>&1; then
+  NEED_ROOT=true
+fi
+if systemctl is-active --quiet nginx 2>/dev/null; then
+  NEED_ROOT=true
+fi
+if [[ $NEED_ROOT == true && $EUID -ne 0 ]]; then
+  die "Herstart van systemd/nginx vereist sudo: sudo bash update.sh"
+fi
 
 echo -e "${BOLD}🌱 AllOne Garden — update${RESET}"
+info "Installatie: ${INSTALL_DIR}"
+info "Gebruiker:    ${SERVICE_USER}"
 
 info "Repository bijwerken…"
-chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || true
-if ! su -c "env GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false git \
-    -C '${INSTALL_DIR}' \
-    -c safe.directory='${INSTALL_DIR}' \
-    -c credential.helper='' \
-    -c core.askPass='' \
-    pull --ff-only" "$SERVICE_USER"; then
-  die "git pull mislukt in ${INSTALL_DIR}"
+if ! bash "$GIT_PULL" "$INSTALL_DIR" "$SERVICE_USER"; then
+  die "git pull mislukt in ${INSTALL_DIR}
+Tip: test handmatig: cd ${INSTALL_DIR} && git pull
+Bij een private repo: SSH-remote of een deploy key / PAT configureren."
 fi
-success "Code bijgewerkt ($(su -c "git -C '${INSTALL_DIR}' rev-parse --short HEAD" "$SERVICE_USER"))"
+success "Code bijgewerkt ($(run_as "git -C '${INSTALL_DIR}' rev-parse --short HEAD"))"
 
 info "Backend dependencies…"
-su -c "cd '${INSTALL_DIR}/packages/backend' && npm install --production" "$SERVICE_USER"
+run_as "cd '${INSTALL_DIR}/packages/backend' && npm install --production"
 
 info "Frontend dependencies…"
-su -c "cd '${INSTALL_DIR}/packages/frontend' && npm install" "$SERVICE_USER"
+run_as "cd '${INSTALL_DIR}/packages/frontend' && npm install"
 
 info "Frontend build (service worker cache wordt vernieuwd)…"
-su -c "cd '${INSTALL_DIR}/packages/frontend' && CI=false GENERATE_SOURCEMAP=false NODE_OPTIONS=--max-old-space-size=4096 npm run build" "$SERVICE_USER"
+run_as "cd '${INSTALL_DIR}/packages/frontend' && CI=false GENERATE_SOURCEMAP=false NODE_OPTIONS=--max-old-space-size=4096 npm run build"
 success "Frontend gebouwd"
 
 info "Database migraties…"
-su -c "cd '${INSTALL_DIR}/packages/backend' && npm run db:migrate" "$SERVICE_USER"
+run_as "cd '${INSTALL_DIR}/packages/backend' && npm run db:migrate"
 success "Database up-to-date"
 
-info "Services herstarten…"
-systemctl restart allone-garden
-if systemctl is-active --quiet nginx 2>/dev/null; then
-  nginx -t && systemctl restart nginx
+if [[ $EUID -eq 0 ]]; then
+  if systemctl list-unit-files 'allone-garden.service' &>/dev/null 2>&1; then
+    info "Herstart allone-garden…"
+    systemctl restart allone-garden
+    success "allone-garden herstart"
+  else
+    warn "Geen systemd unit 'allone-garden' — start de backend handmatig (pm2/node)."
+  fi
+  if systemctl is-active --quiet nginx 2>/dev/null; then
+    nginx -t && systemctl restart nginx
+    success "nginx herstart"
+  fi
+else
+  warn "Geen sudo: systemd/nginx niet herstart. Doe dat zelf indien nodig."
 fi
-success "allone-garden (en nginx) herstart"
 
 echo ""
 echo -e "${GREEN}${BOLD}✅  Update voltooid${RESET}"
-echo -e "  Commit: ${BOLD}$(su -c "git -C '${INSTALL_DIR}' log -1 --oneline" "$SERVICE_USER")${RESET}"
+echo -e "  Pad:    ${INSTALL_DIR}"
+echo -e "  Commit: ${BOLD}$(run_as "git -C '${INSTALL_DIR}' log -1 --oneline")${RESET}"
 echo -e "  Tip: harde refresh in de browser of PWA-cache legen als de UI nog oud lijkt."

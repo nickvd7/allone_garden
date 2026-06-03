@@ -139,6 +139,8 @@ if [[ $EUID -ne 0 ]]; then
   error "Run with sudo: sudo bash install.sh"
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # ── This machine's own IP (detected locally — see detect_primary_ip) ───────────
 PI_IP="$(detect_primary_ip)"
 [[ -z "$PI_IP" ]] && PI_IP="127.0.0.1"
@@ -221,12 +223,7 @@ if [[ -d "$INSTALL_DIR/.git" ]]; then
   # Also own the directory as the service user first so git agrees on ownership.
   chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || true
 
-  if su -c "env GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false git \
-      -C '${INSTALL_DIR}' \
-      -c safe.directory='${INSTALL_DIR}' \
-      -c credential.helper='' \
-      -c core.askPass='' \
-      pull --ff-only" "$SERVICE_USER"; then
+  if bash "${SCRIPT_DIR}/scripts/git-pull.sh" "${INSTALL_DIR}" "${SERVICE_USER}"; then
     success "Repository updated"
   else
     warn "Could not update the repository — continuing with existing code in ${INSTALL_DIR}."

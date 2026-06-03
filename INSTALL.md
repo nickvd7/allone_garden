@@ -174,10 +174,11 @@ sudo journalctl -u allone-garden -f
 sudo systemctl restart allone-garden
 
 # Update na een nieuwe release (zonder apt — sneller dan install.sh opnieuw)
+cd /opt/allone-garden   # of jouw clone, bijv. ~/coding/allone_garden
 sudo bash update.sh
 ```
 
-`update.sh` doet: `git pull` → dependencies → frontend build (nieuwe service-worker cache) → `npm run db:migrate` → herstart `allone-garden` + nginx.
+`update.sh` detecteert de map waarin het script staat (niet alleen `/opt/allone-garden`). Bij `sudo` draait git/npm als jouw gebruiker (`SUDO_USER`). Het script doet: `git pull` → dependencies → frontend build (nieuwe service-worker cache) → `npm run db:migrate` → herstart `allone-garden` + nginx (als die units bestaan).
 
 ---
 
