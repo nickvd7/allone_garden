@@ -24,12 +24,9 @@ FRESH="${ROOT}/install-fresh.sh"
 # 1) Werk-copy → /opt (geen git clone op /opt)
 bash "$DEPLOY"
 
-# 2) Volledige install op /opt (geen tweede clone)
+# 2) Volledige install op /opt (direct install.sh — herkent rsync-boom zonder .git)
 export GARDEN_DIR=/opt/allone-garden
 export GARDEN_USER=garden
-export FRESH_CLONE=0
 export FRESH_INSTALL=1
-export RUN_GIT_PULL=0
-export GARDEN_DEPLOY=
 
-exec bash "$FRESH"
+exec bash /opt/allone-garden/install.sh

@@ -213,26 +213,38 @@ if ! id "$SERVICE_USER" &>/dev/null; then
   useradd --system --create-home --shell /bin/bash "$SERVICE_USER"
 fi
 
-# ── Clone / update repo ───────────────────────────────────────────────────────
-# GIT_TERMINAL_PROMPT=0 makes git fail fast instead of hanging on a credential
-# prompt (e.g. if the repo is private or temporarily returns 401). We run as
-# SERVICE_USER because on re-runs the directory is owned by that user, and
-# git 2.35+ refuses to operate as root on a dir owned by someone else.
-if [[ -d "$INSTALL_DIR/.git" ]]; then
-  info "Updating existing installation in ${INSTALL_DIR}…"
-  # Pass safe.directory directly via -c so no writable gitconfig is needed.
-  # Also own the directory as the service user first so git agrees on ownership.
-  chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || true
+# ── Source tree (git / deploy / fetch) ────────────────────────────────────────
+# Pi-productie: code komt via rsync uit ~/coding (reinstall-pi.sh) — geen .git op /opt.
+# Geen git clone naar een bestaande map (voorkomt GitHub-login + "already exists").
+_has_install_tree() {
+  [[ -f "${INSTALL_DIR}/install.sh" && -f "${INSTALL_DIR}/packages/backend/src/index.js" ]]
+}
 
-  if bash "${SCRIPT_DIR}/scripts/git-pull.sh" "${INSTALL_DIR}" "${SERVICE_USER}"; then
+if [[ -d "$INSTALL_DIR/.git" ]]; then
+  info "Updating existing git installation in ${INSTALL_DIR}…"
+  chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || true
+  if [[ -x "${SCRIPT_DIR}/scripts/git-pull.sh" ]] && bash "${SCRIPT_DIR}/scripts/git-pull.sh" "${INSTALL_DIR}" "${SERVICE_USER}"; then
     success "Repository updated"
   else
     warn "Could not update the repository — continuing with existing code in ${INSTALL_DIR}."
   fi
+elif _has_install_tree; then
+  info "Source tree already in ${INSTALL_DIR} (deploy/rsync) — skipping git clone"
+  chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || true
+elif [[ -d "$INSTALL_DIR" ]] && [[ -n "$(ls -A "$INSTALL_DIR" 2>/dev/null)" ]]; then
+  error "${INSTALL_DIR} exists but is not a complete install. Use: sudo bash reinstall-pi.sh from ~/coding/allone_garden"
 else
-  info "Cloning AllOne Garden into ${INSTALL_DIR}…"
-  GIT_TERMINAL_PROMPT=0 git clone --depth=1 "$REPO_URL" "$INSTALL_DIR" \
-    || error "Could not clone ${REPO_URL}. If the repository is private, clone it manually into ${INSTALL_DIR} first, then re-run."
+  info "Fetching AllOne Garden into ${INSTALL_DIR}…"
+  mkdir -p "$(dirname "$INSTALL_DIR")"
+  if [[ -x "${SCRIPT_DIR}/scripts/fetch-github-tree.sh" ]]; then
+    bash "${SCRIPT_DIR}/scripts/fetch-github-tree.sh" "$INSTALL_DIR"
+  else
+    env -u GIT_ASKPASS -u SSH_ASKPASS GIT_TERMINAL_PROMPT=0 \
+      git -c credential.helper= -c core.askPass= \
+      clone --depth=1 "$REPO_URL" "$INSTALL_DIR" \
+      || error "Could not fetch source. Run reinstall-pi.sh from your ~/coding clone instead."
+  fi
+  chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR"
 fi
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR"
 # Prevent other local users from reading or modifying source/config files
