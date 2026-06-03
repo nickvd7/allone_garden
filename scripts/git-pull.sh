@@ -80,6 +80,14 @@ BRANCH="$(run_git rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
 LOCAL="$(run_git rev-parse HEAD)"
 echo "[git-pull] local ${LOCAL:0:7} branch ${BRANCH} slug ${SLUG}"
 
+# Snelste pad: directe pull van de (anonieme) origin. Werkt voor publieke repos
+# zonder GitHub-login en zonder de API nodig te hebben.
+if run_git pull --ff-only origin "$BRANCH" 2>/dev/null; then
+  echo "[git-pull] Bijgewerkt via origin → $(run_git rev-parse --short HEAD)"
+  exit 0
+fi
+echo "[git-pull] Directe pull lukte niet — val terug op API/ls-remote…"
+
 REMOTE_SHA="$(remote_sha_via_api "$SLUG" "$BRANCH" || true)"
 if [[ -z "$REMOTE_SHA" && "$BRANCH" != main ]]; then
   REMOTE_SHA="$(remote_sha_via_api "$SLUG" main || true)"

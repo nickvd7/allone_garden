@@ -45,7 +45,11 @@ resolve_install_dir() {
 }
 
 INSTALL_DIR="$(resolve_install_dir)"
-[[ -d "${INSTALL_DIR}/.git" ]] || die "Geen git-repo in ${INSTALL_DIR}. Zet GARDEN_DIR of run vanuit de clone."
+[[ -f "${INSTALL_DIR}/install.sh" ]] || die "Geen AllOne Garden installatie in ${INSTALL_DIR}. Zet GARDEN_DIR of run vanuit de clone."
+
+# /opt is een rsync-deploy zonder .git → git-stap overslaan (geen pull nodig)
+HAS_GIT=false
+[[ -d "${INSTALL_DIR}/.git" ]] && HAS_GIT=true
 
 # Wie voert git/npm uit?
 if [[ -n "${GARDEN_USER:-}" ]]; then
@@ -57,8 +61,6 @@ elif [[ $EUID -ne 0 ]]; then
 else
   SERVICE_USER="$(stat -c '%U' "${INSTALL_DIR}" 2>/dev/null || echo garden)"
 fi
-
-[[ -x "$GIT_PULL" ]] || die "Ontbreekt: ${GIT_PULL} (eerst git pull vanaf GitHub)"
 
 run_as() {
   local cmd="$1"
@@ -90,14 +92,13 @@ info "Gebruiker:    ${SERVICE_USER}"
 
 if [[ "${UPDATE_SKIP_GIT_PULL:-}" == 1 ]]; then
   warn "Git overgeslagen (UPDATE_SKIP_GIT_PULL=1)"
-else
+elif [[ "$HAS_GIT" != true ]]; then
+  info "Geen .git in ${INSTALL_DIR} (rsync-deploy) — alleen build/migraties/herstart."
+  info "Code bijwerken doe je in je clone: cd ~/coding/allone_garden && git pull && sudo bash scripts/deploy-to-production.sh"
+elif [[ -x "$GIT_PULL" ]]; then
   info "Repository bijwerken…"
-  if ! bash "$GIT_PULL" "$INSTALL_DIR" "$SERVICE_USER"; then
-    warn "Git-update mislukt — build, migraties en herstart gaan door met de code die al op schijf staat."
-    warn "Fix remote: git remote set-url origin https://github.com/nickvd7/allone_garden.git"
-    warn "Bootstrap scripts zonder git: bash scripts/bootstrap-update-from-github.sh"
-    warn "Of overslaan: UPDATE_SKIP_GIT_PULL=1 sudo bash update.sh"
-  fi
+  bash "$GIT_PULL" "$INSTALL_DIR" "$SERVICE_USER" \
+    || warn "Git-update mislukt — build/migraties gaan door met code op schijf."
 fi
 success "Code bijgewerkt ($(run_as "git -C '${INSTALL_DIR}' rev-parse --short HEAD"))"
 
