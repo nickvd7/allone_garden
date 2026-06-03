@@ -52,7 +52,9 @@ if [[ -f /etc/systemd/system/allone-garden.service ]]; then
   systemctl is-active allone-garden && echo "[fix] allone-garden actief" || echo "[fix] allone-garden nog niet actief — zie journalctl"
 fi
 
-if systemctl is-active --quiet nginx 2>/dev/null; then
+if [[ -x "${INSTALL_DIR}/scripts/fix-nginx-vhost.sh" ]]; then
+  bash "${INSTALL_DIR}/scripts/fix-nginx-vhost.sh" "$INSTALL_DIR"
+elif systemctl is-active --quiet nginx 2>/dev/null; then
   nginx -t && systemctl restart nginx
 fi
 

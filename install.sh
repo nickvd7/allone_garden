@@ -438,17 +438,18 @@ success "allone-garden.service started"
 info "Configuring Nginx…"
 LOCAL_IP="$PI_IP"
 
-# Use all domain variants in server_name — certbot needs this to find the right vhost
+# Domains + catch-all (_ default_server) + LAN IP so http://<pi-ip> hits this vhost
 if [[ -n "$DOMAIN" ]]; then
-  _NGINX_SERVER_NAME=$(IFS=' '; echo "${CERT_DOMAINS[*]}")
+  _NGINX_SERVER_NAME="$(IFS=' '; echo "${CERT_DOMAINS[*]}") _ ${PI_IP}"
 else
-  _NGINX_SERVER_NAME="_"
+  _NGINX_SERVER_NAME="_ ${PI_IP}"
 fi
 
 cat > /etc/nginx/sites-available/allone-garden <<EOF
 # AllOne Garden — Nginx reverse proxy
 server {
-    listen 80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     server_name ${_NGINX_SERVER_NAME};
 
     # Serve built React frontend
@@ -462,6 +463,9 @@ server {
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
     }
 

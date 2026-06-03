@@ -4,11 +4,16 @@
 set -euo pipefail
 
 INSTALL_DIR="${1:-}"
+if [[ -z "$INSTALL_DIR" && -f /etc/systemd/system/allone-garden.service ]]; then
+  _wd="$(grep -E '^WorkingDirectory=' /etc/systemd/system/allone-garden.service 2>/dev/null | cut -d= -f2- || true)"
+  [[ -n "$_wd" ]] && INSTALL_DIR="$(cd "${_wd}/../.." && pwd)"
+fi
 if [[ -z "$INSTALL_DIR" ]]; then
-  for d in /opt/allone-garden "$HOME/coding/allone_garden" "$(cd "$(dirname "$0")/.." && pwd)"; do
+  for d in /opt/allone-garden /home/nickvd/coding/allone_garden "$HOME/coding/allone_garden" "$(cd "$(dirname "$0")/.." && pwd)"; do
     [[ -f "$d/packages/backend/.env" ]] && INSTALL_DIR="$d" && break
   done
 fi
+NGINX_ROOT="$(grep -E '^\s*root ' /etc/nginx/sites-enabled/allone-garden 2>/dev/null | awk '{print $2}' | tr -d ';' || true)"
 [[ -n "$INSTALL_DIR" && -d "$INSTALL_DIR" ]] || { echo "Geen install-dir"; exit 1; }
 
 ENV_FILE="${INSTALL_DIR}/packages/backend/.env"
@@ -36,6 +41,10 @@ grep -E '^\s*(root|proxy_pass|server_name)' /etc/nginx/sites-enabled/* 2>/dev/nu
 echo ""
 
 echo "--- frontend build ---"
+if [[ -n "$NGINX_ROOT" && "$NGINX_ROOT" != "${BUILD_DIR}/index.html" && "${NGINX_ROOT%/}" != "${BUILD_DIR}" ]]; then
+  echo "WAARSCHUWING: nginx root (${NGINX_ROOT}) ≠ install build (${BUILD_DIR})"
+  echo "             Fix: sudo bash scripts/fix-nginx-vhost.sh ${INSTALL_DIR}"
+fi
 if [[ -f "${BUILD_DIR}/index.html" ]]; then
   ls -la "${BUILD_DIR}/index.html"
   if id www-data &>/dev/null; then
@@ -62,7 +71,14 @@ fi
 echo ""
 
 echo "--- API health (via nginx /api/health) ---"
-curl -fsS "http://127.0.0.1/api/health" 2>/dev/null && echo "" || echo "FOUT: nginx → backend proxy faalt (502/500)"
+if curl -fsS "http://127.0.0.1/api/health" 2>/dev/null; then
+  echo "OK: nginx default_server (IP/localhost)"
+elif curl -fsS -H "Host: allone.garden" "http://127.0.0.1/api/health" 2>/dev/null; then
+  echo "OK: nginx met Host: allone.garden"
+  echo "TIP: open via https://allone.garden of run: sudo bash scripts/fix-nginx-vhost.sh"
+else
+  echo "FOUT: nginx → backend proxy faalt — run: sudo bash scripts/fix-nginx-vhost.sh"
+fi
 echo ""
 
 echo "--- DATABASE_URL test ---"
