@@ -141,33 +141,37 @@ bash start-android.sh
 
 Tested on Pi 3B+, Pi 4, Pi 5 running Raspberry Pi OS Bookworm (64-bit).
 
-### Schone installatie (aanbevolen bij problemen)
+### Volledige herinstallatie Pi → `/opt/allone-garden` (aanbevolen)
 
-**Met git pull (aanbevolen):**
-
-```bash
-cd ~/coding/allone_garden   # jouw clone
-git pull
-sudo bash install-fresh.sh
-```
-
-Of in één stap: `sudo bash pull-and-install.sh` (doet `git pull` + install).
-
-Code wordt in **dezelfde map** geïnstalleerd (nieuwe `.env`, Postgres-sync, build, migraties, nginx, systemd). Voor productie onder `/opt`:
+Alles in één keer: backup oude `/opt`, verse code, Postgres, `.env`, build, migraties, nginx, systemd.
 
 ```bash
 cd ~/coding/allone_garden
 git pull
-sudo GARDEN_DEPLOY=/opt/allone-garden bash install-fresh.sh
+sudo bash reinstall-pi.sh
 ```
 
-**Zonder git (curl):** oude map `/opt` wordt geback-upt en opnieuw gecloned:
+Duurt ~15–30 min. Oude installatie: `/opt/allone-garden.bak.<datum>`.
+
+**Let op het pad:** `/opt/allone-garden` (met **streepje**), niet `allone_garden`.
+
+Na afloop testen:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nickvd7/allone_garden/main/install-fresh.sh | sudo bash
+curl -sS http://127.0.0.1/api/health
+curl -sS http://$(hostname -I | awk '{print $1}')/api/health
+sudo systemctl status allone-garden
 ```
 
-Daarna: `sudo systemctl status allone-garden`, updates via `sudo bash update.sh` (in de install-map).
+Updates daarna: `sudo bash /opt/allone-garden/update.sh`
+
+### Andere opties
+
+**Alleen updaten (geen herinstall):** `git pull && sudo bash update.sh` in je clone.
+
+**Install in home-map:** `sudo bash install-fresh.sh` (zonder `reinstall-pi.sh`).
+
+**Zonder git:** `curl -fsSL https://raw.githubusercontent.com/nickvd7/allone_garden/main/reinstall-pi.sh | sudo bash`
 
 ### Standaard install / herinstallatie in bestaande map
 

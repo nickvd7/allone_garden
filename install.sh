@@ -679,6 +679,17 @@ if grep -q "P2P_ENABLED=true" "$ENV_FILE" 2>/dev/null; then
 fi
 success "Firewall configured"
 
+# ── Post-install: nginx vhost + health check ─────────────────────────────────
+if [[ -x "${INSTALL_DIR}/scripts/fix-nginx-vhost.sh" ]]; then
+  info "Nginx vhost afstemmen op ${INSTALL_DIR}…"
+  bash "${INSTALL_DIR}/scripts/fix-nginx-vhost.sh" "$INSTALL_DIR" || warn "fix-nginx-vhost mislukt — run handmatig"
+fi
+if curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/health" >/dev/null 2>&1; then
+  success "Backend health OK (poort ${BACKEND_PORT})"
+else
+  warn "Backend health check mislukt — zie: sudo journalctl -u allone-garden -n 40"
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}╔═══════════════════════════════════════════════════╗${RESET}"
@@ -688,7 +699,9 @@ echo ""
 
 if [[ -n "$DOMAIN" ]]; then
   echo -e "  Game URL:     ${BOLD}https://${DOMAIN}/${RESET}"
+  echo -e "  LAN URL:      ${BOLD}http://${PI_IP}/${RESET}"
   echo -e "  API health:   ${BOLD}https://${DOMAIN}/api/health${RESET}"
+  echo -e "  API (LAN):    ${BOLD}http://${PI_IP}/api/health${RESET}"
 else
   echo -e "  Game URL:     ${BOLD}http://${LOCAL_IP}/${RESET}"
   echo -e "  API health:   ${BOLD}http://${LOCAL_IP}/api/health${RESET}"
