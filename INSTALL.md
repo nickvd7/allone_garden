@@ -141,6 +141,20 @@ bash start-android.sh
 
 Tested on Pi 3B+, Pi 4, Pi 5 running Raspberry Pi OS Bookworm (64-bit).
 
+### Schone installatie (aanbevolen bij problemen)
+
+Verwijdert niets uit je home-map; installeert vers naar **`/opt/allone-garden`** (oude map wordt hernoemd naar `.bak.<datum>`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nickvd7/allone_garden/main/install-fresh.sh | sudo bash
+```
+
+Of vanuit een clone: `sudo bash install-fresh.sh`
+
+Daarna: game-URL via nginx (zie install-summary), `sudo systemctl status allone-garden`, updates via `sudo bash /opt/allone-garden/update.sh`.
+
+### Standaard install / herinstallatie in bestaande map
+
 ```bash
 # Basic install (HTTP only)
 sudo bash install.sh

@@ -19,6 +19,7 @@
 #   GARDEN_EMAIL=you@example.com       — email for Let's Encrypt notifications
 #   GARDEN_DIR=/opt/allone-garden
 #   GARDEN_USER=garden
+#   FRESH_INSTALL=1                  — nieuwe .env (backup van oude); gebruik install-fresh.sh
 # =============================================================================
 set -euo pipefail
 
@@ -297,6 +298,13 @@ success "Redis running on port ${REDIS_PORT}"
 ENV_FILE="${INSTALL_DIR}/packages/backend/.env"
 DATABASE_URL="postgresql://${POSTGRES_USER}:${DB_PASS}@127.0.0.1:${PGPORT}/${POSTGRES_DB}"
 
+if [[ "${FRESH_INSTALL:-}" == 1 && -f "$ENV_FILE" ]]; then
+  _ENV_BAK="${ENV_FILE}.bak.$(date +%Y%m%d%H%M%S)"
+  info "Fresh install: oude .env → ${_ENV_BAK}"
+  cp "$ENV_FILE" "$_ENV_BAK"
+  rm -f "$ENV_FILE"
+fi
+
 if [[ ! -f "$ENV_FILE" ]]; then
   info "Creating .env file…"
 
@@ -374,6 +382,12 @@ success "Frontend built"
 
 # ── Run DB migrations ─────────────────────────────────────────────────────────
 info "Running database migrations (schema + incremental)…"
+if ! su -c "cd '${INSTALL_DIR}/packages/backend' && node scripts/check-db-connection.js" "$SERVICE_USER" 2>/dev/null; then
+  if [[ -x "${INSTALL_DIR}/scripts/sync-postgres-env.sh" ]]; then
+    warn "DATABASE_URL test mislukt — sync PostgreSQL-wachtwoord…"
+    bash "${INSTALL_DIR}/scripts/sync-postgres-env.sh" "$INSTALL_DIR" "$SERVICE_USER"
+  fi
+fi
 su -c "cd '${INSTALL_DIR}/packages/backend' && npm run db:migrate" "$SERVICE_USER"
 success "Database schema ready"
 
