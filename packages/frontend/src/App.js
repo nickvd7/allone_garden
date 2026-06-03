@@ -46,7 +46,6 @@ import SetupWizard from './components/SetupWizard';
 import QRPanel from './components/QRPanel';
 import PlantRecognitionModal from './components/PlantRecognitionModal';
 import GardenConflictModal from './components/GardenConflictModal';
-import GroupCallManager from './components/GroupCallManager';
 import { GameContentProvider } from './context/GameContentContext';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || '';
