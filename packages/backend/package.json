@@ -6,6 +6,7 @@
   "scripts": {
     "prestart": "node scripts/security-check.js",
     "start": "node src/index.js",
+    "start:prod": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src --ext .js",

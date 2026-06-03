@@ -405,32 +405,7 @@ success "Database schema ready"
 # ── Systemd service ───────────────────────────────────────────────────────────
 info "Creating systemd service…"
 
-cat > /etc/systemd/system/allone-garden.service <<EOF
-[Unit]
-Description=AllOne Garden Server
-After=network.target postgresql.service redis-server.service
-Wants=postgresql.service redis-server.service
-
-[Service]
-Type=simple
-User=${SERVICE_USER}
-WorkingDirectory=${INSTALL_DIR}/packages/backend
-# npm start runs security-check (prestart) then the server
-ExecStart=$(command -v npm) start
-Restart=always
-RestartSec=5
-Environment=NODE_ENV=production
-EnvironmentFile=${ENV_FILE}
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=allone-garden
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable allone-garden
+bash "${INSTALL_DIR}/scripts/write-systemd-unit.sh" "${INSTALL_DIR}" "${SERVICE_USER}"
 systemctl restart allone-garden
 success "allone-garden.service started"
 
