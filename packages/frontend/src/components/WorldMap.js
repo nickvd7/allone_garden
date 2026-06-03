@@ -347,6 +347,9 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   const [facing,         setFacing]         = useState('down');  // eslint-disable-line
   const [step,           setStep]           = useState(0);
 
+  // Overview map
+  const [showOverviewMap, setShowOverviewMap] = useState(false);
+
   // Garden visiting
   const [nearGarden,   setNearGarden]   = useState(null);
   const [nearMarketplace, setNearMarketplace] = useState(false);
@@ -1214,6 +1217,70 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
           {/* ── Walking map ──────────────────────────────────────────── */}
           <div className="walk-map-column">
             <div className="walk-map-main" ref={mapMainRef}>
+            {/* Overview map button */}
+            <button
+              className="walk-overview-btn"
+              onClick={() => setShowOverviewMap((v) => !v)}
+              title="Tuinoverzicht"
+            >
+              {'\u{1F5FA}️'}
+            </button>
+            {showOverviewMap && (
+              <div className="walk-overview-panel">
+                <div className="walk-overview-header">
+                  <strong>{'\u{1F5FA}️'} Tuinoverzicht</strong>
+                  <button onClick={() => setShowOverviewMap(false)}>✕</button>
+                </div>
+                <div
+                  className="walk-overview-map"
+                  style={{ position: 'relative', width: MAP_W * 8, height: MAP_H * 8, background: '#5fa33a', border: '1px solid #3a7a22' }}
+                >
+                  {displayGardenOwners.map((owner) => {
+                    if (!Number.isInteger(owner.x) || !Number.isInteger(owner.y)) return null;
+                    return (
+                      <div
+                        key={String(owner.id)}
+                        style={{
+                          position: 'absolute',
+                          left: owner.x * 8 - 4,
+                          top: owner.y * 8 - 4,
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          background: avatarColor(owner.id),
+                          border: '1px solid #fff',
+                          cursor: 'pointer',
+                        }}
+                        title={owner.username}
+                      />
+                    );
+                  })}
+                  {/* Current player position */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: pos.x * 8 - 4,
+                      top: pos.y * 8 - 4,
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      zIndex: 2,
+                    }}
+                    title={t('worldMap.you')}
+                  />
+                </div>
+                <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: 120, overflowY: 'auto' }}>
+                  {displayGardenOwners.filter((o) => !o.virtual).map((owner) => (
+                    <div key={String(owner.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: avatarColor(owner.id), flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600 }}>{owner.username}</span>
+                      {isCurrentPlayer(owner) && <span style={{ fontSize: '0.7rem', color: '#a5d6a7' }}>(jij)</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div
               className="walk-viewport"
               ref={viewportRef}

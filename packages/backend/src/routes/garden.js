@@ -66,6 +66,29 @@ router.get('/', requireAuth, async (req, res) => {
     const serverUpdatedAt = row.updated_at
       ? new Date(row.updated_at).toISOString()
       : null;
+
+    // Auto-advance day if the garden hasn't been updated for 24+ hours
+    const now = new Date();
+    const lastUpdate = row.updated_at ? new Date(row.updated_at) : now;
+    const daysSince = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+    if (daysSince >= 1) {
+      const daysToAdvance = Math.min(daysSince, 7); // max 7 days at once
+      const newDay = (row.current_day || 1) + daysToAdvance;
+      const weathers = ['sunny', 'cloudy', 'rainy', 'windy', 'storm', 'drought'];
+      const newWeather = weathers[Math.floor(Math.random() * weathers.length)];
+      await db.query(
+        'UPDATE gardens SET current_day = $1, weather = $2 WHERE user_id = $3',
+        [newDay, newWeather, userId]
+      );
+      return res.json({
+        plots: row.plots,
+        currentDay: newDay,
+        weather: newWeather,
+        serverUpdatedAt: new Date().toISOString(),
+        autoAdvanced: daysToAdvance,
+      });
+    }
+
     return res.json({
       plots: row.plots,
       currentDay: row.current_day,

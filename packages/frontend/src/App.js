@@ -34,6 +34,7 @@ import AccountSettings from './components/AccountSettings';
 import Leaderboard from './components/Leaderboard';
 import WorldMap from './components/WorldMap';
 import VideoCall from './components/VideoCall';
+import GroupCallManager from './components/GroupCallManager';
 import TourOverlay from './components/TourOverlay';
 import HelpPanel from './components/HelpPanel';
 import StructuresPanel from './components/StructuresPanel';
@@ -45,6 +46,7 @@ import SetupWizard from './components/SetupWizard';
 import QRPanel from './components/QRPanel';
 import PlantRecognitionModal from './components/PlantRecognitionModal';
 import GardenConflictModal from './components/GardenConflictModal';
+import GroupCallManager from './components/GroupCallManager';
 import { GameContentProvider } from './context/GameContentContext';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || '';
@@ -161,10 +163,12 @@ function App() {
   const [showSocialMenu,   setShowSocialMenu]   = useState(false);
   const [showInventoryMenu,setShowInventoryMenu]= useState(false);
   const [showXpDetails,    setShowXpDetails]    = useState(false);
+  const [showFabMenu,      setShowFabMenu]      = useState(false);
   const [worldHud,         setWorldHud]         = useState({ coords: null, onlineCount: 0 });
   const [socialUnread,     setSocialUnread]     = useState(0);
   const [, setContentWikiBadge] = useState(0);
   const [callState,        setCallState]        = useState(null);   // { mode, peerId, peerUsername, offer? }
+  const [groupCallState,   setGroupCallState]   = useState(null);   // group call state
   const [dmTarget,         setDmTarget]         = useState(null);   // { id, username } — pre-select DM conversation
 
   // ── Tour & Help ───────────────────────────────────────────────────────────────
@@ -369,10 +373,13 @@ function App() {
     if (!authUser) return;
 
     const newSocket = io(BACKEND_URL, {
-      transports:      ['websocket'],
-      reconnectionAttempts: 5,
-      withCredentials: AUTH_HTTPONLY,
-      auth:            { token: authToken || undefined },
+      transports:           ['websocket', 'polling'],  // fallback to polling if websocket fails
+      reconnectionAttempts: 15,
+      reconnectionDelay:    1000,
+      reconnectionDelayMax: 10000,
+      timeout:              20000,
+      withCredentials:      AUTH_HTTPONLY,
+      auth:                 { token: authToken || undefined },
     });
 
     newSocket.on('connect', () => {
@@ -383,6 +390,26 @@ function App() {
 
     newSocket.on('server:info', (info) => setServerInfo(info));
     newSocket.on('connect_error', () => newSocket.disconnect());
+
+    newSocket.on('reconnect', () => {
+      setBackendUp(true);
+      // Re-fetch garden to sync after reconnect
+      if (hasServerAuth) {
+        api.get('/api/garden').then((data) => {
+          setGameState((prev) => ({
+            ...prev,
+            plots: data.plots?.length ? data.plots : prev.plots,
+            currentDay: data.currentDay || prev.currentDay,
+            weather: data.weather || prev.weather,
+          }));
+        }).catch(() => {});
+      }
+    });
+    newSocket.on('disconnect', (reason) => {
+      if (reason === 'io server disconnect') {
+        newSocket.connect(); // server disconnected us, try reconnecting
+      }
+    });
 
     return () => newSocket.disconnect();
   }, [authUser, authToken]);
@@ -510,6 +537,24 @@ function App() {
     socket.on('dm:receive', onDmToast);
     return () => socket.off('dm:receive', onDmToast);
   }, [socket, showSocialMenu, showNotification]);
+
+  // ── Click-outside: close social menu and FAB menu ─────────────────────────
+  useEffect(() => {
+    if (!showSocialMenu && !showFabMenu && !showGradendexQuick) return;
+    const onPointerDown = (e) => {
+      // Close if clicking outside .world-social-dropdown, .world-fab-menu, .world-fab--main
+      const isInsideSocial = e.target.closest('.world-social-dropdown') || e.target.closest('[data-social-toggle]');
+      const isInsideFab = e.target.closest('.world-fab--main') || e.target.closest('.world-fab-menu') || e.target.closest('.world-fab-menu__item');
+      const isInsideGdex = e.target.closest('.world-fab-menu') || e.target.closest('[class*="gradendex"]');
+      if (showSocialMenu && !isInsideSocial) setShowSocialMenu(false);
+      if (showFabMenu && !isInsideFab) {
+        setShowFabMenu(false);
+        if (!isInsideGdex) setShowGradendexQuick(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [showSocialMenu, showFabMenu, showGradendexQuick]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleLogin = (user, token) => {
@@ -955,6 +1000,7 @@ function App() {
                   currentUserId={authUser.id}
                   dmTarget={dmTarget}
                   onDmTargetClear={() => setDmTarget(null)}
+                  onStartCall={(state) => setCallState(state)}
                 />
                 <PlayersPanel
                   socket={socket}
@@ -1119,6 +1165,17 @@ function App() {
         />
       )}
 
+      {/* Group call overlay */}
+      {groupCallState && socket && (
+        <GroupCallManager
+          socket={socket}
+          currentUserId={authUser.id}
+          currentUsername={authUser.username}
+          {...groupCallState}
+          onLeave={() => setGroupCallState(null)}
+        />
+      )}
+
       {/* MOTD banner — shown once per session after connect */}
       {motd && (
         <div style={{
@@ -1201,22 +1258,30 @@ function App() {
         </div>
       )}
 
-      {/* ── Persistent 📖 Gardendex hub button ── */}
-      <button
-        onClick={() => setShowGradendexQuick((prev) => !prev)}
-        title="Open Gardendex menu"
-        aria-label="Open Gardendex options"
-        className="world-fab world-fab--gradendex"
-      >
-        📖
-      </button>
+      {/* ── Consolidated FAB menu ── */}
+      {showFabMenu && (
+        <div className="world-fab-menu">
+          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowInventoryMenu((prev) => !prev); }}>
+            <span className="fab-icon">🎒</span> Inventaris
+          </button>
+          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowStructures((open) => !open); }}>
+            <span className="fab-icon">🏗️</span> Structuren
+          </button>
+          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowGradendexQuick((prev) => !prev); }}>
+            <span className="fab-icon">📖</span> Gardendex
+          </button>
+          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowHelp(true); }}>
+            <span className="fab-icon">❓</span> {t('help')}
+          </button>
+        </div>
+      )}
 
       {showGradendexQuick && (
         <div style={{
           position: 'fixed',
-          bottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + 12.9rem)',
+          bottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + 3.4rem)',
           right: 'max(1rem, env(safe-area-inset-right))',
-          zIndex: 1401,
+          zIndex: 1402,
           width: '220px',
           background: 'rgba(15, 43, 22, 0.92)',
           border: '1px solid rgba(165, 214, 167, 0.4)',
@@ -1242,35 +1307,12 @@ function App() {
       )}
 
       <button
-        onClick={() => setShowInventoryMenu((prev) => !prev)}
-        title="Open inventory"
-        aria-label="Open inventory"
-        className="world-fab world-fab--inventory"
+        onClick={() => { setShowFabMenu((prev) => !prev); setShowGradendexQuick(false); }}
+        title="Menu"
+        aria-label="Open menu"
+        className={`world-fab world-fab--main${showFabMenu ? ' world-fab--open' : ''}`}
       >
-        🎒
-      </button>
-
-      <button
-        type="button"
-        onClick={() => setShowStructures((open) => !open)}
-        title={showStructures ? 'Structures sluiten' : 'Structures openen'}
-        aria-label={showStructures ? 'Structures sluiten' : 'Structures openen'}
-        aria-expanded={showStructures}
-        className="world-fab world-fab--structures"
-      >
-        🏗️
-      </button>
-
-      {/* ── Persistent ❓ Help button ── */}
-      <button
-        onClick={() => setShowHelp(true)}
-        title="Help & Reference"
-        aria-label="Open help panel"
-        className="world-fab world-fab--help"
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-      >
-        ❓
+        🌿
       </button>
 
       {/* ── Help Panel ── */}

@@ -11,7 +11,7 @@ function avatarColor(userId) {
   return `hsl(${hue},60%,45%)`;
 }
 
-function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear }) {
+function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState('everyone'); // 'everyone' | 'direct'
 
@@ -342,7 +342,12 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear 
                 onChange={(e) => setDmSearch(e.target.value)}
                 style={{ marginBottom: '0.5rem', width: '100%', boxSizing: 'border-box' }}
               />
-              <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+              {filteredPlayers.length > 0 && (
+                <div style={{ fontSize: '0.75rem', color: '#888', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border, #e0e0e0)', marginBottom: '0.25rem' }}>
+                  {onlinePlayers.length} online · {filteredPlayers.length} zichtbaar
+                </div>
+              )}
+              <div style={{ maxHeight: 300, overflowY: 'auto' }}>
                 {convsLoading && (
                   <div style={{ fontSize: '0.8rem', color: '#aaa', textAlign: 'center', padding: '0.5rem' }}>
                     Laden…
@@ -364,11 +369,13 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear 
                       onClick={() => setSelectedUser(player)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: '0.6rem',
-                        width: '100%', padding: '0.5rem 0.4rem', border: 'none', background: 'none',
+                        width: '100%', padding: '0.5rem 0.4rem', border: 'none',
+                        background: 'var(--hover, rgba(76,175,80,0.04))',
                         cursor: 'pointer', borderRadius: '6px', textAlign: 'left',
+                        transition: 'background 0.15s',
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--hover, rgba(0,0,0,0.05))'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--hover, rgba(0,0,0,0.08))'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--hover, rgba(76,175,80,0.04))'; }}
                     >
                       <div style={{
                         width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
@@ -386,12 +393,15 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear 
                             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf50', display: 'inline-block' }} />
                           )}
                         </div>
-                        {last && (
+                        {last ? (
                           <div style={{ fontSize: '0.75rem', color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
                             {String(last.from) === String(currentUserId) ? 'Jij: ' : ''}{last.text}
                           </div>
+                        ) : (
+                          <div style={{ fontSize: '0.72rem', color: '#bbb', fontStyle: 'italic' }}>Stuur bericht</div>
                         )}
                       </div>
+                      <span style={{ color: '#aaa', fontSize: '0.8rem', flexShrink: 0 }}>→</span>
                       {unread > 0 && (
                         <span style={{
                           background: '#e53935', color: '#fff',
@@ -428,6 +438,12 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear 
                 <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{selectedUser.username}</span>
                 {!selectedUser.offline && (
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf50', display: 'inline-block' }} />
+                )}
+                {!selectedUser.offline && onStartCall && (
+                  <>
+                    <button type="button" onClick={() => onStartCall({ mode: 'outgoing', peerId: selectedUser.id, peerUsername: selectedUser.username, audioOnly: false })} title="Videogesprek" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.15rem 0.3rem' }}>📹</button>
+                    <button type="button" onClick={() => onStartCall({ mode: 'outgoing', peerId: selectedUser.id, peerUsername: selectedUser.username, audioOnly: true })} title="Audiogesprek" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.15rem 0.3rem' }}>📞</button>
+                  </>
                 )}
               </div>
 

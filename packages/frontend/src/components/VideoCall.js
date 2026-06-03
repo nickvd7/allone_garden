@@ -115,14 +115,20 @@ function VideoCallInner({ socket, callState, onEnd }) {
   const [errorMsg,   setErrorMsg]   = useState('');
 
   // ICE servers fetched from backend (includes TURN if configured server-side)
+  // Use a ref so that createPC always reads the latest value, even if the
+  // outgoing-call useEffect fires before the async fetch resolves.
+  const iceServersRef = useRef(DEFAULT_ICE_SERVERS);
   const [iceServers, setIceServers] = useState(DEFAULT_ICE_SERVERS);
   useEffect(() => {
-    fetchIceServers().then(setIceServers).catch(() => {});
+    fetchIceServers().then((servers) => {
+      iceServersRef.current = servers;
+      setIceServers(servers);
+    }).catch(() => {});
   }, []);
 
   // ── Create RTCPeerConnection ───────────────────────────────────────────────
   const createPC = useCallback(() => {
-    const pc = new RTCPeerConnection({ iceServers });
+    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
@@ -144,7 +150,7 @@ function VideoCallInner({ socket, callState, onEnd }) {
 
     pcRef.current = pc;
     return pc;
-  }, [socket, callState.peerId, iceServers]); // eslint-disable-line
+  }, [socket, callState.peerId]); // eslint-disable-line -- iceServersRef is a ref, not state
 
   // ── Get local camera + mic (or audio only) ────────────────────────────────
   const getLocalStream = useCallback(async () => {

@@ -214,4 +214,69 @@ module.exports = function proximityHandler(socket, io) {
     if (!targetId) return;
     io.to(targetId).emit('call:end', { from: socket.userId });
   });
+
+  // ── 4. Group call room management ─────────────────────────────────────────
+  // groupCallRooms is module-scoped so it persists across socket connections.
+  socket.on('group-call:create', ({ roomId }) => {
+    if (!socket.userId) return;
+    if (!roomId || typeof roomId !== 'string' || roomId.length > 64) return;
+    if (!module.exports._groupCallRooms) module.exports._groupCallRooms = {};
+    const rooms = module.exports._groupCallRooms;
+    if (!rooms[roomId]) rooms[roomId] = new Set();
+    rooms[roomId].add(socket.id);
+    socket.join(`group-call:${roomId}`);
+    socket.emit('group-call:created', { roomId, participants: [] });
+  });
+
+  socket.on('group-call:join', ({ roomId }) => {
+    if (!socket.userId) return;
+    if (!roomId || typeof roomId !== 'string' || roomId.length > 64) return;
+    if (!module.exports._groupCallRooms) module.exports._groupCallRooms = {};
+    const rooms = module.exports._groupCallRooms;
+    const room = rooms[roomId];
+    if (!room) return;
+    const existingParticipants = [...room].map((sid) => {
+      const s = io.sockets.sockets.get(sid);
+      return s ? { socketId: sid, userId: s.userId, username: s.username } : null;
+    }).filter(Boolean);
+    room.add(socket.id);
+    socket.join(`group-call:${roomId}`);
+    // Notify existing participants of new joiner
+    socket.to(`group-call:${roomId}`).emit('group-call:peer-joined', {
+      peerId: socket.id, userId: socket.userId, username: socket.username,
+    });
+    // Send list of existing participants to new joiner
+    socket.emit('group-call:joined', { roomId, participants: existingParticipants });
+  });
+
+  socket.on('group-call:leave', ({ roomId }) => {
+    if (roomId && module.exports._groupCallRooms?.[roomId]) {
+      module.exports._groupCallRooms[roomId].delete(socket.id);
+      if (module.exports._groupCallRooms[roomId].size === 0) {
+        delete module.exports._groupCallRooms[roomId];
+      }
+    }
+    if (roomId) {
+      socket.to(`group-call:${roomId}`).emit('group-call:peer-left', { peerId: socket.id });
+      socket.leave(`group-call:${roomId}`);
+    }
+  });
+
+  socket.on('group-call:offer', ({ to, offer }) => {
+    if (!socket.userId) return;
+    if (!isSmallObject(offer, MAX_WEBRTC_BYTES)) return;
+    io.to(to).emit('group-call:offer', { from: socket.id, offer });
+  });
+
+  socket.on('group-call:answer', ({ to, answer }) => {
+    if (!socket.userId) return;
+    if (!isSmallObject(answer, MAX_WEBRTC_BYTES)) return;
+    io.to(to).emit('group-call:answer', { from: socket.id, answer });
+  });
+
+  socket.on('group-call:ice', ({ to, candidate }) => {
+    if (!socket.userId) return;
+    if (candidate !== null && !isSmallObject(candidate, 4096)) return;
+    io.to(to).emit('group-call:ice', { from: socket.id, candidate });
+  });
 };

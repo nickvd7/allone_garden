@@ -21,6 +21,7 @@ const LANGUAGES = [
   { code: 'id', label: 'ID 🇮🇩' },
   { code: 'vi', label: 'VI 🇻🇳' },
   { code: 'uk', label: 'UK 🇺🇦' },
+  { code: 'el', label: 'Ελληνικά 🇬🇷' },
   { code: 'ar', label: 'AR 🇸🇦', rtl: true },
 ];
 

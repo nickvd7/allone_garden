@@ -18,6 +18,7 @@ import hi from './locales/hi.json';
 import id from './locales/id.json';
 import vi from './locales/vi.json';
 import uk from './locales/uk.json';
+import el from './locales/el.json';
 import gradendexEn from './gradendex.en.json';
 import gradendexNl from './gradendex.nl.json';
 import gradendexDe from './gradendex.de.json';
@@ -36,6 +37,7 @@ import gradendexHi from './gradendex.hi.json';
 import gradendexId from './gradendex.id.json';
 import gradendexVi from './gradendex.vi.json';
 import gradendexUk from './gradendex.uk.json';
+import gradendexEl from './gradendex.el.json';
 
 const withGdex = (base, gdex) => ({ ...base, ...gdex });
 
@@ -61,6 +63,7 @@ i18n
       id: { translation: withGdex(id, gradendexId) },
       vi: { translation: withGdex(vi, gradendexVi) },
       uk: { translation: withGdex(uk, gradendexUk) },
+      el: { translation: withGdex(el, gradendexEl) },
     },
     lng: 'en',
     fallbackLng: 'en',

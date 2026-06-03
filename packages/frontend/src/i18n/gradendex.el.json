@@ -1,0 +1,181 @@
+{
+  "gradendex": {
+    "ui": {
+      "loading": "Loading Gradendex…",
+      "error_load": "Could not load Gradendex. Is the server running?",
+      "search_placeholder": "🔍 Search plants or structures…",
+      "no_results": "No entries found for \"{{search}}\".",
+      "tab_all": "🌍 All",
+      "tab_plants": "🌱 Plants",
+      "tab_structures": "🏗️ Structures",
+      "back_to_list": "← Back to list",
+      "back": "← Back",
+      "edit": "✏️ Edit",
+      "edit_title_suffix": "— Edit",
+      "companion_planting": "Companion planting",
+      "tips": "Tips",
+      "last_edited": "Last edited by {{user}} · {{date}}",
+      "admin_hint": "✏️ Admin mode — click any entry to edit",
+      "stats_days": "{{count}} day",
+      "stats_days_plural": "{{count}} days",
+      "stats_coins": "{{count}} coins",
+      "aria_search": "Search Gradendex",
+      "aria_view": "View {{name}}",
+      "saving": "Saving…",
+      "save_changes": "💾 Save changes",
+      "cancel": "Cancel",
+      "load_error_detail": "Could not save changes",
+      "form_emoji": "Emoji",
+      "form_name": "Name",
+      "form_category": "Category",
+      "form_short": "Short description (max 300 chars)",
+      "form_long": "Long description (Markdown: **bold**, *italic*, newlines)",
+      "form_growth": "Growth days",
+      "form_coins": "Base coins 🪙",
+      "form_tips": "Tips (one per line)",
+      "cat_plant": "Plant",
+      "cat_structure": "Structure",
+      "cat_tool": "Tool",
+      "cat_other": "Other"
+    },
+    "entries": {
+      "radish": {
+        "name": "Radish",
+        "short_desc": "Fastest-growing crop. Perfect for beginners.",
+        "long_desc": "The radish is the speedster of AllOne Garden — ready to harvest after just **1 day**. Its modest coin value (🪙6) is offset by how quickly you can cycle harvests, stacking XP and inventory fast.\n\nRadishes grow well next to lettuce and carrot, making them a great filler crop in a companion-planned garden.",
+        "tips": {
+          "0": "Plant radishes in empty plots while slower crops mature.",
+          "1": "Pairs well with lettuce and carrot for small companion bonuses.",
+          "2": "Great for levelling up quickly early in the game."
+        }
+      },
+      "carrot": {
+        "name": "Carrot",
+        "short_desc": "Reliable 2-day crop with great companion synergy.",
+        "long_desc": "Carrots are among the most versatile crops in AllOne Garden. They ripen in **2 days** and play nicely with nearly every other plant — benefiting from tomatoes, lettuce, and radishes nearby.\n\nAt 🪙10 per harvest they are a solid mid-game earner.",
+        "tips": {
+          "0": "Surround carrots with tomatoes (+20%) and lettuce (+15%) for the biggest bonus.",
+          "1": "Keep away from corn — no synergy there.",
+          "2": "Good choice for the Compost Heap strategy due to reliable 2-day cycles."
+        }
+      },
+      "lettuce": {
+        "name": "Lettuce",
+        "short_desc": "Cheap filler crop. Good companion to most plants.",
+        "long_desc": "Lettuce matures in **2 days** for a modest 🪙8. Its real value is as a companion: it benefits neighbours such as carrots and radishes while itself being boosted by carrot proximity.\n\nAvoid planting next to corn — they antagonise each other (−15% for lettuce).",
+        "tips": {
+          "0": "Lettuce is cheap insurance: fill gaps between high-value crops.",
+          "1": "Carrot/Lettuce/Radish trio gives everyone bonuses.",
+          "2": "Never plant next to corn if you care about yield."
+        }
+      },
+      "sunflower": {
+        "name": "Sunflower",
+        "short_desc": "Bright 2-day crop. The best friend of pumpkins.",
+        "long_desc": "Sunflowers are the companion kings of the garden. They ripen in **2 days** for 🪙12 and provide a +15% bonus to adjacent pumpkins — making them essential in any late-game pumpkin setup.\n\nThey also benefit from blueberry neighbours (+10%).",
+        "tips": {
+          "0": "Always surround pumpkin plots with sunflowers.",
+          "1": "Sunflower + Blueberry + Pumpkin is a powerful late-game trio.",
+          "2": "Short growth cycle means you can harvest 2–3 times per pumpkin cycle."
+        }
+      },
+      "tomato": {
+        "name": "Tomato",
+        "short_desc": "Classic 3-day crop. Great earnings with the right neighbours.",
+        "long_desc": "Tomatoes take **3 days** but pay 🪙15 at harvest. Combined with a 20% carrot companion bonus the effective value rises to 🪙18 — among the best mid-game returns.\n\nKeep them away from pumpkins, which reduce tomato yield by 10%.",
+        "tips": {
+          "0": "Tomato + Carrot is one of the strongest early-game duos (+20%).",
+          "1": "Add a lettuce border for a small extra boost.",
+          "2": "Water every day — tomatoes punish neglected plots."
+        }
+      },
+      "potato": {
+        "name": "Potato",
+        "short_desc": "Hearty 3-day crop. Loves corn, hates pumpkins.",
+        "long_desc": "Potatoes take **3 days** and earn 🪙12. Their standout feature is a strong synergy with corn: potatoes next to corn earn a +20% bonus (and corn next to potatoes does too), making the Corn/Potato pair one of the most efficient arrangements in the game.",
+        "tips": {
+          "0": "Alternate rows of corn and potato for a mutual +20% bonus.",
+          "1": "Never plant next to pumpkins.",
+          "2": "The Greenhouse protects high-value corn/potato plots from storm damage."
+        }
+      },
+      "blueberry": {
+        "name": "Blueberry",
+        "short_desc": "High-value 4-day crop. Pairs beautifully with sunflowers.",
+        "long_desc": "Blueberries take **4 days** to mature but reward patience with 🪙22 at harvest. They benefit from sunflower and carrot neighbours, fitting neatly into a mixed garden.\n\nBecause of the longer cycle, fertilize every blueberry plot to accelerate growth.",
+        "tips": {
+          "0": "Always fertilize blueberries — shaving off even 0.5 days matters over many harvests.",
+          "1": "Sunflower neighbour gives +10%.",
+          "2": "Use the Well early in a blueberry cycle to water everything in one go."
+        }
+      },
+      "corn": {
+        "name": "Corn",
+        "short_desc": "Tall 4-day crop. Best friend of potato, worst enemy of pumpkin.",
+        "long_desc": "Corn ripens in **4 days** for 🪙18. The mutual Corn/Potato bond (+20% each) makes this pair the backbone of a productivity-focused garden.\n\nCorn actively harms lettuce (−15%) and pumpkins (−20%), so careful plot planning is essential.",
+        "tips": {
+          "0": "Alternate corn and potato columns for maximum mutual bonus.",
+          "1": "Keep corn far from lettuce and pumpkin plots.",
+          "2": "Fertilize corn to bring the 4-day cycle down effectively."
+        }
+      },
+      "pumpkin": {
+        "name": "Pumpkin",
+        "short_desc": "The most valuable crop. Slow but worth the wait.",
+        "long_desc": "Pumpkins take a full **5 days** to ripen but pay out 🪙28 — the highest base value in the game. Add a sunflower companion bonus (+15%) and the effective yield climbs to 🪙32.\n\nPumpkins are fragile: corn, potato, and tomato neighbours all reduce yield. Plan the pumpkin block of your garden carefully.",
+        "tips": {
+          "0": "Surround every pumpkin with sunflowers — a +15% bonus on 🪙28 adds up fast.",
+          "1": "Build the Greenhouse before planting pumpkins: storms can knock ripe crops back a day.",
+          "2": "Fertilize + water every cycle. Never skip a day on pumpkins.",
+          "3": "Keep pumpkins in a dedicated corner, away from corn and potato."
+        }
+      },
+      "well": {
+        "name": "Water Well",
+        "short_desc": "Waters all tilled plots in one click. 3 charges per day.",
+        "long_desc": "The Water Well costs **50 🪙** to build and gives you 3 charges every day (replenished at each Next Day tick). Each use raises the water level of every tilled plot by +2.\n\nIndispensable once your garden exceeds 10–12 active plots — the time saved clicking individual plots is enormous.",
+        "tips": {
+          "0": "Build the Well as your second structure (after Compost Heap).",
+          "1": "Charges reset every Next Day — never save them; use all 3 each day.",
+          "2": "Combine with fertilizer for maximum daily growth per plot."
+        }
+      },
+      "compost_heap": {
+        "name": "Compost Heap",
+        "short_desc": "Auto-generates fertilizer charges every 3 harvests.",
+        "long_desc": "The Compost Heap costs **30 🪙** and pays for itself within a few harvests. After every 3 harvests it generates 1 fertilizer charge. Clicking \"Fertilize All\" applies that charge to every planted, unfertilized plot instantly.\n\nThe cheapest structure and the first one you should build.",
+        "tips": {
+          "0": "Build this first — 30 🪙 is achievable within your first 5–10 harvests.",
+          "1": "Save the charge for when you have many planted plots.",
+          "2": "Fertilizer + water on the same day = fastest possible growth."
+        }
+      },
+      "greenhouse": {
+        "name": "Greenhouse",
+        "short_desc": "Passive shield against storm and drought damage.",
+        "long_desc": "The Greenhouse costs **80 🪙** and works passively — no charges, no clicks. It converts storm ⛈️ and drought 🏜️ weather events into safe Cloudy conditions, preventing all crop damage and reducing drought-pest chance from 15% back to 5%.\n\nEssential before committing to a full 24-plot pumpkin or blueberry garden.",
+        "tips": {
+          "0": "Build the Greenhouse before planting your first pumpkins.",
+          "1": "Storms can knock a ripe pumpkin back by a whole day — the Greenhouse prevents this.",
+          "2": "Once built, you never need to worry about weather again."
+        }
+      }
+    },
+    "page": {
+      "title": "📖 Gradendex",
+      "subtitle": "— crop & structure reference",
+      "brand": "🌱 AllOne Garden",
+      "back_game": "🎮 Back to game",
+      "intro": "Community-maintained reference for every crop and structure in AllOne Garden.",
+      "intro_logged_in": "You are logged in — admin entries can be edited directly.",
+      "intro_guest_before": "",
+      "log_in": "Log in",
+      "intro_guest_after": "to contribute as an admin.",
+      "footer": "AllOne Garden · Gradendex · Data loaded from",
+      "open_full": "↗ Full page",
+      "open_full_title": "Open Gradendex in full page",
+      "close": "Close Gradendex",
+      "aria_dialog": "Gradendex"
+    }
+  }
+}
