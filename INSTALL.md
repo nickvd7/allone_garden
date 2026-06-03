@@ -143,15 +143,31 @@ Tested on Pi 3B+, Pi 4, Pi 5 running Raspberry Pi OS Bookworm (64-bit).
 
 ### Schone installatie (aanbevolen bij problemen)
 
-Verwijdert niets uit je home-map; installeert vers naar **`/opt/allone-garden`** (oude map wordt hernoemd naar `.bak.<datum>`):
+**Met git pull (aanbevolen):**
+
+```bash
+cd ~/coding/allone_garden   # jouw clone
+git pull
+sudo bash install-fresh.sh
+```
+
+Of in één stap: `sudo bash pull-and-install.sh` (doet `git pull` + install).
+
+Code wordt in **dezelfde map** geïnstalleerd (nieuwe `.env`, Postgres-sync, build, migraties, nginx, systemd). Voor productie onder `/opt`:
+
+```bash
+cd ~/coding/allone_garden
+git pull
+sudo GARDEN_DEPLOY=/opt/allone-garden bash install-fresh.sh
+```
+
+**Zonder git (curl):** oude map `/opt` wordt geback-upt en opnieuw gecloned:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nickvd7/allone_garden/main/install-fresh.sh | sudo bash
 ```
 
-Of vanuit een clone: `sudo bash install-fresh.sh`
-
-Daarna: game-URL via nginx (zie install-summary), `sudo systemctl status allone-garden`, updates via `sudo bash /opt/allone-garden/update.sh`.
+Daarna: `sudo systemctl status allone-garden`, updates via `sudo bash update.sh` (in de install-map).
 
 ### Standaard install / herinstallatie in bestaande map
 

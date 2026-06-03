@@ -5,8 +5,8 @@
 # Doet: git pull → npm install → frontend build (incl. SW cache-bust) →
 #       alle DB-migraties → herstart allone-garden + nginx (indien aanwezig).
 #
-# Gebruik:
-#   cd /pad/naar/allone_garden && sudo bash update.sh
+# Gebruik (na git pull in je clone):
+#   cd ~/coding/allone_garden && git pull && sudo bash update.sh
 #   GARDEN_DIR=/opt/allone-garden sudo bash update.sh
 #
 # Detecteert automatisch de map waarin dit script staat (bijv. ~/coding/allone_garden).
