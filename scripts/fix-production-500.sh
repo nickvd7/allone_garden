@@ -3,14 +3,47 @@
 #   sudo bash scripts/fix-production-500.sh /opt/allone-garden
 set -euo pipefail
 
-INSTALL_DIR="${1:-}"
-[[ -z "$INSTALL_DIR" ]] && INSTALL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+resolve_install_dir() {
+  local arg="${1:-}"
+  local candidates=()
+  [[ -n "$arg" ]] && candidates+=("$arg")
+  # Veelgemaakte typo: allone_garden vs allone-garden
+  [[ -n "$arg" ]] && candidates+=("${arg/_garden/-garden}" "${arg/-garden/_garden}")
+  candidates+=(
+    /opt/allone-garden
+    /opt/allone_garden
+    /home/nickvd/coding/allone_garden
+    "$(cd "$(dirname "$0")/.." && pwd)"
+  )
+  local d
+  for d in "${candidates[@]}"; do
+    [[ -f "${d}/packages/backend/.env" ]] && echo "$(cd "$d" && pwd)" && return 0
+  done
+  return 1
+}
+
+REQUESTED="${1:-}"
+INSTALL_DIR="$(resolve_install_dir "$REQUESTED")" || {
+  echo "Geen installatie gevonden."
+  [[ -n "$REQUESTED" ]] && echo "  Opgegeven pad: ${REQUESTED}"
+  echo "  Gezocht naar packages/backend/.env in o.a.:"
+  echo "    /opt/allone-garden   (standaard — let op het streepje -)"
+  echo "    /opt/allone_garden"
+  echo "    ~/coding/allone_garden"
+  echo ""
+  echo "  Tip: sudo bash scripts/fix-production-500.sh /opt/allone-garden"
+  exit 1
+}
+
 ENV_FILE="${INSTALL_DIR}/packages/backend/.env"
 BUILD_DIR="${INSTALL_DIR}/packages/frontend/build"
 OWNER="$(stat -c '%U' "${INSTALL_DIR}/packages/backend" 2>/dev/null || echo garden)"
 
 [[ $EUID -eq 0 ]] || { echo "Run met sudo"; exit 1; }
-[[ -f "$ENV_FILE" ]] || { echo "Geen .env in ${ENV_FILE}"; exit 1; }
+
+if [[ -n "$REQUESTED" && "$(cd "$REQUESTED" 2>/dev/null && pwd || echo "$REQUESTED")" != "$INSTALL_DIR" ]]; then
+  echo "[fix] Pad gecorrigeerd: ${REQUESTED} → ${INSTALL_DIR}"
+fi
 
 echo "[fix] Installatie: ${INSTALL_DIR} (user: ${OWNER})"
 

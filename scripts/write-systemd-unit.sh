@@ -6,6 +6,11 @@ set -euo pipefail
 [[ $EUID -eq 0 ]] || { echo "Run met sudo"; exit 1; }
 
 INSTALL_DIR="${1:?install-dir}"
+# typo allone_garden → allone-garden
+if [[ ! -f "${INSTALL_DIR}/packages/backend/.env" && -f "${INSTALL_DIR/_garden/-garden}/packages/backend/.env" ]]; then
+  INSTALL_DIR="${INSTALL_DIR/_garden/-garden}"
+  echo "[systemd] Pad gecorrigeerd naar ${INSTALL_DIR}"
+fi
 SERVICE_USER="${2:-$(stat -c '%U' "${INSTALL_DIR}/packages/backend" 2>/dev/null || echo garden)}"
 BACKEND_DIR="${INSTALL_DIR}/packages/backend"
 ENV_FILE="${BACKEND_DIR}/.env"
