@@ -150,6 +150,11 @@ if [[ $EUID -eq 0 ]]; then
     nginx -t && systemctl restart nginx
     success "nginx herstart"
   fi
+  # SSL/HTTPS opnieuw toepassen (idempotent — TransIP DNS-01 of bestaand cert)
+  if [[ -x "${INSTALL_DIR}/scripts/setup-ssl.sh" ]]; then
+    info "SSL controleren/toepassen…"
+    bash "${INSTALL_DIR}/scripts/setup-ssl.sh" || warn "SSL niet toegepast — zie hierboven"
+  fi
 else
   warn "Geen sudo: systemd/nginx niet herstart. Doe dat zelf indien nodig."
 fi

@@ -692,9 +692,14 @@ fi
 success "Firewall configured"
 
 # ── Post-install: nginx vhost + health check ─────────────────────────────────
+# fix-nginx-vhost regenereert de HTTP-vhost én herstelt daarna SSL (setup-ssl.sh),
+# zodat het 443-blok niet verloren gaat. Geef domein/e-mail door voor TransIP DNS-01.
 if [[ -x "${INSTALL_DIR}/scripts/fix-nginx-vhost.sh" ]]; then
-  info "Nginx vhost afstemmen op ${INSTALL_DIR}…"
-  bash "${INSTALL_DIR}/scripts/fix-nginx-vhost.sh" "$INSTALL_DIR" || warn "fix-nginx-vhost mislukt — run handmatig"
+  info "Nginx vhost + SSL afstemmen op ${INSTALL_DIR}…"
+  GARDEN_DOMAIN="$DOMAIN" GARDEN_EMAIL="$EMAIL" \
+    GARDEN_CERT_DOMAINS="$(IFS=' '; echo "${CERT_DOMAINS[*]}")" \
+    GARDEN_TRANSIP_INI="$TRANSIP_INI" \
+    bash "${INSTALL_DIR}/scripts/fix-nginx-vhost.sh" "$INSTALL_DIR" || warn "fix-nginx-vhost mislukt — run handmatig"
 fi
 if curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/health" >/dev/null 2>&1; then
   success "Backend health OK (poort ${BACKEND_PORT})"

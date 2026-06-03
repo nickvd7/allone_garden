@@ -84,5 +84,11 @@ ln -sf /etc/nginx/sites-available/allone-garden /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
 nginx -t
 systemctl restart nginx
-info "OK — nginx herstart. Test: curl -sS http://127.0.0.1/api/health"
+info "OK — nginx (HTTP) herstart. Test: curl -sS http://127.0.0.1/api/health"
 curl -fsS "http://127.0.0.1/api/health" && echo "" || warn "curl zonder Host faalt nog — probeer in browser via http://${PI_IP}/"
+
+# Deze vhost is HTTP-only; herstel het 443-blok als er een certificaat is.
+SCRIPT_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -x "${SCRIPT_SELF_DIR}/setup-ssl.sh" ]]; then
+  GARDEN_DOMAIN="${GARDEN_DOMAIN:-${DOMAIN}}" bash "${SCRIPT_SELF_DIR}/setup-ssl.sh" || warn "SSL niet (her)toegepast — zie hierboven"
+fi
