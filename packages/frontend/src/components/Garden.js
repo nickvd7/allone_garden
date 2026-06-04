@@ -207,6 +207,10 @@ function Plot({ plot, index, companionIcon, onPlotClick, growthStages, plantEmoj
           />
         </div>
       )}
+
+      {isReady && (
+        <div className="harvest-ready-badge">Oogst!</div>
+      )}
     </div>
   );
 }

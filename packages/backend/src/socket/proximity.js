@@ -143,6 +143,18 @@ module.exports = function proximityHandler(socket, io) {
     }
   });
 
+  // ── 2b. DM typing indicator ──────────────────────────────────────────────
+  socket.on('dm:typing', ({ to, isTyping }) => {
+    if (!socket.userId) return;
+    let targetSocket = null;
+    io.sockets.sockets.forEach((s) => {
+      if (String(s.userId) === String(to)) targetSocket = s;
+    });
+    if (targetSocket) {
+      targetSocket.emit('dm:typing', { from: socket.userId, isTyping });
+    }
+  });
+
   // ── 3. WebRTC signaling relay ─────────────────────────────────────────────
   // The server never interprets SDP / ICE content — it only validates shape/size,
   // then routes to the correct socket room.

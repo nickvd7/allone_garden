@@ -724,7 +724,12 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   }, [getTile]);
 
   // ── Broadcast own position ────────────────────────────────────────────────
+  const lastBroadcastPosRef = useRef(null);
   const broadcastPos = useCallback((x, y) => {
+    if (lastBroadcastPosRef.current &&
+        lastBroadcastPosRef.current.x === x &&
+        lastBroadcastPosRef.current.y === y) return;
+    lastBroadcastPosRef.current = { x, y };
     socket?.emit('world:position', { x, y });
   }, [socket]);
 

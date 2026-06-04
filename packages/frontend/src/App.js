@@ -146,7 +146,7 @@ function App() {
   const [socket,     setSocket]     = useState(null);
   const [serverInfo, setServerInfo] = useState(null);
 
-  const [notification,     setNotification]     = useState(null);
+  const [toasts,           setToasts]           = useState([]);
   const [bonusToast,       setBonusToast]       = useState(null);  // daily-bonus popup
   const [motd,             setMotd]             = useState(null);  // MOTD shown once per session
   const motdShown = useRef(false);
@@ -216,10 +216,13 @@ function App() {
     day:     gameState.currentDay,
   } : { details: 'On the login screen', state: 'AllOne Garden' });
 
+  const [loginStreak, setLoginStreak] = useState(() => parseInt(localStorage.getItem('garden_streak') || '0', 10));
+
   // ── Notification helper ───────────────────────────────────────────────────────
-  const showNotification = useCallback((msg) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 3000);
+  const showNotification = useCallback((msg, type = 'info') => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev.slice(-2), { id, msg, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   }, []);
 
   // ── Content Wiki badge — poll every 60 s ──────────────────────────────────────
@@ -454,6 +457,10 @@ function App() {
     const onDailyBonus = (data) => {
       setBonusToast(data);
       setTimeout(() => setBonusToast(null), 5000);
+      if (data.streak) {
+        setLoginStreak(data.streak);
+        localStorage.setItem('garden_streak', String(data.streak));
+      }
       // Also update coin/xp counts
       setGameState((prev) => ({
         ...prev,
@@ -1232,7 +1239,13 @@ function App() {
         </div>
       )}
 
-      {notification && <div className="notification">{notification}</div>}
+      <div className="toast-stack">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`notification toast-item toast-item--${toast.type}`}>
+            {toast.msg}
+          </div>
+        ))}
+      </div>
 
       {levelUpOverlay && (
         <div className="level-up-overlay">
@@ -1312,6 +1325,11 @@ function App() {
           display: 'grid',
           gap: '0.4rem',
         }}>
+          {loginStreak > 1 && (
+            <div style={{ textAlign: 'center', fontSize: '0.78rem', color: '#ffb300', fontWeight: 700, padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.15)', marginBottom: '0.3rem' }}>
+              🔥 {loginStreak}-daagse streak!
+            </div>
+          )}
           <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => { setShowGradendexQuick(false); setShowGradendex(true); }}>
             🔍 Zoeken
           </button>

@@ -27,6 +27,8 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   const errorTimerRef  = useRef(null);
 
   // ── DM state ──────────────────────────────────────────────────────────────
+  const [dmTypingUser,       setDmTypingUser]       = useState(null);
+  const dmTypingTimerRef = useRef(null);
   const [onlinePlayers,      setOnlinePlayers]      = useState([]);
   const [dmHistory,          setDmHistory]          = useState({}); // { userId: [msg, ...] }
   const [loadedHistories,    setLoadedHistories]    = useState(new Set()); // userId strings
@@ -169,8 +171,22 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       });
     };
 
+    const onDmTyping = ({ from, isTyping }) => {
+      const fromId = String(from);
+      if (!selectedUser || String(selectedUser.id) !== fromId) return;
+      setDmTypingUser(isTyping ? fromId : null);
+      if (isTyping) {
+        clearTimeout(dmTypingTimerRef.current);
+        dmTypingTimerRef.current = setTimeout(() => setDmTypingUser(null), 3000);
+      }
+    };
+    socket.on('dm:typing', onDmTyping);
+
     socket.on('dm:receive', onDm);
-    return () => socket.off('dm:receive', onDm);
+    return () => {
+      socket.off('dm:receive', onDm);
+      socket.off('dm:typing', onDmTyping);
+    };
   }, [socket, tab, selectedUser]);
 
   // ── Global chat: send ─────────────────────────────────────────────────────
@@ -483,6 +499,11 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                     </div>
                   );
                 })}
+                {dmTypingUser && (
+                  <div style={{ fontSize: '0.78rem', color: '#aaa', fontStyle: 'italic', padding: '0.2rem 0' }}>
+                    {selectedUser?.username} typt…
+                  </div>
+                )}
                 <div ref={dmBottomRef} />
               </div>
 
@@ -492,7 +513,16 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                   type="text"
                   placeholder={`Bericht aan ${selectedUser.username}…`}
                   value={dmInput}
-                  onChange={(e) => setDmInput(e.target.value)}
+                  onChange={(e) => {
+                    setDmInput(e.target.value);
+                    if (socket && selectedUser) {
+                      socket.emit('dm:typing', { to: selectedUser.id, isTyping: true });
+                      clearTimeout(dmTypingTimerRef.current);
+                      dmTypingTimerRef.current = setTimeout(() => {
+                        socket.emit('dm:typing', { to: selectedUser.id, isTyping: false });
+                      }, 1500);
+                    }
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && sendDm()}
                   maxLength={300}
                 />

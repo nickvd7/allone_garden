@@ -28,7 +28,7 @@ const LANGUAGES = [
 function Header({
   onLanguageChange,
   currentLang,
-  serverInfo: _serverInfo,
+  serverInfo,
   username,
   darkMode,
   onToggleDark,
@@ -97,6 +97,11 @@ function Header({
             aria-label={t('header_menu_social', { defaultValue: 'Chat & Players' })}
           >
             💬
+            {serverInfo?.players > 1 && (
+              <span style={{ fontSize: '0.65rem', color: '#4caf50', marginLeft: '0.25rem', fontWeight: 600 }}>
+                {serverInfo.players} online
+              </span>
+            )}
             {socialBadge > 0 && (
               <span className="header-icon-btn__badge" aria-hidden>
                 {socialBadge > 99 ? '99+' : socialBadge}

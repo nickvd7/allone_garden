@@ -126,19 +126,13 @@ function CropPricesTab({ socket }) {
 
 function ListingRow({ listing, onBuy, ownUserId }) {
   const [qty, setQty]     = useState(1);
-  const [busy, setBusy]   = useState(false);
   const plant = PLANT_INFO[listing.crop_id || listing.cropId] || { emoji: '❓', name: listing.crop_id };
   const price = listing.price_per_unit || listing.pricePerUnit;
   const available = listing.quantity;
   const isOwn = listing.seller_id === ownUserId || listing.sellerId === ownUserId;
 
-  const handleBuy = async () => {
-    setBusy(true);
-    try {
-      await onBuy(listing.id, qty, price * qty);
-    } finally {
-      setBusy(false);
-    }
+  const handleBuy = () => {
+    onBuy({ id: listing.id, crop: plant.name, qty, price, totalCost: price * qty });
   };
 
   return (
@@ -163,11 +157,10 @@ function ListingRow({ listing, onBuy, ownUserId }) {
               style={styles.buyQtyInput}
             />
             <button
-              style={{ ...styles.btnBuy, opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap' }}
+              style={{ ...styles.btnBuy, whiteSpace: 'nowrap' }}
               onClick={handleBuy}
-              disabled={busy}
             >
-              {busy ? '…' : `Buy 🪙${price * qty}`}
+              {`Buy 🪙${price * qty}`}
             </button>
           </div>
         )}
@@ -184,6 +177,7 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDe
   const [listings, setListings] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+  const [confirmBuy, setConfirmBuy] = useState(null);
 
   // Create listing form
   const [sellForm, setSellForm] = useState({ cropId: 'tomato', quantity: 1, pricePerUnit: 10 });
@@ -215,7 +209,7 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDe
     if (tab === 'browse') fetchListings();
   }, [tab, fetchListings]);
 
-  const handleGuestBuy = useCallback((listingId, qty, totalCost) => {
+  const executeGuestBuy = useCallback((listingId, qty, totalCost) => {
     if (coins < totalCost) { setError(`Not enough coins (need 🪙${totalCost})`); return; }
     const all = loadGuestListings();
     const idx = all.findIndex((l) => l.id === listingId);
@@ -238,9 +232,9 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDe
     setError('');
   }, [coins, userId, onBuy]);
 
-  const handleBuy = async (listingId, qty, totalCost) => {
+  const executeBuy = useCallback(async (listingId, qty, totalCost) => {
     if (!hasAuth) {
-      handleGuestBuy(listingId, qty, totalCost);
+      executeGuestBuy(listingId, qty, totalCost);
       return;
     }
     if (coins < totalCost) { setError(`Not enough coins (need 🪙${totalCost})`); return; }
@@ -253,7 +247,11 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDe
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [hasAuth, coins, executeGuestBuy, listings, onBuy, fetchListings]);
+
+  const handleBuy = useCallback(({ id, crop, qty, price, totalCost }) => {
+    setConfirmBuy({ id, crop, qty, price, totalCost });
+  }, []);
 
   const handleSell = async (e) => {
     e.preventDefault();
@@ -368,6 +366,21 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDe
         {/* Browse tab */}
         {tab === 'browse' && (
           <div style={styles.tabContent}>
+            {confirmBuy && (
+              <div style={{ background: '#fff3e0', border: '1px solid #ffb300', borderRadius: 8, padding: '0.6rem 0.8rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', flex: 1 }}>
+                  Koop {confirmBuy.qty}× {confirmBuy.crop} voor 🪙{confirmBuy.totalCost}?
+                </span>
+                <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
+                  onClick={() => { executeBuy(confirmBuy.id, confirmBuy.qty, confirmBuy.totalCost); setConfirmBuy(null); }}>
+                  ✓ Bevestig
+                </button>
+                <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.3rem 0.7rem' }}
+                  onClick={() => setConfirmBuy(null)}>
+                  ✕ Annuleer
+                </button>
+              </div>
+            )}
             {!hasAuth && (
               <div style={styles.guestBanner}>
                 <strong>Lokale markt</strong> — alleen op dit apparaat. Maak een account om met echte spelers te handelen.
