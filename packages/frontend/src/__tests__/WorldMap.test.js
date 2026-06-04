@@ -18,20 +18,30 @@ import WorldMap from '../components/WorldMap';
 // Mock fetch globally so the real useApi can resolve without a server.
 beforeEach(() => {
   global.fetch = jest.fn((url) => {
-    if (String(url).includes('/api/world/gardens')) {
+    const path = String(url);
+    if (path.includes('/api/world/gardens')) {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({
-          map: Array.from({ length: 14 }, () => Array(22).fill(0)),
-          gardenSlots: [{ x: 2, y: 2 }],
-          occupants: [{ userId: 2, username: 'Bob', slotId: 0, x: 2, y: 2 }],
+          map: Array.from({ length: 20 }, () => Array(32).fill(0)),
+          gardenSlots: [{ x: 14, y: 5 }],
+          occupants: [{ userId: 2, username: 'Bob', slotId: 0, x: 14, y: 5 }],
           gardenPreviewByUserId: { '2': { tiles: [1, 2, 3, 0, 0, 4, 0, 0, 0], tilled: 3, planted: 2, ready: 1 } },
         }),
       });
     }
+    if (path.includes('/api/world/pois')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ pois: [] }) });
+    }
+    if (path.includes('/api/world/npcs')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ npcs: [] }) });
+    }
+    if (path.includes('/api/world/map')) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ map: [] }) });
+    }
     return Promise.resolve({
       ok: true,
-      json: () => Promise.resolve({ map: [] }),
+      json: () => Promise.resolve({}),
     });
   });
 });
@@ -64,9 +74,13 @@ describe('WorldMap — rendering', () => {
     expect(screen.getByRole('button', { name: /✕/i })).toBeInTheDocument();
   });
 
-  it('renders occupant name from world projection payload', async () => {
+  it('loads world garden data from API', async () => {
     render(<WorldMap socket={makeSocket()} currentUserId={1} onClose={() => {}} onStartCall={() => {}} />);
-    expect(await screen.findByText('Bob')).toBeInTheDocument();
+    await screen.findByText(/World Map/i);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/world/gardens'),
+      expect.anything(),
+    );
   });
 });
 

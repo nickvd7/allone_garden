@@ -180,6 +180,20 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_dm_to_user
     ON direct_messages (to_user_id, created_at)
   `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS player_proposals (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user_id  INTEGER NOT NULL,
+      to_user_id    INTEGER NOT NULL,
+      kind          TEXT NOT NULL,
+      payload       TEXT NOT NULL DEFAULT '{}',
+      message       TEXT,
+      status        TEXT NOT NULL DEFAULT 'pending',
+      created_at    DATETIME NOT NULL DEFAULT (datetime('now')),
+      responded_at  DATETIME
+    )
+  `);
 }
 
 // ── Public API (mirrors db.js) ─────────────────────────────────────────────────

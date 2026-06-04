@@ -1,71 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
-// ── Tour steps ────────────────────────────────────────────────────────────────
-// target: CSS selector matching the element to spotlight (null = centred modal)
-// position: where to place the card relative to the target
-export const TOUR_STEPS = [
-  {
-    id:       'welcome',
-    title:    '👋 Welcome to AllOne Garden!',
-    body:     'This quick tour shows you the most important parts of the game. You can skip at any time and replay it later with the ❓ Help button.',
-    target:   null,
-    position: 'center',
-  },
-  {
-    id:       'tools',
-    title:    '🔧 Tools Panel',
-    body:     'Pick a tool to interact with your plots. Start by selecting ⛏️ Till, then click a plot to prepare the soil. After tilling, switch to 🌱 Plant and choose a seed. Add 💧 Water and come back tomorrow with ⏭ Next Day to watch your crops grow!',
-    target:   '[data-tour="tools"]',
-    position: 'right',
-  },
-  {
-    id:       'garden',
-    title:    '🌾 Your Garden',
-    body:     'Click any of the 24 plots to apply the active tool. Plots change colour as you work them — brown when tilled, blue-tinted when watered. The 💚 and ⚠️ icons indicate companion-planting effects that boost or reduce your harvest.',
-    target:   '[data-tour="garden"]',
-    position: 'left',
-  },
-  {
-    id:       'structures',
-    title:    '🏗️ Structures',
-    body:     'Spend coins to build structures. The 🪣 Well waters every tilled plot in one click (3 charges/day). The 🌿 Compost Heap auto-fertilizes after every 3 harvests. The 🏡 Greenhouse shields your crops from storms and drought.',
-    target:   '[data-tour="structures"]',
-    position: 'right',
-  },
-  {
-    id:       'inventory',
-    title:    '🎒 Inventory',
-    body:     'Harvested crops land here. Click "Sell" to exchange them for coins right away, or open the 🔄 Marketplace to post trade listings and buy from other players.',
-    target:   '[data-tour="inventory"]',
-    position: 'top',
-  },
-  {
-    id:       'chat',
-    title:    '🌍 Multiplayer',
-    body:     'Chat with other players in real time and see who is currently online. Use the 🗺️ World Map to visit a neighbour\'s garden, help them out for bonus XP, or start a video call. The game syncs automatically when you\'re connected.',
-    target:   '[data-tour="chat"]',
-    position: 'top',
-  },
-  {
-    id:       'header',
-    title:    '⚙️ Top Bar',
-    body:     'Quick access to everything: 🔄 Marketplace, 🔌 Plugins, 🏆 Badges, 🗺️ World Map, 📊 Leaderboard, and your 👤 Account. Switch the language or toggle 🌙 dark mode on the right.',
-    target:   '[data-tour="header"]',
-    position: 'bottom',
-  },
-  {
-    id:       'done',
-    title:    '🌱 You\'re all set!',
-    body:     'That\'s everything you need to know to get started. Explore at your own pace — and remember, the ❓ Help button is always there if you need a refresher. Happy gardening!',
-    target:   null,
-    position: 'center',
-  },
+export const TOUR_STEP_META = [
+  { id: 'welcome',    target: null,                      position: 'center' },
+  { id: 'tools',      target: '[data-tour="tools"]',     position: 'right'  },
+  { id: 'garden',     target: '[data-tour="garden"]',    position: 'left'   },
+  { id: 'structures', target: '[data-tour="structures"]', position: 'right'  },
+  { id: 'village',    target: '[data-tour="world"]',     position: 'bottom' },
+  { id: 'inventory',  target: '[data-tour="inventory"]', position: 'top'    },
+  { id: 'chat',       target: '[data-tour="chat"]',      position: 'top'    },
+  { id: 'header',     target: '[data-tour="header"]',    position: 'bottom' },
+  { id: 'done',       target: null,                      position: 'center' },
 ];
 
-// ── Helper: position the card near the highlighted element ─────────────────
+/** Build translated tour steps (for tests pass i18n.t). */
+export function getTourSteps(t) {
+  return TOUR_STEP_META.map(({ id, target, position }) => ({
+    id,
+    title: t(`tour.steps.${id}.title`),
+    body:  t(`tour.steps.${id}.body`),
+    target,
+    position,
+  }));
+}
+
 function calcCardStyle(targetRect, position) {
   const CARD_W  = 340;
-  const CARD_H  = 240; // approximate
+  const CARD_H  = 280;
   const MARGIN  = 16;
   const viewW   = window.innerWidth;
   const viewH   = window.innerHeight;
@@ -77,11 +38,13 @@ function calcCardStyle(targetRect, position) {
       left:      '50%',
       transform: 'translate(-50%, -50%)',
       width:     CARD_W,
+      maxHeight: 'min(85vh, calc(100vh - 2rem))',
+      overflowY: 'auto',
     };
   }
 
   const { top, bottom, left, right, width } = targetRect;
-  const style = { position: 'fixed', width: CARD_W };
+  const style = { position: 'fixed', width: CARD_W, maxHeight: 'min(70vh, 320px)', overflowY: 'auto' };
 
   switch (position) {
     case 'right':
@@ -106,20 +69,27 @@ function calcCardStyle(targetRect, position) {
   return style;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
+function renderTourBody(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) =>
+    part.startsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : part
+  );
+}
+
 function TourOverlay({ onFinish }) {
-  const [step,       setStep]       = useState(0);
+  const { t, i18n } = useTranslation();
+  const tourSteps = useMemo(() => getTourSteps(t), [t, i18n.language]);
+  const [step, setStep] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
-  const [showAgain,  setShowAgain]  = useState(false);
+  const [showAgain, setShowAgain] = useState(false);
   const rafRef = useRef(null);
 
-  const current = TOUR_STEPS[step];
-  const isLast  = step === TOUR_STEPS.length - 1;
+  const current = tourSteps[step] || tourSteps[0];
+  const isLast  = step === tourSteps.length - 1;
   const isFirst = step === 0;
 
-  // Measure the target element and keep the rect up-to-date on resize
   const measureTarget = useCallback(() => {
-    if (!current.target) { setTargetRect(null); return; }
+    if (!current?.target) { setTargetRect(null); return; }
     const el = document.querySelector(current.target);
     if (el) {
       setTargetRect(el.getBoundingClientRect());
@@ -127,20 +97,22 @@ function TourOverlay({ onFinish }) {
     } else {
       setTargetRect(null);
     }
-  }, [current.target]);
+  }, [current?.target]);
 
   useEffect(() => {
     measureTarget();
     window.addEventListener('resize', measureTarget);
-    const rafId = rafRef.current;
-    return () => {
-      window.removeEventListener('resize', measureTarget);
-      cancelAnimationFrame(rafId);
-    };
+    return () => window.removeEventListener('resize', measureTarget);
   }, [measureTarget]);
 
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onFinish(!showAgain); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onFinish, showAgain]);
+
   const handleNext = () => {
-    if (step < TOUR_STEPS.length - 1) setStep((s) => s + 1);
+    if (step < tourSteps.length - 1) setStep((s) => s + 1);
     else onFinish(!showAgain);
   };
 
@@ -152,18 +124,16 @@ function TourOverlay({ onFinish }) {
 
   return (
     <>
-      {/* ── Backdrop ── (only shown when there is no spotlight element) */}
       {!targetRect && (
         <div
           aria-hidden="true"
           style={{
-            position: 'fixed', inset: 0, zIndex: 2000,
+            position: 'fixed', inset: 0, zIndex: 7000,
             background: 'rgba(0,0,0,0.6)',
           }}
         />
       )}
 
-      {/* ── Spotlight ring ── (box-shadow trick dims everything outside the target) */}
       {targetRect && (
         <div
           aria-hidden="true"
@@ -174,9 +144,8 @@ function TourOverlay({ onFinish }) {
             width:     targetRect.width  + PAD * 2,
             height:    targetRect.height + PAD * 2,
             borderRadius:  10,
-            zIndex:        2000,
+            zIndex:        7000,
             pointerEvents: 'none',
-            // The enormous box-shadow dims everything except this element
             boxShadow: '0 0 0 3000px rgba(0,0,0,0.60)',
             border:    '2px solid #4caf50',
             transition: 'top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease',
@@ -184,14 +153,13 @@ function TourOverlay({ onFinish }) {
         />
       )}
 
-      {/* ── Tour card ── */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={current.title}
         style={{
           ...calcCardStyle(targetRect, current.position),
-          zIndex:       2001,
+          zIndex:       7001,
           background:   'white',
           borderRadius: 14,
           padding:      '1.4rem 1.5rem',
@@ -199,9 +167,8 @@ function TourOverlay({ onFinish }) {
           fontFamily:   'inherit',
         }}
       >
-        {/* Progress dots */}
         <div style={{ display: 'flex', gap: 5, marginBottom: '1rem', justifyContent: 'center' }}>
-          {TOUR_STEPS.map((_, i) => (
+          {tourSteps.map((_, i) => (
             <div
               key={i}
               style={{
@@ -212,7 +179,7 @@ function TourOverlay({ onFinish }) {
               }}
               onClick={() => setStep(i)}
               role="button"
-              aria-label={`Go to step ${i + 1}`}
+              aria-label={t('tour.goToStep', { n: i + 1 })}
             />
           ))}
         </div>
@@ -221,15 +188,13 @@ function TourOverlay({ onFinish }) {
           {current.title}
         </h3>
         <p style={{ margin: '0 0 1.2rem', fontSize: '0.88rem', color: '#555', lineHeight: 1.6 }}>
-          {current.body}
+          {renderTourBody(current.body)}
         </p>
 
-        {/* Step counter */}
         <div style={{ fontSize: '0.75rem', color: '#aaa', marginBottom: '0.75rem', textAlign: 'center' }}>
-          {step + 1} / {TOUR_STEPS.length}
+          {t('tour.stepCounter', { current: step + 1, total: tourSteps.length })}
         </div>
 
-        {/* "Show again" option */}
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.78rem', color: '#999', marginBottom: '0.6rem', cursor: 'pointer', userSelect: 'none' }}>
           <input
             type="checkbox"
@@ -237,36 +202,29 @@ function TourOverlay({ onFinish }) {
             onChange={(e) => setShowAgain(e.target.checked)}
             style={{ accentColor: '#4caf50', cursor: 'pointer' }}
           />
-          Opnieuw tonen bij volgende inlog
+          {t('tour.showAgain')}
         </label>
 
-        {/* Navigation */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <button
+            type="button"
             onClick={() => onFinish(!showAgain)}
             style={{
               border: 'none', background: 'none', color: '#bbb',
               cursor: 'pointer', fontSize: '0.8rem', padding: '0.3rem 0',
             }}
           >
-            Skip tour
+            {t('tour.skip')}
           </button>
 
           <div style={{ display: 'flex', gap: 8 }}>
             {!isFirst && (
-              <button
-                onClick={handlePrev}
-                style={STYLES.btnSecondary}
-              >
-                ← Back
+              <button type="button" onClick={handlePrev} style={STYLES.btnSecondary}>
+                {t('tour.back')}
               </button>
             )}
-            <button
-              onClick={handleNext}
-              style={STYLES.btnPrimary}
-              autoFocus
-            >
-              {isLast ? '🌱 Start playing!' : 'Next →'}
+            <button type="button" onClick={handleNext} style={STYLES.btnPrimary} autoFocus>
+              {isLast ? t('tour.finish') : t('tour.next')}
             </button>
           </div>
         </div>

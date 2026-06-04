@@ -6,11 +6,26 @@ import appLogo from '../assets/allone-garden-logo-transparent.png';
 
 const API = process.env.REACT_APP_API_URL || '';
 
+const AUTH_LANGUAGES = [
+  { code: 'nl', label: 'Nederlands 🇳🇱' },
+  { code: 'en', label: 'English 🇬🇧' },
+  { code: 'de', label: 'Deutsch 🇩🇪' },
+  { code: 'fr', label: 'Français 🇫🇷' },
+  { code: 'es', label: 'Español 🇪🇸' },
+];
+
 function AuthScreen({ onLogin, allowGuest = true }) {
-  const { t } = useTranslation();
-  // mode: 'login' | 'register' | 'forgot' | 'reset'
+  const { t, i18n } = useTranslation();
   const [mode,    setMode]    = useState('login');
-  const [form,    setForm]    = useState({ username: '', email: '', password: '', token: '', newPassword: '' });
+  const [form,    setForm]    = useState({
+    username: '',
+    email: '',
+    password: '',
+    passwordConfirm: '',
+    language: typeof localStorage !== 'undefined' ? (localStorage.getItem('garden_lang') || 'nl') : 'nl',
+    token: '',
+    newPassword: '',
+  });
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,17 +35,30 @@ function AuthScreen({ onLogin, allowGuest = true }) {
 
   const switchMode = (m) => { setMode(m); setError(''); setSuccess(''); };
 
-  // Parse ?token=... from the URL for the reset-password deep-link
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tok = params.get('token');
     if (tok) { setForm((prev) => ({ ...prev, token: tok })); switchMode('reset'); }
   }, []);
 
+  const applyLanguage = (code) => {
+    localStorage.setItem('garden_lang', code);
+    i18n.changeLanguage(code);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (mode === 'register') {
+      if (form.password !== form.passwordConfirm) {
+        setError(t('auth.password_mismatch'));
+        return;
+      }
+      applyLanguage(form.language);
+    }
+
     setLoading(true);
 
     try {
@@ -45,6 +73,7 @@ function AuthScreen({ onLogin, allowGuest = true }) {
           withCredentials: AUTH_HTTPONLY,
         });
         persistGardenToken(data.token);
+        if (mode === 'register') applyLanguage(form.language);
         onLogin(data.user, AUTH_HTTPONLY ? null : data.token);
 
       } else if (mode === 'forgot') {
@@ -66,7 +95,6 @@ function AuthScreen({ onLogin, allowGuest = true }) {
     }
   };
 
-  // Allow playing offline / as guest without a real account
   const handleGuest = () => {
     onLogin(
       { id: 0, username: 'Guest', email: '', level: 1, xp: 0, coins: 100, plantsGrown: 0 },
@@ -82,7 +110,7 @@ function AuthScreen({ onLogin, allowGuest = true }) {
           className="auth-title-btn"
           id="auth-main-title"
           onClick={() => { window.location.href = '/home'; }}
-          title="Open homepage"
+          title={t('auth.open_home', { defaultValue: 'Open homepage' })}
         >
           <h1 className="auth-title">
             <img src={appLogo} alt={t('app_title')} className="auth-title-logo" />
@@ -90,7 +118,6 @@ function AuthScreen({ onLogin, allowGuest = true }) {
         </button>
         <p className="auth-subtitle">{t('auth.tagline')}</p>
 
-        {/* Tabs — only for login / register */}
         {(mode === 'login' || mode === 'register') && (
           <div className="auth-tabs" role="tablist" aria-labelledby="auth-main-title">
             <button
@@ -114,20 +141,14 @@ function AuthScreen({ onLogin, allowGuest = true }) {
           </div>
         )}
 
-        {/* Forgot / Reset heading */}
         {mode === 'forgot' && (
-          <h2 className="auth-mode-title">
-            🔑 {t('auth.forgot_heading')}
-          </h2>
+          <h2 className="auth-mode-title">🔑 {t('auth.forgot_heading')}</h2>
         )}
         {mode === 'reset' && (
-          <h2 className="auth-mode-title">
-            🔐 {t('auth.new_password_heading')}
-          </h2>
+          <h2 className="auth-mode-title">🔐 {t('auth.new_password_heading')}</h2>
         )}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          {/* Username — login & register only */}
           {(mode === 'login' || mode === 'register') && (
             <input
               className="auth-input"
@@ -142,7 +163,6 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             />
           )}
 
-          {/* Email — register & forgot */}
           {(mode === 'register' || mode === 'forgot') && (
             <input
               className="auth-input"
@@ -155,7 +175,6 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             />
           )}
 
-          {/* Password — login & register */}
           {(mode === 'login' || mode === 'register') && (
             <input
               className="auth-input"
@@ -169,7 +188,34 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             />
           )}
 
-          {/* Reset token (hidden when pre-filled from URL) */}
+          {mode === 'register' && (
+            <>
+              <input
+                className="auth-input"
+                type="password"
+                placeholder={t('auth.password_confirm')}
+                value={form.passwordConfirm}
+                onChange={update('passwordConfirm')}
+                required
+                minLength={8}
+                autoComplete="new-password"
+              />
+              <label className="auth-lang-label" htmlFor="auth-language">
+                {t('language', { defaultValue: 'Language' })}
+              </label>
+              <select
+                id="auth-language"
+                className="auth-input auth-lang-select"
+                value={form.language}
+                onChange={update('language')}
+              >
+                {AUTH_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>{lang.label}</option>
+                ))}
+              </select>
+            </>
+          )}
+
           {mode === 'reset' && !form.token && (
             <input
               className="auth-input"
@@ -181,7 +227,6 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             />
           )}
 
-          {/* New password — reset mode */}
           {mode === 'reset' && (
             <input
               className="auth-input"
@@ -206,24 +251,14 @@ function AuthScreen({ onLogin, allowGuest = true }) {
               t('auth.btn_save_password')}
           </button>
 
-          {/* Forgot link under login form */}
           {mode === 'login' && (
-            <button
-              type="button"
-              className="auth-link"
-              onClick={() => switchMode('forgot')}
-            >
+            <button type="button" className="auth-link" onClick={() => switchMode('forgot')}>
               {t('auth.forgot_link')}
             </button>
           )}
 
-          {/* Back to login link for forgot/reset */}
           {(mode === 'forgot' || mode === 'reset') && (
-            <button
-              type="button"
-              className="auth-link"
-              onClick={() => switchMode('login')}
-            >
+            <button type="button" className="auth-link" onClick={() => switchMode('login')}>
               {t('auth.back_to_login')}
             </button>
           )}
@@ -238,10 +273,7 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             <button type="button" className="auth-btn-guest" onClick={handleGuest}>
               🌿 {t('play_as_guest')}
             </button>
-
-            <p className="auth-note">
-              {t('auth.guest_note')}
-            </p>
+            <p className="auth-note">{t('auth.guest_note')}</p>
           </>
         )}
       </div>

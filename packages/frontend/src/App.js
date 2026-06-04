@@ -25,7 +25,6 @@ import AuthScreen from './components/AuthScreen';
 import Header from './components/Header';
 import ChatPanel from './components/ChatPanel';
 import PlayersPanel from './components/PlayersPanel';
-import Inventory from './components/Inventory';
 import TradeModal from './components/TradeModal';
 import PluginMarketplace from './components/PluginMarketplace';
 import AchievementsPanel from './components/AchievementsPanel';
@@ -33,11 +32,11 @@ import AdminPanel from './components/AdminPanel';
 import AccountSettings from './components/AccountSettings';
 import Leaderboard from './components/Leaderboard';
 import WorldMap from './components/WorldMap';
+import NotificationsPanel, { fetchNotificationBadgeCount } from './components/NotificationsPanel';
 import VideoCall from './components/VideoCall';
 import GroupCallManager from './components/GroupCallManager';
 import TourOverlay from './components/TourOverlay';
 import HelpPanel from './components/HelpPanel';
-import StructuresPanel from './components/StructuresPanel';
 import GradendexPage from './components/GradendexPage';
 import GradendexPanel from './components/GradendexPanel';
 import ContentWikiPage from './components/ContentWikiPage';
@@ -49,14 +48,6 @@ import GardenConflictModal from './components/GardenConflictModal';
 import { GameContentProvider } from './context/GameContentContext';
 
 const BACKEND_URL = process.env.REACT_APP_API_URL || '';
-const WEATHER_ICONS = {
-  sunny: '☀️',
-  cloudy: '☁️',
-  rainy: '🌧️',
-  windy: '💨',
-  storm: '⛈️',
-  drought: '🏜️',
-};
 const LOCAL_WEATHER_TYPES = ['sunny', 'cloudy', 'rainy', 'windy', 'storm', 'drought'];
 
 const INITIAL_PLOTS = Array(24).fill(null).map(() => ({
@@ -81,7 +72,7 @@ const INITIAL_GAME = {
   selectedTool: null,
   selectedSeed: 'tomato',
   playerStats: { xp: 0, coins: 100, level: 1, plantsGrown: 0 },
-  inventory: { tomato: 0, carrot: 0, lettuce: 0, radish: 0, corn: 0, potato: 0, pumpkin: 0, sunflower: 0, blueberry: 0, egg: 0, milk: 0 },
+  inventory: { tomato: 0, carrot: 0, lettuce: 0, radish: 0, corn: 0, potato: 0, pumpkin: 0, sunflower: 0, blueberry: 0, egg: 0, milk: 0, fertilizer: 0, spray: 0 },
   plots: INITIAL_PLOTS,
   structures: INITIAL_STRUCTURES,
 };
@@ -94,10 +85,12 @@ const LOCAL_GROWTH_STAGES = {
 // Debounce helper — saves to backend at most once every N ms
 function useDebounce(fn, delay) {
   const timer = useRef(null);
-  return useCallback((...args) => {
+  const debounced = useCallback((...args) => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => fn(...args), delay);
   }, [fn, delay]);
+  debounced.cancel = () => clearTimeout(timer.current);
+  return debounced;
 }
 
 // RTL languages that need dir="rtl" on <html>
@@ -157,15 +150,25 @@ function App() {
   const [showAccount,      setShowAccount]      = useState(false);
   const [showLeaderboard,  setShowLeaderboard]  = useState(false);
   const [showGradendex,    setShowGradendex]    = useState(false);
-  const [showGradendexQuick, setShowGradendexQuick] = useState(false);
   const [showContentWiki,  setShowContentWiki]  = useState(false);
   const [showSocialMenu,   setShowSocialMenu]   = useState(false);
-  const [showInventoryMenu,setShowInventoryMenu]= useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationsBadge, setNotificationsBadge] = useState(0);
   const [showXpDetails,    setShowXpDetails]    = useState(false);
-  const [showFabMenu,      setShowFabMenu]      = useState(false);
   const [worldHud,         setWorldHud]         = useState({ coords: null, onlineCount: 0 });
   const [socialUnread,     setSocialUnread]     = useState(0);
-  const [, setContentWikiBadge] = useState(0);
+  const refreshNotificationsBadge = useCallback(async () => {
+    if (!authUser?.id || authUser.id === 0) {
+      setNotificationsBadge(0);
+      return;
+    }
+    const n = await fetchNotificationBadgeCount({
+      userId: authUser.id,
+      isAdmin: !!authUser.isAdmin,
+      hasServerAuth,
+    });
+    setNotificationsBadge(n);
+  }, [authUser?.id, authUser?.isAdmin, hasServerAuth]);
   const [callState,        setCallState]        = useState(null);   // { mode, peerId, peerUsername, offer? }
   const [groupCallState,   setGroupCallState]   = useState(null);   // group call state
   const [dmTarget,         setDmTarget]         = useState(null);   // { id, username } — pre-select DM conversation
@@ -176,7 +179,10 @@ function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [showQR,          setShowQR]          = useState(false);
   const [showRecognition, setShowRecognition] = useState(false);
-  const [showStructures,  setShowStructures]  = useState(false);
+  const [showWorldOverview, setShowWorldOverview] = useState(false);
+  const [hideMovementControls, setHideMovementControls] = useState(
+    () => localStorage.getItem('garden_hide_dpad') === 'true'
+  );
 
   const [gameState, setGameState] = useState(INITIAL_GAME);
   const gameStateRef = useRef(gameState);
@@ -236,7 +242,7 @@ function App() {
     day:     gameState.currentDay,
   } : { details: 'On the login screen', state: 'AllOne Garden' });
 
-  const [loginStreak, setLoginStreak] = useState(() => parseInt(localStorage.getItem('garden_streak') || '0', 10));
+  const [, setLoginStreak] = useState(() => parseInt(localStorage.getItem('garden_streak') || '0', 10));
 
   // ── Notification helper ───────────────────────────────────────────────────────
   const showNotification = useCallback((msg, type = 'info') => {
@@ -245,31 +251,12 @@ function App() {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   }, []);
 
-  // ── Content Wiki badge — poll every 60 s ──────────────────────────────────────
-  // Admins see global pending count; regular users see their own revision_requested count.
-  // authUser.isAdmin is derived from the server profile (UI hint only); counts use public/admin endpoints as appropriate.
   useEffect(() => {
-    if (!authUser) return;
-    const fetchCount = () => {
-      if (authUser.isAdmin) {
-        fetch(`${BACKEND_URL}/api/content/proposals/pending-count`)
-          .then((r) => r.ok ? r.json() : { count: 0 })
-          .then(({ count }) => setContentWikiBadge(count || 0))
-          .catch(() => {});
-      } else {
-        if (!hasServerAuth) { setContentWikiBadge(0); return; }
-        api.get('/api/content/proposals/mine')
-          .then((data) => {
-            const n = (data.proposals || []).filter((p) => p.status === 'revision_requested').length;
-            setContentWikiBadge(n);
-          })
-          .catch(() => {});
-      }
-    };
-    fetchCount();
-    const interval = setInterval(fetchCount, 60_000);
+    if (!authUser) return undefined;
+    refreshNotificationsBadge();
+    const interval = setInterval(refreshNotificationsBadge, 45_000);
     return () => clearInterval(interval);
-  }, [authUser, hasServerAuth]);
+  }, [authUser, refreshNotificationsBadge]);
 
   // ── Restore session from localStorage or HttpOnly cookie ───────────────────
   useEffect(() => {
@@ -313,6 +300,7 @@ function App() {
           plots:      data.plots?.length ? data.plots : prev.plots,
           currentDay: data.currentDay || prev.currentDay,
           weather:    data.weather    || prev.weather,
+          inventory:  data.inventory ? { ...prev.inventory, ...data.inventory } : prev.inventory,
           playerStats: {
             xp:          authUser.xp          || 0,
             coins:       authUser.coins        || 100,
@@ -331,6 +319,7 @@ function App() {
       plots:      state.plots,
       currentDay: state.currentDay,
       weather:    state.weather,
+      inventory:  state.inventory,
     };
     const since = localStorage.getItem(GARDEN_SERVER_UPDATED_KEY);
     if (since) payload.ifUnmodifiedSince = since;
@@ -343,6 +332,22 @@ function App() {
       .catch((err) => {
         if (err instanceof ConflictError && err.detail?.garden) {
           const snap = gameStateRef.current;
+          const server = err.detail.garden;
+          if (
+            Number(server.currentDay) === Number(snap.currentDay)
+            && Number(server.currentDay) > 1
+          ) {
+            if (err.detail.serverUpdatedAt) {
+              localStorage.setItem(GARDEN_SERVER_UPDATED_KEY, err.detail.serverUpdatedAt);
+            }
+            setGameState((prev) => ({
+              ...prev,
+              plots: server.plots?.length ? server.plots : prev.plots,
+              currentDay: server.currentDay ?? prev.currentDay,
+              weather: server.weather ?? prev.weather,
+            }));
+            return;
+          }
           setGardenConflict({
             serverGarden:    err.detail.garden,
             serverUpdatedAt: err.detail.serverUpdatedAt,
@@ -459,7 +464,7 @@ function App() {
     });
 
     return () => newSocket.disconnect();
-  }, [authUser, authToken]);
+  }, [authUser, authToken, hasServerAuth]);
 
   // ── Socket event handlers ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -553,18 +558,16 @@ function App() {
         revision_requested: `🔄 "${itemName}" proposal needs revision: ${note}`,
       };
       if (msgs[status]) showNotification(msgs[status]);
-      // Refresh personal badge count immediately
-      if (hasServerAuth) {
-        api.get('/api/content/proposals/mine')
-          .then((data) => {
-            const n = (data.proposals || []).filter((p) => p.status === 'revision_requested').length;
-            setContentWikiBadge(n);
-          })
-          .catch(() => {});
-      }
+      refreshNotificationsBadge();
     };
 
     socket.on('proposal:status_changed', onProposalStatus);
+
+    const onPlayerProposalEvent = () => {
+      refreshNotificationsBadge();
+    };
+    socket.on('player-proposal:received', onPlayerProposalEvent);
+    socket.on('player-proposal:updated', onPlayerProposalEvent);
 
     return () => {
       socket.off('garden:visitor',  onVisitor);
@@ -574,11 +577,13 @@ function App() {
       socket.off('plugin:server-motd:data',    onMotd);
       socket.off('call:offer',      onCallOffer);
       socket.off('proposal:status_changed', onProposalStatus);
+      socket.off('player-proposal:received', onPlayerProposalEvent);
+      socket.off('player-proposal:updated', onPlayerProposalEvent);
       socket.off('community:goal',     onCommunityGoal);
       socket.off('community:progress', onCommunityProgress);
       socket.off('game:action',        onGameAction);
     };
-  }, [socket, showNotification, hasServerAuth]);
+  }, [socket, showNotification, hasServerAuth, refreshNotificationsBadge]);
 
   useEffect(() => {
     if (!socket) return;
@@ -607,29 +612,24 @@ function App() {
     return () => socket.off('dm:receive', onDmToast);
   }, [socket, showSocialMenu, showNotification]);
 
-  // ── Click-outside: close social menu and FAB menu ─────────────────────────
+  // ── Click-outside: close social menu ─────────────────────────
   useEffect(() => {
-    if (!showSocialMenu && !showFabMenu && !showGradendexQuick) return;
+    if (!showSocialMenu) return;
     const onPointerDown = (e) => {
-      // Close if clicking outside .world-social-dropdown, .world-fab-menu, .world-fab--main
       const isInsideSocial = e.target.closest('.world-social-dropdown') || e.target.closest('[data-social-toggle]');
-      const isInsideFab = e.target.closest('.world-fab--main') || e.target.closest('.world-fab-menu') || e.target.closest('.world-fab-menu__item');
-      const isInsideGdex = e.target.closest('.world-fab-menu') || e.target.closest('[class*="gradendex"]');
-      if (showSocialMenu && !isInsideSocial) setShowSocialMenu(false);
-      if (showFabMenu && !isInsideFab) {
-        setShowFabMenu(false);
-        if (!isInsideGdex) setShowGradendexQuick(false);
-      }
+      if (!isInsideSocial) setShowSocialMenu(false);
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [showSocialMenu, showFabMenu, showGradendexQuick]);
+  }, [showSocialMenu]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleLogin = (user, token) => {
     setAuthUser(user);
     setAuthToken(token);
     if (user.id !== 0) setBackendUp(true);
+    const savedLang = localStorage.getItem('garden_lang');
+    if (savedLang) i18n.changeLanguage(savedLang);
     track('session_start', { level: user.level || 1 });
     setGameState((prev) => ({
       ...prev,
@@ -647,8 +647,60 @@ function App() {
   };
 
   const handleStartDm = useCallback((player) => {
+    setShowWorldOverview(false);
     setShowSocialMenu(true);
     setDmTarget(player);
+  }, []);
+
+  const toggleSocialMenu = useCallback(() => {
+    setShowSocialMenu((prev) => {
+      const next = !prev;
+      if (next) {
+        setShowWorldOverview(false);
+        setShowNotifications(false);
+        setShowProfile(false);
+        setShowGradendex(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleWorldMap = useCallback(() => {
+    setShowWorldOverview((prev) => {
+      const next = !prev;
+      if (next) {
+        setShowSocialMenu(false);
+        setShowNotifications(false);
+        setShowProfile(false);
+        setShowGradendex(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleNotifications = useCallback(() => {
+    if (!authUser?.id || authUser.id === 0) return;
+    setShowNotifications((prev) => {
+      const next = !prev;
+      if (next) {
+        setShowSocialMenu(false);
+        setShowWorldOverview(false);
+        setShowProfile(false);
+        setShowGradendex(false);
+        refreshNotificationsBadge();
+      }
+      return next;
+    });
+  }, [authUser?.id, refreshNotificationsBadge]);
+
+  const handleLanguageChange = useCallback((lang) => {
+    localStorage.setItem('garden_lang', lang);
+    i18n.changeLanguage(lang);
+  }, [i18n]);
+
+  const handleHideMovementToggle = useCallback((hide) => {
+    setHideMovementControls(hide);
+    localStorage.setItem('garden_hide_dpad', String(hide));
   }, []);
 
   const handleTourFinish = (dontShowAgain = true) => {
@@ -674,6 +726,7 @@ function App() {
   };
 
   const handleNextDay = useCallback(() => {
+    debouncedSave.cancel();
     if (!hasServerAuth) {
       setGameState((prev) => ({
         ...prev,
@@ -705,20 +758,55 @@ function App() {
     }
     api.post('/api/garden/nextday')
       .then((data) => {
+        if (data.serverUpdatedAt) {
+          localStorage.setItem(GARDEN_SERVER_UPDATED_KEY, data.serverUpdatedAt);
+        }
         setGameState((prev) => ({
           ...prev,
           currentDay: data.currentDay || ((prev.currentDay || 1) + 1),
           weather: data.weather || prev.weather,
           plots: data.plots?.length ? data.plots : prev.plots,
         }));
+        setGardenConflict(null);
+        showNotification(t('header_next_day'));
       })
       .catch(() => {
         showNotification('Kon de volgende dag niet starten.');
       });
-  }, [hasServerAuth, showNotification]);
+  }, [hasServerAuth, showNotification, debouncedSave, t]);
 
   // Sell a crop from inventory — silo gives +20% bonus
-  const handleSell = useCallback((cropId, qty, priceEach) => {
+  const handleSell = useCallback(async (cropId, qty, priceEach) => {
+    const siloBonus = gameStateRef.current?.structures?.silo?.built ? 1.2 : 1;
+    if (hasServerAuth) {
+      try {
+        const result = await api.post('/api/trade/quick-sell', {
+          cropId,
+          quantity: qty,
+          pricePerUnit: priceEach,
+          siloBonus,
+        });
+        setGameState((prev) => ({
+          ...prev,
+          inventory: result.inventory || {
+            ...prev.inventory,
+            [cropId]: Math.max(0, (prev.inventory[cropId] || 0) - qty),
+          },
+          playerStats: {
+            ...prev.playerStats,
+            coins: result.coins ?? ((prev.playerStats.coins || 0) + (result.earned || 0)),
+          },
+        }));
+        const bonusNote = siloBonus > 1 ? ' (+silo)' : '';
+        showNotification(`Sold ${qty}× ${cropId} for 🪙${result.earned}${bonusNote}`);
+        unlock('FIRST_SALE');
+        triggerHaptic('MEDIUM');
+      } catch (err) {
+        showNotification(err?.message || 'Verkopen mislukt');
+      }
+      return;
+    }
+
     setGameState((prev) => {
       if ((prev.inventory[cropId] || 0) < qty) return prev;
       const siloBonus = prev.structures?.silo?.built ? 1.2 : 1;
@@ -733,7 +821,7 @@ function App() {
         playerStats: { ...prev.playerStats, coins: prev.playerStats.coins + earned },
       };
     });
-  }, [showNotification, unlock, triggerHaptic]);
+  }, [hasServerAuth, showNotification, unlock, triggerHaptic]);
 
   // Farm animal collect handlers
   // QR scan: plant the identified crop in the first available tilled empty plot
@@ -774,6 +862,17 @@ function App() {
     showNotification(`Bought ${qty}× ${cropId} for 🪙${totalCost}`);
   }, [showNotification]);
 
+  const syncInventoryToServer = useCallback(async () => {
+    if (!hasServerAuth || !backendUp) return;
+    const snap = gameStateRef.current;
+    await api.post('/api/garden', {
+      plots: snap.plots,
+      currentDay: snap.currentDay,
+      weather: snap.weather,
+      inventory: snap.inventory,
+    });
+  }, [hasServerAuth, backendUp]);
+
   /** Alleen voor gast-markt: oogst uit inventaris halen bij het plaatsen van een listing. */
   const handleTradeSellDeduct = useCallback((cropId, qty) => {
     setGameState((prev) => {
@@ -793,7 +892,7 @@ function App() {
     showNotification(`Virtuele koper kocht ${qty}× ${cropId} voor 🪙${totalCoins}`);
   }, [showNotification]);
 
-  const handleBuildStructure = useCallback((id) => {
+  const handleBuildStructure = useCallback((id, ringSlot) => {
     setGameState((prev) => {
       const defCosts = { well: 50, compost: 30, greenhouse: 80, barn: 120, chickenCoop: 60, stable: 100, silo: 90 };
       const requires = { chickenCoop: 'barn', stable: 'barn' };
@@ -801,11 +900,12 @@ function App() {
       if ((prev.structures?.[id]?.built) || (prev.playerStats?.coins || 0) < cost) return prev;
       const req = requires[id];
       if (req && !prev.structures?.[req]?.built) return prev;
+      if (!Number.isInteger(ringSlot) || ringSlot < 0) return prev;
       return {
         ...prev,
         structures: {
           ...prev.structures,
-          [id]: { ...(prev.structures?.[id] || {}), built: true },
+          [id]: { ...(prev.structures?.[id] || {}), built: true, ringSlot },
         },
         playerStats: {
           ...prev.playerStats,
@@ -977,8 +1077,6 @@ function App() {
         </div>
       )}
       <Header
-        onLanguageChange={(lang) => i18n.changeLanguage(lang)}
-        currentLang={i18n.language}
         serverInfo={serverInfo}
         username={authUser.username}
         darkMode={darkMode}
@@ -986,10 +1084,41 @@ function App() {
         onLogout={handleLogout}
         onOpenAccount={() => setShowAccount(true)}
         onOpenPlugins={() => setShowPlugins(true)}
-        onOpenProfile={() => setShowProfile(true)}
-        onOpenSocialMenu={() => setShowSocialMenu((prev) => !prev)}
+        onOpenProfile={() => {
+          setShowSocialMenu(false);
+          setShowWorldOverview(false);
+          setShowGradendex(false);
+          setShowProfile(true);
+        }}
+        onOpenSocialMenu={toggleSocialMenu}
+        onOpenNotifications={!isGuestMode ? toggleNotifications : undefined}
+        notificationsBadge={notificationsBadge}
+        notificationsOpen={showNotifications}
+        onOpenWorldMap={toggleWorldMap}
+        worldMapOpen={showWorldOverview}
+        onOpenHelp={() => {
+          setShowProfile(false);
+          setShowHelp(true);
+        }}
+        onOpenGradendex={() => {
+          setShowSocialMenu(false);
+          setShowWorldOverview(false);
+          setShowProfile(false);
+          setShowGradendex(true);
+        }}
         socialBadge={socialUnread}
         onNextDay={handleNextDay}
+        worldSummary={{
+          currentDay: gameState.currentDay,
+          season: gameState.currentSeason,
+          weather: gameState.weather,
+          xp: gameState.playerStats?.xp,
+          coords: worldHud.coords,
+          onlineCount: worldHud.onlineCount,
+          isGuest: isGuestMode,
+        }}
+        communityGoal={communityGoal}
+        communityProgress={communityProgress}
       />
 
       {showXpDetails && (
@@ -1027,30 +1156,9 @@ function App() {
         </div>
       )}
 
-      {communityGoal && authUser && authUser.id !== 0 && (
-        <div className="community-goal-banner">
-          <span className="community-goal-icon">{communityGoal.icon}</span>
-          <div className="community-goal-text">
-            <strong>Dagelijks teamdoel:</strong> {communityGoal.text}
-          </div>
-          <div className="community-goal-bar-wrap">
-            <div className="community-goal-bar" style={{ width: `${Math.min(100, (communityProgress / communityGoal.target) * 100)}%` }} />
-          </div>
-          <span className="community-goal-count">{communityProgress}/{communityGoal.target}</span>
-        </div>
-      )}
-
       <div className="game-container game-container--world">
         <div data-tour="garden">
           <div className="world-playfield-wrap">
-            <div className="mobile-world-mini-hud" aria-label="World quick info">
-              <div className="mobile-world-mini-hud__line">📅 Day {gameState.currentDay || 1}</div>
-              <div className="mobile-world-mini-hud__line">🍂 {gameState.currentSeason || 'spring'}</div>
-              <div className="mobile-world-mini-hud__line">{WEATHER_ICONS[gameState.weather] || '🌤️'} {gameState.weather || 'sunny'}</div>
-              <div className="mobile-world-mini-hud__line">✨ XP {gameState.playerStats?.xp || 0}</div>
-              <div className="mobile-world-mini-hud__line">📍 {worldHud.coords || '-,-'}</div>
-              {!isGuestMode && <div className="mobile-world-mini-hud__line">👥 {worldHud.onlineCount || 0} online</div>}
-            </div>
             <WorldMap
               embedded
               socket={socket}
@@ -1061,7 +1169,56 @@ function App() {
               onStartCall={(state) => setCallState(state)}
               onOpenMarketplace={() => setShowTrade(true)}
               onWorldHudChange={setWorldHud}
+              hideDpad={hideMovementControls}
+              suppressSidePanels={
+                showSocialMenu || showNotifications || showWorldOverview || showProfile || showGradendex
+                || showHelp || showAccount
+              }
+              showOverviewMap={showWorldOverview}
+              onShowOverviewMapChange={setShowWorldOverview}
+              onSell={handleSell}
+              onBuildStructure={handleBuildStructure}
+              onUseWell={handleUseWell}
+              onUseCompost={handleUseCompost}
+              onCollectEggs={handleCollectEggs}
+              onCollectMilk={handleCollectMilk}
             />
+            {showNotifications && (
+              <div className="notifications-dropdown" data-tour="notifications-panel">
+                <div className="notifications-dropdown__header">
+                  <strong>{t('notifications.title', { defaultValue: 'Meldingen' })}</strong>
+                  <button
+                    type="button"
+                    className="modal-close notifications-dropdown__close"
+                    onClick={() => setShowNotifications(false)}
+                    aria-label={t('worldMap.close_panel')}
+                    title={t('worldMap.close_panel')}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <NotificationsPanel
+                  currentUserId={authUser.id}
+                  isAdmin={!!authUser.isAdmin}
+                  hasServerAuth={hasServerAuth}
+                  onCountChange={setNotificationsBadge}
+                  onNotice={showNotification}
+                  onOpenContentWiki={() => {
+                    setShowNotifications(false);
+                    setShowContentWiki(true);
+                  }}
+                  onEconomyUpdate={({ inventory, coins }) => {
+                    setGameState((prev) => ({
+                      ...prev,
+                      inventory: inventory ? { ...prev.inventory, ...inventory } : prev.inventory,
+                      playerStats: coins !== undefined
+                        ? { ...prev.playerStats, coins }
+                        : prev.playerStats,
+                    }));
+                  }}
+                />
+              </div>
+            )}
             {showSocialMenu && (
               <div className="world-social-dropdown" data-tour="chat">
                 <div className="world-social-dropdown__header">
@@ -1083,51 +1240,13 @@ function App() {
                   dmTarget={dmTarget}
                   onDmTargetClear={() => setDmTarget(null)}
                   onStartCall={(state) => setCallState(state)}
+                  dmOnly
                 />
                 <PlayersPanel
                   socket={socket}
                   currentUserId={authUser.id}
                   onDm={handleStartDm}
                 />
-              </div>
-            )}
-            {showInventoryMenu && (
-              <div data-tour="inventory" className="world-floating-inventory">
-                <Inventory
-                  inventory={gameState.inventory}
-                  onSell={handleSell}
-                  onOpenTrade={() => setShowTrade(true)}
-                  onClose={() => setShowInventoryMenu(false)}
-                />
-              </div>
-            )}
-            {showStructures && (
-              <div className="modal-overlay" data-tour="structures">
-                <div className="modal world-structures-modal">
-                  <div className="modal-header">
-                    <h2>🏗️ Structures</h2>
-                    <button
-                      type="button"
-                      className="modal-close"
-                      onClick={() => setShowStructures(false)}
-                      aria-label="Structures sluiten"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <div className="world-structures-modal__body">
-                    <StructuresPanel
-                      hideTitle
-                      structures={gameState.structures}
-                      coins={gameState.playerStats.coins}
-                      onBuild={handleBuildStructure}
-                      onUseWell={handleUseWell}
-                      onUseCompost={handleUseCompost}
-                      onCollectEggs={handleCollectEggs}
-                      onCollectMilk={handleCollectMilk}
-                    />
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -1143,6 +1262,7 @@ function App() {
           socket={socket}
           onBuy={handleTradeBuy}
           onSellDeduct={handleTradeSellDeduct}
+          onSyncInventory={syncInventoryToServer}
           onGuestSale={handleGuestSale}
           onClose={() => setShowTrade(false)}
         />
@@ -1184,27 +1304,50 @@ function App() {
               </button>
             </div>
             <div className="profile-modal__body">
+              <label className="profile-modal__lang" htmlFor="profile-lang-select">
+                <span>{t('language')}</span>
+                <select
+                  id="profile-lang-select"
+                  className="lang-selector"
+                  value={i18n.language}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                >
+                  <option value="nl">NL 🇳🇱</option>
+                  <option value="en">EN 🇬🇧</option>
+                  <option value="de">DE 🇩🇪</option>
+                  <option value="fr">FR 🇫🇷</option>
+                  <option value="es">ES 🇪🇸</option>
+                </select>
+              </label>
               <button
                 type="button"
                 className="btn btn-secondary profile-modal__action"
                 onClick={() => { setShowProfile(false); setShowAchievements(true); }}
               >
-                🏆 Badges
+                🏆 {t('header_menu_badges', { defaultValue: 'Badges' })}
               </button>
               <button
                 type="button"
                 className="btn btn-secondary profile-modal__action"
                 onClick={() => { setShowProfile(false); setShowLeaderboard(true); }}
               >
-                📊 Leaderboard
+                📊 {t('header_leaderboard_title', { defaultValue: 'Leaderboard' })}
               </button>
               <button
                 type="button"
                 className="btn btn-secondary profile-modal__action"
                 onClick={() => { setShowProfile(false); setShowAccount(true); }}
               >
-                ⚙️ Account instellingen
+                ⚙️ {t('account_settings', { defaultValue: 'Account settings' })}
               </button>
+              <label className="profile-modal__toggle">
+                <input
+                  type="checkbox"
+                  checked={hideMovementControls}
+                  onChange={(e) => handleHideMovementToggle(e.target.checked)}
+                />
+                <span>{t('profile_hide_movement', { defaultValue: 'Hide movement buttons' })}</span>
+              </label>
             </div>
           </div>
         </div>
@@ -1214,6 +1357,10 @@ function App() {
         <GradendexPanel
           token={authToken}
           onClose={() => setShowGradendex(false)}
+          onPlantIdentified={(slug) => {
+            setGameState((prev) => ({ ...prev, selectedSeed: slug, selectedTool: 'plant' }));
+            showNotification(t('gardendex_hub.plant_selected', { plant: slug, defaultValue: `Selected ${slug} to plant` }));
+          }}
         />
       )}
 
@@ -1355,68 +1502,6 @@ function App() {
           </button>
         </div>
       )}
-
-      {/* ── Consolidated FAB menu ── */}
-      {showFabMenu && (
-        <div className="world-fab-menu">
-          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowInventoryMenu((prev) => !prev); }}>
-            <span className="fab-icon">🎒</span> Inventaris
-          </button>
-          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowStructures((open) => !open); }}>
-            <span className="fab-icon">🏗️</span> Structuren
-          </button>
-          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowGradendexQuick((prev) => !prev); }}>
-            <span className="fab-icon">📖</span> Gardendex
-          </button>
-          <button className="world-fab-menu__item" onClick={() => { setShowFabMenu(false); setShowHelp(true); }}>
-            <span className="fab-icon">❓</span> {t('help')}
-          </button>
-        </div>
-      )}
-
-      {showGradendexQuick && (
-        <div style={{
-          position: 'fixed',
-          bottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + 3.4rem)',
-          right: 'max(1rem, env(safe-area-inset-right))',
-          zIndex: 1402,
-          width: '220px',
-          background: 'rgba(15, 43, 22, 0.92)',
-          border: '1px solid rgba(165, 214, 167, 0.4)',
-          borderRadius: '12px',
-          boxShadow: '0 8px 22px rgba(0,0,0,0.25)',
-          padding: '0.5rem',
-          display: 'grid',
-          gap: '0.4rem',
-        }}>
-          {loginStreak > 1 && (
-            <div style={{ textAlign: 'center', fontSize: '0.78rem', color: '#ffb300', fontWeight: 700, padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.15)', marginBottom: '0.3rem' }}>
-              🔥 {loginStreak}-daagse streak!
-            </div>
-          )}
-          <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => { setShowGradendexQuick(false); setShowGradendex(true); }}>
-            🔍 Zoeken
-          </button>
-          <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => { setShowGradendexQuick(false); setShowContentWiki(true); }}>
-            📚 Wiki
-          </button>
-          <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => { setShowGradendexQuick(false); setShowRecognition(true); }}>
-            🌿 Plant recognition
-          </button>
-          <button className="btn btn-secondary" style={{ fontSize: '0.82rem' }} onClick={() => { setShowGradendexQuick(false); setShowQR(true); }}>
-            📷 Garden QR
-          </button>
-        </div>
-      )}
-
-      <button
-        onClick={() => { setShowFabMenu((prev) => !prev); setShowGradendexQuick(false); }}
-        title="Menu"
-        aria-label="Open menu"
-        className={`world-fab world-fab--main${showFabMenu ? ' world-fab--open' : ''}`}
-      >
-        🌿
-      </button>
 
       {/* ── Help Panel ── */}
       {showHelp && (

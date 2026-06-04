@@ -8,7 +8,7 @@
  */
 
 // Replaced at build time by scripts/stamp-sw-cache.js (git short SHA or BUILD_CACHE_REV).
-const CACHE_NAME = 'allone-garden-dev';
+const CACHE_NAME = 'allone-garden-dd1f10f';
 
 const APP_SHELL = [
   '/',

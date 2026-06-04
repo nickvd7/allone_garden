@@ -1,65 +1,56 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import appLogo from '../assets/allone-garden-logo-transparent.png';
 
-// Supported UI languages (add more by adding locale files + registering in i18n/config.js)
-const LANGUAGES = [
-  { code: 'en', label: 'EN 🇬🇧' },
-  { code: 'nl', label: 'NL 🇳🇱' },
-  { code: 'de', label: 'DE 🇩🇪' },
-  { code: 'fr', label: 'FR 🇫🇷' },
-  { code: 'es', label: 'ES 🇪🇸' },
-  { code: 'pt', label: 'PT 🇵🇹' },
-  { code: 'ru', label: 'RU 🇷🇺' },
-  { code: 'it', label: 'IT 🇮🇹' },
-  { code: 'pl', label: 'PL 🇵🇱' },
-  { code: 'tr', label: 'TR 🇹🇷' },
-  { code: 'ja', label: 'JA 🇯🇵' },
-  { code: 'ko', label: 'KO 🇰🇷' },
-  { code: 'zh', label: 'ZH 🇨🇳' },
-  { code: 'hi', label: 'HI 🇮🇳' },
-  { code: 'id', label: 'ID 🇮🇩' },
-  { code: 'vi', label: 'VI 🇻🇳' },
-  { code: 'uk', label: 'UK 🇺🇦' },
-  { code: 'el', label: 'Ελληνικά 🇬🇷' },
-  { code: 'ar', label: 'AR 🇸🇦', rtl: true },
-];
+const WEATHER_ICONS = {
+  sunny: '☀️',
+  cloudy: '☁️',
+  rainy: '🌧️',
+  windy: '💨',
+  storm: '⛈️',
+  drought: '🏜️',
+};
 
 function Header({
-  onLanguageChange,
-  currentLang,
-  serverInfo,
   username,
   darkMode,
   onToggleDark,
   onLogout,
-  onOpenAccount,
-  onOpenTrade: _onOpenTrade,
   onOpenPlugins,
   onOpenProfile,
-  onOpenWorldMap: _onOpenWorldMap,
+  onOpenWorldMap,
   onOpenSocialMenu,
   socialBadge,
-  onToggleInventory,
-  inventoryOpen,
-  worldSummary: _worldSummary,
+  worldSummary,
+  communityGoal,
+  communityProgress,
   onNextDay,
-  onOpenXpDetails: _onOpenXpDetails,
+  onOpenHelp,
+  onOpenGradendex,
+  onOpenNotifications,
+  notificationsBadge = 0,
+  notificationsOpen = false,
+  worldMapOpen,
 }) {
   const { t } = useTranslation();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const profileWrapRef = useRef(null);
+  const statusWrapRef = useRef(null);
 
   useEffect(() => {
-    if (!profileOpen) return undefined;
+    if (!profileOpen && !statusOpen) return undefined;
     const onDocPointerDown = (e) => {
-      if (profileWrapRef.current && !profileWrapRef.current.contains(e.target)) {
+      if (profileOpen && profileWrapRef.current && !profileWrapRef.current.contains(e.target)) {
         setProfileOpen(false);
+      }
+      if (statusOpen && statusWrapRef.current && !statusWrapRef.current.contains(e.target)) {
+        setStatusOpen(false);
       }
     };
     const onKey = (e) => {
       if (e.key === 'Escape') {
         setProfileOpen(false);
+        setStatusOpen(false);
       }
     };
     document.addEventListener('pointerdown', onDocPointerDown);
@@ -68,63 +59,118 @@ function Header({
       document.removeEventListener('pointerdown', onDocPointerDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [profileOpen]);
+  }, [profileOpen, statusOpen]);
+
+  const goalPct = communityGoal?.target
+    ? Math.min(100, Math.round(((communityProgress || 0) / communityGoal.target) * 100))
+    : 0;
 
   return (
-    <header className="header" data-tour="header">
-      <h1 className="header-brand">
-        <img src={appLogo} alt={t('app_title')} className="header-brand-logo" />
-      </h1>
+    <header className="header header--game" data-tour="header">
+      <div className="header-start" ref={statusWrapRef}>
+        <button
+          type="button"
+          className="header-day-chip"
+          aria-expanded={statusOpen}
+          onClick={() => setStatusOpen((o) => !o)}
+          title={t('header_world_status')}
+        >
+          <span className="header-day-chip__main">📅 {t('day')} {worldSummary?.currentDay || 1}</span>
+          <span className="header-day-chip__chevron" aria-hidden>{statusOpen ? '▴' : '▾'}</span>
+        </button>
 
-      <div className="header-actions">
+        {statusOpen && worldSummary && (
+          <div className="header-status-popover" role="region" aria-label={t('header_world_status')}>
+            <div className="header-status-popover__row">
+              {t(`leaderboard.season_${worldSummary.season || 'spring'}`, { defaultValue: worldSummary.season })}
+            </div>
+            <div className="header-status-popover__row">
+              {WEATHER_ICONS[worldSummary.weather] || '🌤️'}{' '}
+              {t(`weather_${worldSummary.weather || 'sunny'}`, { defaultValue: worldSummary.weather })}
+            </div>
+            <div className="header-status-popover__row">✨ XP {worldSummary.xp ?? 0}</div>
+            <div className="header-status-popover__row">📍 {worldSummary.coords || '-,-'}</div>
+            {!worldSummary.isGuest && (
+              <div className="header-status-popover__row">👥 {worldSummary.onlineCount ?? 0} online</div>
+            )}
+            {communityGoal && (
+              <div className="header-status-popover__row header-status-popover__goal">
+                {communityGoal.icon} {communityGoal.text} — {communityProgress || 0}/{communityGoal.target} ({goalPct}%)
+              </div>
+            )}
+          </div>
+        )}
+
         {onNextDay && (
           <button
             type="button"
-            className="header-icon-btn header-icon-btn--minimal header-icon-btn--nextday"
+            className="header-next-day-btn"
             onClick={onNextDay}
-            aria-label={t('header_next_day', { defaultValue: 'Next day' })}
+            aria-label={t('header_next_day')}
           >
-            ⏭️ <span className="header-icon-btn__label">{t('header_next_day', { defaultValue: 'Next day' })}</span>
+            ⏭️ <span className="header-next-day-btn__text">{t('header_next_day')}</span>
+          </button>
+        )}
+      </div>
+
+      <div className="header-actions">
+        {onOpenWorldMap && (
+          <button
+            type="button"
+            className={`header-action-btn${worldMapOpen ? ' header-action-btn--active' : ''}`}
+            onClick={onOpenWorldMap}
+            title={t('header_world_map_title')}
+            aria-label={t('header_world_map_title')}
+            aria-pressed={worldMapOpen}
+            data-tour="world"
+          >
+            <span className="header-action-btn__icon" aria-hidden>🗺️</span>
+            <span className="header-action-btn__label">{t('header_world_short')}</span>
           </button>
         )}
 
         {onOpenSocialMenu && (
           <button
             type="button"
-            className="header-icon-btn header-icon-btn--minimal header-icon-btn--badge-wrap"
+            className="header-action-btn header-action-btn--badge-wrap"
             onClick={onOpenSocialMenu}
-            title={t('header_menu_social', { defaultValue: 'Chat & Online Players' })}
-            aria-label={t('header_menu_social', { defaultValue: 'Chat & Players' })}
+            title={t('header_menu_social')}
+            aria-label={t('header_menu_social')}
           >
-            💬
-            {serverInfo?.players > 1 && (
-              <span style={{ fontSize: '0.65rem', color: '#4caf50', marginLeft: '0.25rem', fontWeight: 600 }}>
-                {serverInfo.players} online
-              </span>
-            )}
+            <span className="header-action-btn__icon" aria-hidden>💬</span>
+            <span className="header-action-btn__label">{t('chat')}</span>
             {socialBadge > 0 && (
-              <span className="header-icon-btn__badge" aria-hidden>
+              <span className="header-action-btn__badge" aria-hidden>
                 {socialBadge > 99 ? '99+' : socialBadge}
               </span>
             )}
           </button>
         )}
 
-        {onToggleInventory && (
+        {onOpenNotifications && (
           <button
             type="button"
-            className="header-icon-btn"
-            onClick={onToggleInventory}
-            title={t('header_menu_inventory', { defaultValue: 'Inventory' })}
+            className={`header-action-btn header-action-btn--badge-wrap${notificationsOpen ? ' header-action-btn--active' : ''}`}
+            onClick={onOpenNotifications}
+            title={t('header_notifications_title')}
+            aria-label={t('header_notifications_title')}
+            aria-pressed={notificationsOpen}
+            data-tour="notifications"
           >
-            🎒 <span className="header-icon-btn__label">{t('header_menu_inventory', { defaultValue: 'Inventory' })}</span> {inventoryOpen ? '▴' : '▾'}
+            <span className="header-action-btn__icon" aria-hidden>🔔</span>
+            <span className="header-action-btn__label">{t('header_notifications_short')}</span>
+            {notificationsBadge > 0 && (
+              <span className="header-action-btn__badge" aria-label={t('header_notifications_badge', { count: notificationsBadge, defaultValue: `${notificationsBadge} new` })}>
+                {notificationsBadge > 99 ? '99+' : notificationsBadge}
+              </span>
+            )}
           </button>
         )}
 
         <div className="header-more" ref={profileWrapRef}>
           <button
             type="button"
-            className="header-icon-btn header-icon-btn--minimal header-user-icon-btn"
+            className="header-action-btn header-action-btn--profile"
             aria-expanded={profileOpen}
             aria-haspopup="menu"
             aria-controls="header-profile-menu"
@@ -133,9 +179,12 @@ function Header({
               e.stopPropagation();
               setProfileOpen((o) => !o);
             }}
-            title={t('header_profile_title', { defaultValue: 'Profile' })}
+            title={username ? `${t('header_profile_title')} — ${username}` : t('header_profile_title')}
           >
-            👤
+            <span className="header-action-btn__icon" aria-hidden>👤</span>
+            <span className="header-action-btn__label header-action-btn__label--profile">
+              {t('header_profile_title')}
+            </span>
           </button>
           {profileOpen && (
             <div
@@ -144,20 +193,6 @@ function Header({
               aria-labelledby="header-profile-btn"
               className="header-more-dropdown"
             >
-              {onOpenProfile ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="header-more-item header-more-item--label header-more-item--label-btn"
-                  onClick={() => { setProfileOpen(false); onOpenAccount?.(); }}
-                >
-                  👤 {username || 'Guest'}
-                </button>
-              ) : (
-                <div className="header-more-item header-more-item--label" aria-hidden>
-                  👤 {username || 'Guest'}
-                </div>
-              )}
               {onOpenProfile && (
                 <button
                   type="button"
@@ -165,7 +200,17 @@ function Header({
                   className="header-more-item"
                   onClick={() => { setProfileOpen(false); onOpenProfile(); }}
                 >
-                  📊 {t('header_profile_title', { defaultValue: 'Profile' })}
+                  👤 {t('header_profile_title')}
+                </button>
+              )}
+              {onOpenGradendex && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-more-item"
+                  onClick={() => { setProfileOpen(false); onOpenGradendex(); }}
+                >
+                  📖 {t('header_menu_gradendex')}
                 </button>
               )}
               {onOpenPlugins && (
@@ -174,9 +219,8 @@ function Header({
                   role="menuitem"
                   className="header-more-item"
                   onClick={() => { setProfileOpen(false); onOpenPlugins(); }}
-                  title={t('header_menu_plugins', { defaultValue: 'Plugins' })}
                 >
-                  🔌 {t('header_menu_plugins', { defaultValue: 'Plugins' })}
+                  🔌 {t('header_menu_plugins')}
                 </button>
               )}
               {onToggleDark && (
@@ -185,30 +229,31 @@ function Header({
                   role="menuitem"
                   className="header-more-item"
                   onClick={() => { setProfileOpen(false); onToggleDark(); }}
-                  title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
                 >
-                  {darkMode ? '☀️' : '🌙'} {darkMode ? t('theme_light', { defaultValue: 'Light mode' }) : t('theme_dark', { defaultValue: 'Dark mode' })}
+                  {darkMode ? '☀️' : '🌙'}{' '}
+                  {darkMode ? t('theme_light', { defaultValue: 'Light mode' }) : t('theme_dark', { defaultValue: 'Dark mode' })}
                 </button>
               )}
-              <select
-                id="header-profile-lang"
-                className="lang-selector header-profile-lang"
-                value={currentLang}
-                onChange={(e) => onLanguageChange(e.target.value)}
-                aria-label="Language"
-                title={t('language', { defaultValue: 'Language' })}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
               {onLogout && (
                 <>
                   <div className="header-more-divider" aria-hidden="true" />
-                  <button type="button" role="menuitem" className="header-more-item" onClick={() => { setProfileOpen(false); onLogout(); }} title="Log out">
-                    🚪 {t('header_logout_short', { defaultValue: 'Logout' })}
+                  {onOpenHelp && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="header-more-item"
+                      onClick={() => { setProfileOpen(false); onOpenHelp(); }}
+                    >
+                      ❓ {t('help')}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="header-more-item"
+                    onClick={() => { setProfileOpen(false); onLogout(); }}
+                  >
+                    🚪 {t('header_logout_short')}
                   </button>
                 </>
               )}

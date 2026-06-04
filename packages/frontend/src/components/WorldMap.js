@@ -10,6 +10,17 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../hooks/useApi';
 import { SEEDS } from './ToolsPanel';
+import StructuresPanel, { STRUCTURE_DEFS } from './StructuresPanel';
+import { getStructureRingCoords, firstFreeStructureSlot } from '../utils/structureRing';
+import { buildBiomeCoordMaps, biomeForTileCode, BIOME_ZONES } from '../utils/worldBiomes';
+import { shouldUsePixiMap } from '../utils/deviceProfile';
+import { tileBackgroundHex, tilePixiGradient } from '../utils/mapTileVisuals';
+import { FALLBACK_WORLD_POIS, poiAt, poiNear, localizedField, poiWithInterior } from '../utils/worldPois';
+import { applyCastleVillage, CASTLE_DRAWBRIDGE, isCastleDrawbridge, isCastleGate, isCastleVillageTile } from '../utils/castleVillageMap';
+import { getInteriorById } from '../data/villageInteriors';
+import WorldPoiModal from './WorldPoiModal';
+import VillageInteriorView from './VillageInteriorView';
+import PlayerProposalsPanel from './PlayerProposalsPanel';
 
 // ─── Map constants ────────────────────────────────────────────────────────────
 const TILE   = 52;
@@ -31,6 +42,8 @@ const W = 2;  // water   (impassable)
 const T = 3;  // tree    (impassable)
 const D = 4;  // desert  (passable)
 const M = 5;  // mountain (impassable)
+const K = 7;  // dock / fishing platform (passable)
+const V = 8;  // village cobblestone
 
 const BASE_MAP = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => G));
 for (let y = 0; y < MAP_H; y += 1) BASE_MAP[y][Math.floor(MAP_W / 2)] = P;
@@ -64,16 +77,8 @@ for (let y = 0; y <= 6; y += 1) {
   if (BASE_MAP[y] && BASE_MAP[y][x] !== W) BASE_MAP[y][x] = M;
 });
 
-// Make a small plaza around the marketplace tile so it is easier to spot.
-[
-  [15, 1], [16, 1], [17, 1],
-  [15, 2], [16, 2], [17, 2],
-  [15, 3], [16, 3], [17, 3],
-].forEach(([x, y]) => {
-  if (BASE_MAP[y] && BASE_MAP[y][x] !== W && BASE_MAP[y][x] !== T) {
-    BASE_MAP[y][x] = P;
-  }
-});
+// Kasteeldorp — gracht, binnenplein en loopbrug (sync met castleVillageMap.js).
+applyCastleVillage(BASE_MAP, { W, T, V, P, G });
 
 const GARDEN_SLOTS = [
   { x: 3,  y: 3  },
@@ -93,8 +98,9 @@ const GARDEN_SLOTS = [
 const START_X = 11;
 const START_Y = 7;
 
-const TILE_BG = { [G]: '#5fa33a', [P]: '#b8955a', [W]: '#3a8fc8', [T]: '#3a7a22', [D]: '#d2b56b', [M]: '#8a9099' };
-const TILE_DECOR = { [G]: null, [P]: null, [W]: '🌊', [T]: '🌲', [D]: '🏜️', [M]: '⛰️' };
+const TILE_BG = { [G]: '#5fa33a', [P]: '#b8955a', [W]: '#3a8fc8', [T]: '#3a7a22', [D]: '#d2b56b', [M]: '#8a9099', [K]: '#6d4f2a', [V]: '#8b7b62', 4: '#8bc34a' };
+const TILE_DECOR = { [G]: null, [P]: null, [W]: '🌊', [T]: '🌲', [D]: '🏜️', [M]: '⛰️', [K]: '⚓', [V]: null };
+const OVERVIEW_TILE = 8;
 
 // Player avatar colors (deterministic from userId)
 function avatarColor(userId) {
@@ -126,12 +132,13 @@ const VIRTUAL_NEIGHBORS = [
   { id: 'npc:bo', username: 'Bo', x: 13, y: 7, role: 'helper' },
   { id: 'npc:ivy', username: 'Ivy', x: 11, y: 5, role: 'trader' },
 ];
-const MARKET_TILE = { x: 16, y: 2 };
+const CASTLE_ENTRANCE = CASTLE_DRAWBRIDGE;
 
 const WORLD_HUB = { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
 const roadTile = (x, y) => {
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return;
   if (BASE_MAP[y][x] === W) return;
+  if (BASE_MAP[y][x] === V) return;
   BASE_MAP[y][x] = P;
 };
 const roadBetween = (from, to) => {
@@ -140,7 +147,18 @@ const roadBetween = (from, to) => {
   const stepY = from.y <= to.y ? 1 : -1;
   for (let y = from.y; y !== to.y + stepY; y += stepY) roadTile(to.x, y);
 };
-[MARKET_TILE, ...GARDEN_SLOTS].forEach((slot) => roadBetween(WORLD_HUB, slot));
+[CASTLE_ENTRANCE, ...GARDEN_SLOTS].forEach((slot) => roadBetween(WORLD_HUB, slot));
+
+// Dorps-POI's blijven op kasseien (geen dirt-path overlay)
+
+// Passable biome garden strips (desert / dock / alpine foothills)
+BIOME_ZONES.forEach((zone) => {
+  zone.coords.forEach(({ x, y }) => {
+    if (BASE_MAP[y] && BASE_MAP[y][x] === W) BASE_MAP[y][x] = K;
+    else if (BASE_MAP[y] && (BASE_MAP[y][x] === T || BASE_MAP[y][x] === M)) BASE_MAP[y][x] = G;
+    else if (zone.id === 'dock' && BASE_MAP[y]) BASE_MAP[y][x] = K;
+  });
+});
 const NPC_HOME_BY_ID = VIRTUAL_NEIGHBORS.reduce((acc, npc) => {
   acc[npc.id] = { x: npc.x, y: npc.y };
   return acc;
@@ -239,14 +257,50 @@ function npcPatrolPath(home) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateGame, onClose, onStartCall, onOpenMarketplace, onWorldHudChange, embedded = false }) {
+function WorldMap({
+  socket,
+  currentUserId,
+  currentUsername,
+  gameState,
+  onUpdateGame,
+  onClose,
+  onStartCall,
+  onOpenMarketplace,
+  onWorldHudChange,
+  embedded = false,
+  hideDpad = false,
+  suppressSidePanels = false,
+  showOverviewMap: showOverviewMapProp,
+  onShowOverviewMapChange,
+  onSell,
+  onBuildStructure,
+  onUseWell,
+  onUseCompost,
+  onCollectEggs,
+  onCollectMilk,
+}) {
   const [embeddedViewport, setEmbeddedViewport] = useState({ w: EMBEDDED_VIEW_W, h: EMBEDDED_VIEW_H });
+  const [embeddedMapFit, setEmbeddedMapFit] = useState({ scale: 1 });
+  const [worldPois, setWorldPois] = useState(FALLBACK_WORLD_POIS);
+  const [activePoi, setActivePoi] = useState(null);
+  const [activeInterior, setActiveInterior] = useState(null);
+  const [villageNotice, setVillageNotice] = useState('');
+  const [nearPoi, setNearPoi] = useState(null);
+  const [playerPulse, setPlayerPulse] = useState(false);
+  const [findMeNotice, setFindMeNotice] = useState('');
+  const pulseTimerRef = useRef(null);
+  const findMeNoticeTimerRef = useRef(null);
+  const [serverNpcState, setServerNpcState] = useState(null);
+  const [proposalNotice, setProposalNotice] = useState('');
+  const [WalkMapPixi, setWalkMapPixi] = useState(null);
+  const pixiEnabled = embedded && shouldUsePixiMap();
   const mapMainRef = useRef(null);
   const viewW = embedded ? embeddedViewport.w : VIEW_W;
   const viewH = embedded ? embeddedViewport.h : VIEW_H;
   /** Altijd vaste tegelgrootte (zoals oorspronkelijk), geen “kleiner schalen”. */
   const pxTile = TILE;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const poiLang = i18n.language?.startsWith('en') ? 'en' : 'nl';
   const isCurrentPlayer = useCallback((player) => {
     if (!player) return false;
     if (currentUserId !== null && currentUserId !== undefined && String(currentUserId) !== '') {
@@ -258,6 +312,8 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
 
   // Dynamic map loaded from server (falls back to BASE_MAP + GARDEN_SLOTS)
   const [serverMap,      setServerMap]      = useState(BASE_MAP);
+  const mapW = useMemo(() => serverMap[0]?.length || MAP_W, [serverMap]);
+  const mapH = useMemo(() => serverMap.length || MAP_H, [serverMap]);
   const [serverSlots,    setServerSlots]    = useState(GARDEN_SLOTS);
   const [worldOccupants, setWorldOccupants] = useState([]);
   const [gardenPreviews, setGardenPreviews] = useState({});
@@ -280,6 +336,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
             slotId: o.slotId,
             x: o.x,
             y: o.y,
+            sharedCount: o.sharedCount || 1,
           }))
         );
       } else {
@@ -303,6 +360,17 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     } finally {
       refreshInFlightRef.current = false;
     }
+  }, []);
+
+  useEffect(() => {
+    api.get('/api/world/pois')
+      .then((data) => {
+        if (Array.isArray(data?.pois) && data.pois.length) setWorldPois(data.pois);
+      })
+      .catch(() => {});
+    api.get('/api/world/npcs')
+      .then((data) => { if (data?.npcs) setServerNpcState(data); })
+      .catch(() => {});
   }, []);
 
   const scheduleProjectionRefresh = useCallback((delayMs = 0) => {
@@ -347,12 +415,16 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   const [facing,         setFacing]         = useState('down');  // eslint-disable-line
   const [step,           setStep]           = useState(0);
 
-  // Overview map
-  const [showOverviewMap, setShowOverviewMap] = useState(false);
+  // Overview map (optionally controlled from App header)
+  const [showOverviewMapInternal, setShowOverviewMapInternal] = useState(false);
+  const showOverviewMap = showOverviewMapProp !== undefined ? showOverviewMapProp : showOverviewMapInternal;
+  const setShowOverviewMap = onShowOverviewMapChange || setShowOverviewMapInternal;
+  const [overviewSearch, setOverviewSearch] = useState('');
+  const [ownPanelSection, setOwnPanelSection] = useState(null);
+  const [activeStructureId, setActiveStructureId] = useState(null);
 
   // Garden visiting
   const [nearGarden,   setNearGarden]   = useState(null);
-  const [nearMarketplace, setNearMarketplace] = useState(false);
   const [visitedData,  setVisitedData]  = useState(null);
   const [loadingVisit, setLoadingVisit] = useState(false);
   const [helpDone,     setHelpDone]     = useState(false);
@@ -417,13 +489,30 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
       setPlayerPositions(prev => ({ ...prev, [userId]: { x, y, username } }));
     const onOffline = ({ userId }) =>
       setPlayerPositions(prev => { const n = {...prev}; delete n[userId]; return n; });
-    socket.on('world:player-moved',   onMoved);
-    socket.on('world:player-offline', onOffline);
-    return () => {
-      socket.off('world:player-moved',   onMoved);
-      socket.off('world:player-offline', onOffline);
+    const onSnapshot = (positions) => {
+      if (!Array.isArray(positions)) return;
+      setPlayerPositions((prev) => {
+        const next = { ...prev };
+        positions.forEach((p) => {
+          if (!p?.userId || String(p.userId) === String(currentUserId)) return;
+          next[p.userId] = { x: p.x, y: p.y, username: p.username };
+        });
+        return next;
+      });
     };
-  }, [socket]);
+    const onNpcWorld = (data) => { if (data?.npcs) setServerNpcState(data); };
+    socket.on('world:player-moved', onMoved);
+    socket.on('world:player-offline', onOffline);
+    socket.on('world:positions-snapshot', onSnapshot);
+    socket.on('npc:world-updated', onNpcWorld);
+    socket.emit('world:request-positions');
+    return () => {
+      socket.off('world:player-moved', onMoved);
+      socket.off('world:player-offline', onOffline);
+      socket.off('world:positions-snapshot', onSnapshot);
+      socket.off('npc:world-updated', onNpcWorld);
+    };
+  }, [socket, currentUserId]);
 
   // ── Socket: refresh world projection when any garden changes ───────────────
   useEffect(() => {
@@ -517,7 +606,8 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   const virtualGardenPreviews = useMemo(() => {
     const previews = {};
     virtualNeighbors.forEach((n) => {
-      previews[String(n.id)] = npcGardenToPreview(NPC_GARDENS[n.id] || []);
+      if (n.preview) previews[String(n.id)] = n.preview;
+      else previews[String(n.id)] = npcGardenToPreview(NPC_GARDENS[n.id] || []);
     });
     return previews;
   }, [virtualNeighbors]);
@@ -545,6 +635,17 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     });
     return map;
   }, [displayGardenOwners]);
+
+  const gardenCoOwnersByCoord = useMemo(() => {
+    const map = {};
+    renderOccupantsWithSelf.forEach((player) => {
+      if (!Number.isInteger(player?.x) || !Number.isInteger(player?.y)) return;
+      const key = `${player.x},${player.y}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(player);
+    });
+    return map;
+  }, [renderOccupantsWithSelf]);
   const ownHome = useMemo(() => (
     lockedOwnHomeRef.current || (myOccupant && Number.isInteger(myOccupant.x) && Number.isInteger(myOccupant.y)
       ? { x: myOccupant.x, y: myOccupant.y }
@@ -564,6 +665,54 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     ? ownPatchCoordToIndex[`${pos.x},${pos.y}`]
     : null;
 
+  const structureEmojiById = useMemo(
+    () => Object.fromEntries(STRUCTURE_DEFS.map((d) => [d.id, d.emoji])),
+    [],
+  );
+
+  const structureByCoord = useMemo(() => {
+    if (!ownHome || !gameState?.structures) return {};
+    const ring = getStructureRingCoords(ownHome.x, ownHome.y);
+    const map = {};
+    Object.entries(gameState.structures).forEach(([id, st]) => {
+      if (!st?.built || !Number.isInteger(st.ringSlot)) return;
+      const coord = ring[st.ringSlot];
+      if (coord) map[`${coord.x},${coord.y}`] = { id, emoji: structureEmojiById[id] || '🏗️' };
+    });
+    return map;
+  }, [ownHome, gameState?.structures, structureEmojiById]);
+
+  useEffect(() => {
+    if (!ownHome || !onUpdateGame || !gameState?.structures) return;
+    const needsSlot = Object.entries(gameState.structures).some(
+      ([, st]) => st?.built && !Number.isInteger(st.ringSlot),
+    );
+    if (!needsSlot) return;
+    const used = new Set();
+    const nextStructures = { ...gameState.structures };
+    Object.entries(nextStructures).forEach(([id, st]) => {
+      if (st?.built && Number.isInteger(st.ringSlot)) used.add(st.ringSlot);
+      else if (st?.built) {
+        const slot = [...Array(12).keys()].find((i) => !used.has(i));
+        if (slot !== undefined) {
+          used.add(slot);
+          nextStructures[id] = { ...st, ringSlot: slot };
+        }
+      }
+    });
+    onUpdateGame((prev) => ({ ...prev, structures: nextStructures }));
+  }, [ownHome, gameState?.structures, onUpdateGame]);
+
+  const handleBuildStructureAtGarden = useCallback((id) => {
+    if (!onBuildStructure || !ownHome) return;
+    const slot = firstFreeStructureSlot(gameState?.structures);
+    if (slot < 0) {
+      setLastOwnActionText(t('structures.ring_full'));
+      return;
+    }
+    onBuildStructure(id, slot);
+    setLastOwnActionText(t('structures.built_on_ring', { emoji: structureEmojiById[id] || '🏗️' }));
+  }, [onBuildStructure, ownHome, gameState?.structures, structureEmojiById, t]);
 
   const neighborPatchCoordMap = useMemo(() => {
     const map = {};
@@ -579,7 +728,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
       for (let i = 0; i < 9; i += 1) {
         const tx = player.x - 1 + (i % 3);
         const ty = player.y + 1 + Math.floor(i / 3);
-        if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) continue;
+        if (tx < 0 || ty < 0 || tx >= mapW || ty >= mapH) continue;
         if (tx === player.x && ty === player.y) continue;
         const key = `${tx},${ty}`;
         if (map[key]) continue;
@@ -665,13 +814,23 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
           break;
         case 'fertilize':
           if (plot.tilled && !plot.fertilized) {
+            if ((inventory.fertilizer || 0) > 0) {
+              inventory.fertilizer -= 1;
+            } else {
+              coinsDelta = -5;
+            }
             plot.fertilized = true;
-            coinsDelta = -5;
             xpDelta = 5;
           }
           break;
         case 'spray':
-          if (plot.pest) { plot.pest = false; xpDelta = 3; }
+          if (plot.pest) {
+            if ((inventory.spray || 0) > 0) {
+              inventory.spray -= 1;
+            }
+            plot.pest = false;
+            xpDelta = 3;
+          }
           break;
         case 'harvest':
           if (plot.planted) {
@@ -715,14 +874,26 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   }, [onUpdateGame, gameState?.selectedTool, gameState?.plots, gameState?.selectedSeed, t]);
 
   const getTile = useCallback((x, y) => {
-    if (x < 0 || x >= MAP_W || y < 0 || y >= MAP_H) return W;
+    if (x < 0 || x >= mapW || y < 0 || y >= mapH) return W;
+    if (poiAt(worldPois, x, y)) {
+      return isCastleVillageTile(x, y) ? V : P;
+    }
     if (gardenMap[`${x},${y}`]) return 4;
     return serverMap[y]?.[x] ?? G;
-  }, [gardenMap, serverMap]);
+  }, [gardenMap, serverMap, mapW, mapH, worldPois]);
   const isPassable = useCallback((x, y) => {
     const t = getTile(x, y);
     return t !== W && t !== T && t !== M;
   }, [getTile]);
+
+  const { coordToPlot: biomeCoordToPlot, coordToZone: biomeCoordToZone } = useMemo(
+    () => buildBiomeCoordMaps(),
+    [],
+  );
+  const currentBiomePlotIndex = Number.isInteger(biomeCoordToPlot[`${pos.x},${pos.y}`])
+    ? biomeCoordToPlot[`${pos.x},${pos.y}`]
+    : null;
+  const [biomeNotice, setBiomeNotice] = useState('');
 
   // ── Broadcast own position ────────────────────────────────────────────────
   const lastBroadcastPosRef = useRef(null);
@@ -764,23 +935,21 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   }, [broadcastPos, isPassable]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setNpcPositions((prev) => prev.map((npc) => {
-        const home = NPC_HOME_BY_ID[npc.id];
-        const path = npcPatrolPath(home);
-        if (!path.length) return npc;
-        for (let i = 1; i <= path.length; i += 1) {
-          const nextStep = ((npc.patrolStep || 0) + i) % path.length;
-          const next = path[nextStep];
-          if (isPassable(next.x, next.y)) {
-            return { ...npc, x: next.x, y: next.y, patrolStep: nextStep };
-          }
-        }
-        return npc;
-      }));
-    }, 1400);
-    return () => clearInterval(timer);
-  }, [isPassable]);
+    if (!serverNpcState?.npcs?.length) return;
+    setNpcPositions(serverNpcState.npcs.map((n, idx) => ({
+      id: n.id,
+      username: n.username,
+      x: n.x,
+      y: n.y,
+      role: n.role,
+      virtual: true,
+      patrolStep: idx,
+      preview: n.preview,
+      serverPlots: n.plots,
+      lastAction: n.lastAction,
+      mood: n.mood,
+    })));
+  }, [serverNpcState]);
 
   useEffect(() => {
     const day = Number(gameState?.currentDay || 1);
@@ -802,6 +971,18 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     });
   }, [gameState?.currentDay, gameState?.currentSeason]);
 
+  useEffect(() => {
+    if (!pixiEnabled) {
+      setWalkMapPixi(null);
+      return undefined;
+    }
+    let live = true;
+    import('./WalkMapPixiRenderer')
+      .then((mod) => { if (live) setWalkMapPixi(() => mod.default); })
+      .catch(() => { if (live) setWalkMapPixi(null); });
+    return () => { live = false; };
+  }, [pixiEnabled]);
+
   useLayoutEffect(() => {
     if (!embedded || !mapMainRef.current) return undefined;
     const el = mapMainRef.current;
@@ -810,10 +991,14 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
       const h = el.clientHeight;
       if (w < 32 || h < 32) return;
 
-      const tw = Math.min(MAP_W, Math.max(EMBEDDED_MIN_VIEW_W, Math.floor(w / TILE)));
-      const th = Math.min(MAP_H, Math.max(EMBEDDED_MIN_VIEW_H, Math.floor(h / TILE)));
+      const tw = Math.min(mapW, Math.max(EMBEDDED_MIN_VIEW_W, Math.floor(w / TILE)));
+      const th = Math.min(mapH, Math.max(EMBEDDED_MIN_VIEW_H, Math.floor(h / TILE)));
+      const mapPxW = tw * TILE;
+      const mapPxH = th * TILE;
+      const scale = Math.min(1, w / mapPxW, h / mapPxH);
 
       setEmbeddedViewport((prev) => ((prev.w === tw && prev.h === th) ? prev : { w: tw, h: th }));
+      setEmbeddedMapFit((prev) => (prev.scale === scale ? prev : { scale }));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -873,10 +1058,111 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     onOpenMarketplace?.();
   }, [onOpenMarketplace]);
 
+  const enterInterior = useCallback((poi) => {
+    const interior = getInteriorById(poi?.interiorId);
+    if (!interior) return;
+    setActiveInterior({ poi, interior });
+    setActivePoi(null);
+  }, []);
+
+  const exitInterior = useCallback(() => {
+    setActiveInterior(null);
+  }, []);
+
+  const flashWorldLocate = useCallback((message) => {
+    setFindMeNotice(message);
+    clearTimeout(findMeNoticeTimerRef.current);
+    findMeNoticeTimerRef.current = setTimeout(() => setFindMeNotice(''), 2800);
+    setPlayerPulse(true);
+    clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => setPlayerPulse(false), 4500);
+    viewportRef.current?.focus();
+  }, []);
+
+  const jumpToWorldPoint = useCallback((tx, ty, notice, extraCandidates = []) => {
+    if (activeInterior) exitInterior();
+    setShowOverviewMap(false);
+    setClickTarget(null);
+    setVisitedData(null);
+    setHelpDone(false);
+
+    const candidates = [
+      ...extraCandidates,
+      { x: tx, y: ty + 1 },
+      { x: tx - 1, y: ty },
+      { x: tx + 1, y: ty },
+      { x: tx, y: ty - 1 },
+      { x: tx - 1, y: ty + 1 },
+      { x: tx + 1, y: ty + 1 },
+      { x: tx, y: ty },
+    ];
+
+    const target = candidates.find((c) => isPassable(c.x, c.y));
+    if (target) {
+      hasUserMovedRef.current = true;
+      setPos(target);
+      broadcastPos(target.x, target.y);
+      flashWorldLocate(notice || t('worldMap.find_me_here'));
+      return true;
+    }
+
+    flashWorldLocate(t('worldMap.overview_jump_blocked'));
+    return false;
+  }, [
+    activeInterior,
+    exitInterior,
+    isPassable,
+    broadcastPos,
+    setShowOverviewMap,
+    flashWorldLocate,
+    t,
+  ]);
+
+  const findMyGarden = useCallback(() => {
+    setOwnGardenPanelDismissed(false);
+    if (!ownHome) {
+      flashWorldLocate(t('worldMap.find_me_here'));
+      return;
+    }
+    jumpToWorldPoint(
+      ownHome.x,
+      ownHome.y,
+      t('worldMap.find_me_done'),
+      [
+        { x: ownHome.x, y: ownHome.y + 1 },
+        { x: ownHome.x - 1, y: ownHome.y + 1 },
+        { x: ownHome.x + 1, y: ownHome.y + 1 },
+      ],
+    );
+  }, [ownHome, jumpToWorldPoint, flashWorldLocate, t]);
+
+  const jumpToOverviewEntry = useCallback((entry) => {
+    if (!entry || !Number.isInteger(entry.x) || !Number.isInteger(entry.y)) return;
+    jumpToWorldPoint(
+      entry.x,
+      entry.y,
+      entry.isMe
+        ? t('worldMap.find_me_done')
+        : t('worldMap.overview_jump_done', { name: entry.username }),
+    );
+  }, [jumpToWorldPoint, t]);
+
   const handlePrimaryInteract = useCallback(() => {
-    // Marketplace has priority over other interactions.
-    if (nearMarketplace) {
-      openMarketplace();
+    if (activeInterior) return;
+    if (nearPoi) {
+      if (poiWithInterior(nearPoi)) {
+        enterInterior(nearPoi);
+        return;
+      }
+      if (nearPoi.type === 'info') {
+        setActivePoi(nearPoi);
+        return;
+      }
+      if (nearPoi.type === 'market') {
+        enterInterior(nearPoi);
+        return;
+      }
+      setActivePoi(nearPoi);
       return;
     }
     if (currentOwnPlotIndex !== null && currentOwnPlotIndex !== undefined) {
@@ -884,22 +1170,15 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
       return;
     }
     if (nearGarden && !isCurrentPlayer(nearGarden)) openVisit(nearGarden);
-  }, [nearMarketplace, openMarketplace, currentOwnPlotIndex, applyToolOnOwnPlot, nearGarden, isCurrentPlayer, openVisit]);
-
-  useEffect(() => {
-    if (!nearMarketplace) {
-      marketplaceAutoOpenedRef.current = false;
-      return;
-    }
-    if (marketplaceAutoOpenedRef.current) return;
-    marketplaceAutoOpenedRef.current = true;
-    openMarketplace();
-  }, [nearMarketplace, openMarketplace]);
+  }, [activeInterior, nearPoi, enterInterior, currentOwnPlotIndex, applyToolOnOwnPlot, nearGarden, isCurrentPlayer, openVisit]);
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
       if (e.repeat) return;
+      if (activeInterior) {
+        return;
+      }
       const tag = e.target?.tagName;
       const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable;
       // Ignore movement/tool key events while typing in form fields
@@ -953,21 +1232,58 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     const isEditableActive = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || document.activeElement?.isContentEditable;
     if (!isEditableActive) viewportRef.current?.focus();
     return () => window.removeEventListener('keydown', onKey, { capture: true });
-  }, [visitedData, move, onClose, currentUserId, isCurrentPlayer, embedded, onUpdateGame, ownHome, pos.x, pos.y, nearbyPlayer, proximityPanelDismissed, handlePrimaryInteract]); // eslint-disable-line
+  }, [visitedData, move, onClose, currentUserId, isCurrentPlayer, embedded, onUpdateGame, ownHome, pos.x, pos.y, nearbyPlayer, proximityPanelDismissed, handlePrimaryInteract, activeInterior, exitInterior]); // eslint-disable-line
 
   // ── Proximity detection ───────────────────────────────────────────────────
+  const WALKER_PROXIMITY = 2;
   useEffect(() => {
-    // Interactie alleen op exacte huis/plot-tegel van andere speler
     const gKey = `${pos.x},${pos.y}`;
     const gardenOwner = gardenMap[gKey] || null;
     const patchOwnerId = neighborPatchCoordMap[gKey]?.ownerId;
     const patchOwner = patchOwnerId ? displayGardenOwnersById[String(patchOwnerId)] : null;
     const activeOwner = (!gardenOwner || isCurrentPlayer(gardenOwner)) ? patchOwner : gardenOwner;
     const canInteract = !!activeOwner && !isCurrentPlayer(activeOwner);
+
+    let closestWalker = null;
+    let closestDist = WALKER_PROXIMITY + 1;
+    Object.entries(playerPositions).forEach(([uid, p]) => {
+      if (String(uid) === String(currentUserId)) return;
+      const d = Math.abs(p.x - pos.x) + Math.abs(p.y - pos.y);
+      if (d <= WALKER_PROXIMITY && d < closestDist) {
+        closestDist = d;
+        closestWalker = { id: uid, username: p.username, x: p.x, y: p.y, virtual: false };
+      }
+    });
+    virtualNeighbors.forEach((n) => {
+      const d = Math.abs(n.x - pos.x) + Math.abs(n.y - pos.y);
+      if (d <= WALKER_PROXIMITY && d < closestDist) {
+        closestDist = d;
+        closestWalker = { ...n };
+      }
+    });
+
+    const plazaPoi = poiNear(worldPois, pos.x, pos.y, 2);
     setNearGarden(canInteract ? activeOwner : null);
-    setNearbyPlayer(canInteract ? { ...activeOwner } : null);
-    setNearMarketplace(pos.x === MARKET_TILE.x && pos.y === MARKET_TILE.y);
-  }, [pos, gardenMap, neighborPatchCoordMap, displayGardenOwnersById, isCurrentPlayer]);
+    setNearbyPlayer(canInteract ? { ...activeOwner } : closestWalker);
+    setNearPoi(plazaPoi);
+  }, [pos, gardenMap, neighborPatchCoordMap, displayGardenOwnersById, isCurrentPlayer, worldPois, playerPositions, virtualNeighbors, currentUserId]);
+
+  useEffect(() => {
+    if (!nearbyPlayer || nearbyPlayer.virtual || !currentUserId) return;
+    api.get(`/api/dm/history/${nearbyPlayer.id}`)
+      .then((data) => {
+        setDmHistory((prev) => ({
+          ...prev,
+          [String(nearbyPlayer.id)]: (data.messages || []).map((m) => ({
+            from: m.from,
+            fromUsername: m.fromUsername,
+            text: m.text,
+            timestamp: m.timestamp,
+          })),
+        }));
+      })
+      .catch(() => {});
+  }, [nearbyPlayer?.id, nearbyPlayer?.virtual, currentUserId]);
 
   const nearbyIdKey = nearbyPlayer?.id !== null && nearbyPlayer?.id !== undefined ? String(nearbyPlayer.id) : null;
   useEffect(() => {
@@ -975,13 +1291,41 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   }, [pos.x, pos.y, nearbyIdKey]);
 
   const handleTileClick = useCallback((tileData) => {
-    const { mx, my, ownPlot, ownPatchIndex, gardenPlayer } = tileData;
+    const { mx, my, ownPlot, ownPatchIndex, gardenPlayer, structureDecor, tile, poi } = tileData;
     if (mx !== pos.x || my !== pos.y) hasUserMovedRef.current = true;
+    const biomePlotIndex = biomeCoordToPlot[`${mx},${my}`];
     if (ownPlot && ownPatchIndex !== null && ownPatchIndex !== undefined) {
       applyToolOnOwnPlot(ownPatchIndex);
       return;
     }
+    if (
+      Number.isInteger(biomePlotIndex)
+      && mx === pos.x && my === pos.y
+    ) {
+      setOwnGardenPanelDismissed(false);
+      applyToolOnOwnPlot(biomePlotIndex);
+      return;
+    }
     if (mx === pos.x && my === pos.y) {
+      if (poi) {
+        if (poiWithInterior(poi)) {
+          enterInterior(poi);
+          return;
+        }
+        setActivePoi(poi);
+        return;
+      }
+      if (structureDecor) {
+        setOwnGardenPanelDismissed(false);
+        setOwnPanelSection('structures');
+        setActiveStructureId(structureDecor.id);
+        return;
+      }
+      if (tile === W || tile === T || tile === M) {
+        const biome = biomeForTileCode(tile);
+        setBiomeNotice(t(`worldMap.biome_interact_${biome}`, { defaultValue: '' }));
+        return;
+      }
       if (gardenPlayer) {
         if (!isCurrentPlayer(gardenPlayer)) openVisit(gardenPlayer);
       }
@@ -989,7 +1333,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     }
     if (!isPassable(mx, my)) return;
     setClickTarget({ x: mx, y: my });
-  }, [pos.x, pos.y, isCurrentPlayer, isPassable, openVisit, applyToolOnOwnPlot]);
+  }, [pos.x, pos.y, isCurrentPlayer, isPassable, openVisit, applyToolOnOwnPlot, biomeCoordToPlot, t, enterInterior]);
 
   const handleHelp = useCallback(() => {
     if (!visitedData?.player || helpDone) return;
@@ -1084,32 +1428,20 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     setNpcNotice(`🛒 Gekocht: ${crop} (-${price} coins)`);
   }, [nearbyPlayer, onUpdateGame]);
 
-  // ── Camera (rand van de kaart pas tonen als je ernaartoe loopt) ───────────
-  /* D-pad staat in onderbalk (niet links); camera gecentreerd op speler */
+  // ── Camera: volledige kaart bereikbaar; rand zichtbaar op kleine schermen ──
   const camAnchorX = Math.floor(viewW / 2);
   const camAnchorY = Math.floor(viewH / 2);
+  const maxCamX = Math.max(0, mapW - viewW);
+  const maxCamY = Math.max(0, mapH - viewH);
   const rawCamX = pos.x - camAnchorX;
   const rawCamY = pos.y - camAnchorY;
-  const EDGE = WORLD_EDGE_REVEAL;
-
-  const minCamX = pos.x >= EDGE + camAnchorX
-    ? Math.min(EDGE, Math.max(0, MAP_W - viewW))
-    : 0;
-  const maxCamXUnclamped = pos.x < MAP_W - EDGE - (viewW - 1 - camAnchorX)
-    ? MAP_W - viewW - EDGE
-    : MAP_W - viewW;
-  const maxCamX = Math.max(minCamX, Math.min(maxCamXUnclamped, MAP_W - viewW));
-
-  const minCamY = pos.y >= EDGE + camAnchorY
-    ? Math.min(EDGE, Math.max(0, MAP_H - viewH))
-    : 0;
-  const maxCamYUnclamped = pos.y < MAP_H - EDGE - (viewH - 1 - camAnchorY)
-    ? MAP_H - viewH - EDGE
-    : MAP_H - viewH;
-  const maxCamY = Math.max(minCamY, Math.min(maxCamYUnclamped, MAP_H - viewH));
-
-  const camX = Math.max(minCamX, Math.min(maxCamX, rawCamX));
-  const camY = Math.max(minCamY, Math.min(maxCamY, rawCamY));
+  const camX = Math.max(0, Math.min(maxCamX, rawCamX));
+  const camY = Math.max(0, Math.min(maxCamY, rawCamY));
+  const atEdgeLeft = camX <= 0;
+  const atEdgeRight = camX >= maxCamX;
+  const atEdgeTop = camY <= 0;
+  const atEdgeBottom = camY >= maxCamY;
+  const mapFitScale = embedded ? embeddedMapFit.scale : 1;
 
   // ── Render tile grid ──────────────────────────────────────────────────────
   const tiles = [];
@@ -1128,11 +1460,80 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
         : null;
       const ownPlot = (ownPatchIndex !== null && ownPatchIndex !== undefined) ? gameState?.plots?.[ownPatchIndex] : null;
       const neighborPatch = neighborPatchCoordMap[`${mx},${my}`];
-      const isMarketTile = mx === MARKET_TILE.x && my === MARKET_TILE.y;
+      const structureDecor = structureByCoord[`${mx},${my}`];
+      const poi = poiAt(worldPois, mx, my);
+      const isMarketTile = poi?.type === 'market';
+      const isWorldEdge = mx === 0 || mx === mapW - 1 || my === 0 || my === mapH - 1;
+      const coOwners = gardenCoOwnersByCoord[`${mx},${my}`] || [];
 
-      tiles.push({ vx, vy, mx, my, tile, gardenPlayer, preview, ownPatchIndex, ownPlot, neighborPatch, isMe, isMarketTile });
+      tiles.push({
+        vx, vy, mx, my, tile, gardenPlayer, preview, ownPatchIndex, ownPlot,
+        neighborPatch, isMe, isMarketTile, structureDecor, poi, isWorldEdge, coOwners,
+      });
     }
   }
+
+  const usePixiLayer = pixiEnabled && WalkMapPixi;
+
+  const pixiTileSpecs = useMemo(() => {
+    if (!usePixiLayer) return [];
+    return tiles.map((t) => {
+      const biomePlotIndex = biomeCoordToPlot[`${t.mx},${t.my}`];
+      const biomePlot = Number.isInteger(biomePlotIndex)
+        ? gameState?.plots?.[biomePlotIndex]
+        : null;
+      const isHighlighted = t.isMe && !!nearGarden;
+      const plotSource = t.ownPlot || biomePlot;
+      let plotOverlay = null;
+      if (plotSource) {
+        plotOverlay = {
+          tilled: !!plotSource.tilled,
+          planted: !!plotSource.planted,
+          active: (currentOwnPlotIndex === t.ownPatchIndex)
+            || (currentBiomePlotIndex === biomePlotIndex),
+          emoji: plotSource.planted ? (plotEmoji(plotSource) || '🌱') : null,
+        };
+      }
+
+      const coCount = t.coOwners?.length || 0;
+      const houseLabel = t.gardenPlayer
+        ? (coCount > 1
+          ? `${t.gardenPlayer.username} +${coCount - 1}`
+          : t.gardenPlayer.username)
+        : null;
+
+      return {
+        vx: t.vx,
+        vy: t.vy,
+        gradientStops: tilePixiGradient(t.tile, { highlighted: isHighlighted }),
+        borderHex: t.isMarketTile ? '#fff59d' : (t.structureDecor ? '#81c784' : null),
+        worldEdge: t.isWorldEdge,
+        decor: t.poi ? null : (TILE_DECOR[t.tile] || null),
+        poiEmoji: t.poi?.emoji || null,
+        plotOverlay,
+        houseEmoji: t.gardenPlayer ? '🏡' : (t.isMarketTile ? '🏪' : null),
+        houseLabel,
+        clickPayload: {
+          mx: t.mx,
+          my: t.my,
+          ownPlot: t.ownPlot,
+          ownPatchIndex: t.ownPatchIndex,
+          tile: t.tile,
+          gardenPlayer: t.gardenPlayer,
+          structureDecor: t.structureDecor,
+          poi: t.poi,
+        },
+      };
+    });
+  }, [
+    usePixiLayer, tiles, biomeCoordToPlot, gameState?.plots, nearGarden,
+    currentOwnPlotIndex, currentBiomePlotIndex,
+  ]);
+
+  const pixiPlayerTile = useMemo(() => {
+    const me = tiles.find((t) => t.isMe);
+    return me ? { vx: me.vx, vy: me.vy } : null;
+  }, [tiles]);
 
   const visibleWalkers = useMemo(() => {
     const fallbackOccupants = otherPlayers
@@ -1168,7 +1569,126 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
     });
   }, [otherPlayers, playerPositions, virtualNeighbors, camX, camY, viewW, viewH]);
 
-  const walkEmoji = step % 2 === 0 ? '🧑‍🌾' : '🌿';
+  const pixiWalkers = useMemo(() => (
+    usePixiLayer
+      ? visibleWalkers.map((w) => ({
+        vx: w.vx,
+        vy: w.vy,
+        stackOffset: w.stack * Math.min(16, Math.round(pxTile * 0.28)),
+        virtual: w.virtual,
+        initial: w.virtual ? null : (w.username?.[0]?.toUpperCase() || '?'),
+      }))
+      : []
+  ), [usePixiLayer, visibleWalkers, pxTile]);
+
+  const liveMapPlayers = useMemo(() => {
+    const map = {};
+    otherPlayers.forEach((p) => {
+      const live = playerPositions[p.id];
+      map[String(p.id)] = {
+        id: p.id,
+        username: p.username,
+        x: Number.isInteger(live?.x) ? live.x : p.x,
+        y: Number.isInteger(live?.y) ? live.y : p.y,
+        online: true,
+        virtual: false,
+      };
+    });
+    Object.entries(playerPositions).forEach(([uid, p]) => {
+      if (String(uid) === String(currentUserId)) return;
+      map[String(uid)] = {
+        id: uid,
+        username: p.username,
+        x: p.x,
+        y: p.y,
+        online: true,
+        virtual: false,
+      };
+    });
+    virtualNeighbors.forEach((n) => {
+      map[String(n.id)] = {
+        id: n.id,
+        username: n.username,
+        x: n.x,
+        y: n.y,
+        virtual: true,
+        online: true,
+      };
+    });
+    return Object.values(map).filter((p) => Number.isInteger(p.x) && Number.isInteger(p.y));
+  }, [otherPlayers, playerPositions, virtualNeighbors, currentUserId]);
+
+  const overviewTerrainCells = useMemo(() => {
+    const cells = [];
+    for (let y = 0; y < mapH; y += 1) {
+      for (let x = 0; x < mapW; x += 1) {
+        const code = getTile(x, y);
+        cells.push({
+          x,
+          y,
+          code,
+          bg: TILE_BG[code] || '#5fa33a',
+          decor: TILE_DECOR[code],
+        });
+      }
+    }
+    return cells;
+  }, [mapH, mapW, getTile]);
+
+  const overviewSearchEntries = useMemo(() => {
+    const seen = new Set();
+    const entries = [];
+    const add = (player) => {
+      if (!player || !Number.isInteger(player.x) || !Number.isInteger(player.y)) return;
+      const key = String(player.id);
+      if (seen.has(key)) return;
+      seen.add(key);
+      entries.push({
+        id: key,
+        username: player.username,
+        x: player.x,
+        y: player.y,
+        virtual: !!player.virtual,
+        isMe: isCurrentPlayer(player),
+      });
+    };
+    liveMapPlayers.forEach(add);
+    displayGardenOwners.forEach(add);
+    return entries.sort((a, b) => a.username.localeCompare(b.username, undefined, { sensitivity: 'base' }));
+  }, [liveMapPlayers, displayGardenOwners, isCurrentPlayer]);
+
+  const filteredOverviewEntries = useMemo(() => {
+    const q = overviewSearch.trim().toLowerCase();
+    if (!q) return overviewSearchEntries;
+    return overviewSearchEntries.filter((e) => e.username.toLowerCase().includes(q));
+  }, [overviewSearch, overviewSearchEntries]);
+
+  const overviewTerrainLegend = useMemo(() => ([
+    { code: G, label: t('worldMap.overview_tile_grass'), sample: TILE_BG[G] },
+    { code: P, label: t('worldMap.overview_tile_path'), sample: TILE_BG[P] },
+    { code: W, label: t('worldMap.overview_tile_water'), sample: TILE_BG[W] },
+    { code: T, label: t('worldMap.overview_tile_forest'), sample: TILE_BG[T] },
+    { code: M, label: t('worldMap.overview_tile_mountain'), sample: TILE_BG[M] },
+    { code: D, label: t('worldMap.overview_tile_desert'), sample: TILE_BG[D] },
+    { code: K, label: t('worldMap.overview_tile_dock'), sample: TILE_BG[K] },
+    { code: 4, label: t('worldMap.overview_tile_garden'), sample: TILE_BG[4] },
+  ]), [t]);
+
+  const offScreenPlayers = useMemo(() => (
+    liveMapPlayers
+      .map((p) => {
+        const inView = p.x >= camX && p.x < camX + viewW && p.y >= camY && p.y < camY + viewH;
+        if (inView) return null;
+        let edge = 'left';
+        if (p.x >= camX + viewW - 1) edge = 'right';
+        else if (p.y < camY) edge = 'top';
+        else if (p.y >= camY + viewH - 1) edge = 'bottom';
+        return { ...p, edge };
+      })
+      .filter(Boolean)
+  ), [liveMapPlayers, camX, camY, viewW, viewH]);
+
+  const walkEmoji = '🧑‍🌾';
 
   // Right panel mode
   const isVirtualUser = (player) => !!(player?.virtual || String(player?.id || '').startsWith('npc:'));
@@ -1177,24 +1697,51 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   const showGardenVisit = !!visitedData || loadingVisit;
   const isNearGardenVirtual = isVirtualUser(nearGarden);
   const showGardenHint  = !showNearbyChat && !showGardenVisit && !!nearGarden && !isNearGardenVirtual;
+  const structureAtPlayer = structureByCoord[`${pos.x},${pos.y}`];
+  const isAtOwnStructure = !!structureAtPlayer && !!ownHome;
+  const currentBiomeZone = biomeCoordToZone[`${pos.x},${pos.y}`] || null;
+  const isAtBiomeGarden = currentBiomePlotIndex !== null;
   const isAtOwnGarden = (currentOwnPlotIndex !== null && currentOwnPlotIndex !== undefined)
-    || (ownHome && pos.x === ownHome.x && pos.y === ownHome.y);
+    || (ownHome && pos.x === ownHome.x && pos.y === ownHome.y)
+    || isAtOwnStructure
+    || isAtBiomeGarden;
   const showOwnGardenPanel = isAtOwnGarden && !showGardenVisit && !ownGardenPanelDismissed;
-  const showFloatingPanel = showNearbyChat || showGardenVisit || showOwnGardenPanel
-    || (showGardenHint && nearGarden && !isCurrentPlayer(nearGarden));
+  const harvestTotal = useMemo(
+    () => Object.values(gameState?.inventory || {}).reduce((sum, qty) => sum + (qty > 0 ? qty : 0), 0),
+    [gameState?.inventory],
+  );
+  const showFloatingPanel = !suppressSidePanels && (
+    showNearbyChat || showGardenVisit || showOwnGardenPanel
+    || (showGardenHint && nearGarden && !isCurrentPlayer(nearGarden))
+  );
   const ownGardenTargetPlot = (currentOwnPlotIndex !== null && currentOwnPlotIndex !== undefined)
     ? currentOwnPlotIndex
-    : homeDefaultPlotIndex;
+    : (currentBiomePlotIndex !== null ? currentBiomePlotIndex : homeDefaultPlotIndex);
   const ownGardenTools = QUICK_TOOLS;
-  const getToolLabel = (tool) => t(`worldMap.tool_${tool}`, { defaultValue: tool });
+  const getToolLabel = (tool) => t(`tool_${tool}`);
 
   useEffect(() => {
     if (!isAtOwnGarden && ownGardenPanelDismissed) setOwnGardenPanelDismissed(false);
   }, [isAtOwnGarden, ownGardenPanelDismissed]);
 
+  useEffect(() => {
+    if (!showOwnGardenPanel) setOwnPanelSection(null);
+  }, [showOwnGardenPanel]);
+
+  useEffect(() => {
+    if (isAtOwnStructure && structureAtPlayer?.id) {
+      setOwnPanelSection('structures');
+      setActiveStructureId(structureAtPlayer.id);
+    }
+  }, [isAtOwnStructure, structureAtPlayer?.id]);
+
   // DM history for current nearby player
   const dmMessages = (nearbyPlayer && dmHistory[nearbyPlayer.id]) || [];
-  const nearbyNpcGarden = nearbyPlayer?.virtual ? (NPC_GARDENS[nearbyPlayer.id] || []) : [];
+  const nearbyNpcGarden = useMemo(() => {
+    if (!nearbyPlayer?.virtual) return [];
+    const npc = virtualNeighbors.find((n) => String(n.id) === String(nearbyPlayer.id));
+    return npc?.serverPlots || NPC_GARDENS[nearbyPlayer.id] || [];
+  }, [nearbyPlayer, virtualNeighbors]);
   const nearbyNpcShop = nearbyPlayer?.virtual ? (npcShopStock[nearbyPlayer.id] || {}) : {};
   const nearbyNpcRole = nearbyPlayer?.virtual ? (NPC_ROLE_META[nearbyPlayer.role] || NPC_ROLE_META.trader) : null;
 
@@ -1222,73 +1769,189 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
 
           {/* ── Walking map ──────────────────────────────────────────── */}
           <div className="walk-map-column">
-            <div className="walk-map-main" ref={mapMainRef}>
-            {/* Overview map button */}
+            <div className={`walk-map-main${activeInterior ? ' walk-map-main--interior' : ''}`} ref={mapMainRef}>
+            {activeInterior ? (
+              <VillageInteriorView
+                interior={activeInterior.interior}
+                onExit={exitInterior}
+                onOpenMarket={openMarketplace}
+                gameState={gameState}
+                onUpdateGame={onUpdateGame}
+                onShopNotice={setVillageNotice}
+                currentUserId={currentUserId}
+              />
+            ) : (
+            <>
             <button
-              className="walk-overview-btn"
+              type="button"
+              className={`walk-overview-btn${embedded ? ' walk-overview-btn--embedded' : ''}`}
               onClick={() => setShowOverviewMap((v) => !v)}
-              title="Tuinoverzicht"
+              title={t('worldMap.overview_map_title')}
+              aria-label={t('worldMap.overview_map_title')}
+              aria-pressed={showOverviewMap}
             >
               {'\u{1F5FA}️'}
             </button>
             {showOverviewMap && (
-              <div className="walk-overview-panel">
+              <div className={`walk-overview-panel${embedded ? ' walk-overview-panel--dock' : ''}`}>
                 <div className="walk-overview-header">
-                  <strong>{'\u{1F5FA}️'} Tuinoverzicht</strong>
-                  <button onClick={() => setShowOverviewMap(false)}>✕</button>
+                  <strong>{'\u{1F5FA}️'} {t('worldMap.overview_map_title')}</strong>
+                  <button type="button" onClick={() => setShowOverviewMap(false)} aria-label={t('worldMap.close_panel')}>✕</button>
                 </div>
-                <div
-                  className="walk-overview-map"
-                  style={{ position: 'relative', width: MAP_W * 8, height: MAP_H * 8, background: '#5fa33a', border: '1px solid #3a7a22' }}
-                >
-                  {displayGardenOwners.map((owner) => {
-                    if (!Number.isInteger(owner.x) || !Number.isInteger(owner.y)) return null;
-                    return (
-                      <div
-                        key={String(owner.id)}
-                        style={{
-                          position: 'absolute',
-                          left: owner.x * 8 - 4,
-                          top: owner.y * 8 - 4,
-                          width: 10,
-                          height: 10,
-                          borderRadius: '50%',
-                          background: avatarColor(owner.id),
-                          border: '1px solid #fff',
-                          cursor: 'pointer',
-                        }}
-                        title={owner.username}
-                      />
-                    );
-                  })}
-                  {/* Current player position */}
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: pos.x * 8 - 4,
-                      top: pos.y * 8 - 4,
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: '#fff',
-                      zIndex: 2,
-                    }}
-                    title={t('worldMap.you')}
+
+                <label className="walk-overview-search-label">
+                  <span className="walk-overview-search-label__text">{t('worldMap.overview_search_label')}</span>
+                  <input
+                    type="search"
+                    className="walk-overview-search"
+                    value={overviewSearch}
+                    onChange={(e) => setOverviewSearch(e.target.value)}
+                    placeholder={t('worldMap.overview_search_placeholder')}
+                    aria-label={t('worldMap.overview_search_placeholder')}
                   />
-                </div>
-                <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', maxHeight: 120, overflowY: 'auto' }}>
-                  {displayGardenOwners.filter((o) => !o.virtual).map((owner) => (
-                    <div key={String(owner.id)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: avatarColor(owner.id), flexShrink: 0 }} />
-                      <span style={{ fontWeight: 600 }}>{owner.username}</span>
-                      {isCurrentPlayer(owner) && <span style={{ fontSize: '0.7rem', color: '#a5d6a7' }}>(jij)</span>}
+                </label>
+
+                <div className="walk-overview-map-wrap">
+                  <div
+                    className="walk-overview-map"
+                    style={{ width: mapW * OVERVIEW_TILE, height: mapH * OVERVIEW_TILE }}
+                  >
+                    <div
+                      className="walk-overview-terrain"
+                      style={{
+                        gridTemplateColumns: `repeat(${mapW}, ${OVERVIEW_TILE}px)`,
+                        gridTemplateRows: `repeat(${mapH}, ${OVERVIEW_TILE}px)`,
+                      }}
+                    >
+                      {overviewTerrainCells.map((cell) => (
+                        <div
+                          key={`${cell.x},${cell.y}`}
+                          className="walk-overview-tile"
+                          style={{ background: cell.bg }}
+                          title={cell.decor || undefined}
+                        />
+                      ))}
                     </div>
+
+                    <div className="walk-overview-markers">
+                      {worldPois.map((poi) => (
+                        <button
+                          key={poi.id}
+                          type="button"
+                          className="walk-overview-poi"
+                          style={{
+                            left: poi.x * OVERVIEW_TILE - 1,
+                            top: poi.y * OVERVIEW_TILE - 3,
+                          }}
+                          title={localizedField(poi.label, poiLang)}
+                          onClick={() => jumpToWorldPoint(
+                            poi.x,
+                            poi.y,
+                            t('worldMap.overview_jump_poi', { name: localizedField(poi.label, poiLang) }),
+                          )}
+                        >
+                          {poi.emoji}
+                        </button>
+                      ))}
+
+                      {displayGardenOwners.map((owner) => {
+                        if (!Number.isInteger(owner.x) || !Number.isInteger(owner.y)) return null;
+                        const isMeGarden = isCurrentPlayer(owner);
+                        return (
+                          <button
+                            key={`g-${owner.id}`}
+                            type="button"
+                            className={`walk-overview-garden${isMeGarden ? ' walk-overview-garden--me' : ''}`}
+                            style={{
+                              left: owner.x * OVERVIEW_TILE - (isMeGarden ? 5 : 3),
+                              top: owner.y * OVERVIEW_TILE - (isMeGarden ? 7 : 3),
+                            }}
+                            title={isMeGarden
+                              ? t('worldMap.your_garden_marker')
+                              : t('worldMap.legend_jump', { name: owner.username })}
+                            onClick={() => jumpToOverviewEntry({
+                              id: owner.id,
+                              username: owner.username,
+                              x: owner.x,
+                              y: owner.y,
+                              isMe: isMeGarden,
+                            })}
+                          >
+                            {isMeGarden ? '🏡' : '🏠'}
+                          </button>
+                        );
+                      })}
+
+                      {liveMapPlayers.map((p) => {
+                        if (isCurrentPlayer(p)) return null;
+                        return (
+                          <button
+                            key={`p-${p.id}`}
+                            type="button"
+                            className={`walk-overview-player-dot${p.virtual ? ' walk-overview-player-dot--npc' : ''}`}
+                            style={{
+                              left: p.x * OVERVIEW_TILE - 4,
+                              top: p.y * OVERVIEW_TILE - 4,
+                              background: p.virtual ? '#8d6e63' : avatarColor(p.id),
+                            }}
+                            title={t('worldMap.overview_jump_done', { name: p.username })}
+                            onClick={() => jumpToOverviewEntry(p)}
+                          />
+                        );
+                      })}
+
+                      <div
+                        className="walk-overview-you"
+                        style={{
+                          left: pos.x * OVERVIEW_TILE - 4,
+                          top: pos.y * OVERVIEW_TILE - 4,
+                        }}
+                        title={t('worldMap.you')}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="walk-overview-legend walk-overview-legend--terrain">
+                  <span className="walk-overview-legend__title">{t('worldMap.overview_terrain_legend')}</span>
+                  {overviewTerrainLegend.map((item) => (
+                    <span key={item.code} className="walk-overview-legend__item">
+                      <span className="walk-overview-legend__swatch" style={{ background: item.sample }} />
+                      {item.label}
+                    </span>
                   ))}
+                  <span className="walk-overview-legend__item">🏘️ {t('worldMap.overview_tile_village')}</span>
+                </div>
+
+                <div className="walk-overview-legend">
+                  <span>🏡 {t('worldMap.your_garden_marker')}</span>
+                  <span>⚪ {t('worldMap.you')}</span>
+                  <span>● {t('worldMap.other_players_live')}</span>
+                  <span>📍 {t('worldMap.overview_tile_poi')}</span>
+                </div>
+
+                <div className="walk-overview-player-list">
+                  {filteredOverviewEntries.map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      className="walk-overview-player-row walk-overview-player-row--btn"
+                      onClick={() => jumpToOverviewEntry(entry)}
+                    >
+                      <span>{entry.virtual ? '🤖' : (entry.isMe ? '🏡' : '●')}</span>
+                      <span className="walk-overview-player-row__name">{entry.username}</span>
+                      <span className="walk-overview-coords">({entry.x},{entry.y})</span>
+                      <span className="walk-overview-go">{t('worldMap.overview_go_to')}</span>
+                    </button>
+                  ))}
+                  {filteredOverviewEntries.length === 0 && (
+                    <p className="walk-overview-empty">{t('worldMap.overview_search_empty')}</p>
+                  )}
                 </div>
               </div>
             )}
             <div
-              className="walk-viewport"
+              className={`walk-viewport${atEdgeLeft ? ' walk-viewport--at-edge-left' : ''}${atEdgeRight ? ' walk-viewport--at-edge-right' : ''}${atEdgeTop ? ' walk-viewport--at-edge-top' : ''}${atEdgeBottom ? ' walk-viewport--at-edge-bottom' : ''}`}
               ref={viewportRef}
               tabIndex={0}
               style={embedded
@@ -1296,42 +1959,117 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                 : { width: viewW * pxTile, height: viewH * pxTile, outline: 'none' }}
               onClick={() => viewportRef.current?.focus()}
             >
+              {offScreenPlayers.map((p) => (
+                <div
+                  key={`off-${p.id}`}
+                  className={`walk-offscreen-player walk-offscreen-player--${p.edge}`}
+                  title={`${p.username} (${p.x},${p.y})`}
+                >
+                  {p.virtual ? '🤖' : p.username[0]?.toUpperCase()}
+                </div>
+              ))}
               <div
-                className="walk-viewport-inner"
+                className="walk-viewport-fit"
+                style={embedded && mapFitScale < 1 ? { width: '100%', height: '100%' } : undefined}
+              >
+              <div
+                className={`walk-viewport-inner${usePixiLayer ? ' walk-viewport-inner--pixi' : ''}`}
                 style={{
                   width: viewW * pxTile,
                   height: viewH * pxTile,
                   position: 'relative',
-                  margin: embedded ? 'auto' : 0,
+                  margin: 0,
+                  transform: mapFitScale < 1 ? `scale(${mapFitScale})` : undefined,
+                  transformOrigin: 'center center',
                 }}
               >
-              {tiles.map(({ vx, vy, mx, my, tile, gardenPlayer, preview, ownPatchIndex, ownPlot, neighborPatch, isMe, isMarketTile }) => {
+              {usePixiLayer && (
+                <WalkMapPixi
+                  width={viewW * pxTile}
+                  height={viewH * pxTile}
+                  pxTile={pxTile}
+                  tileSpecs={pixiTileSpecs}
+                  walkers={pixiWalkers}
+                  playerTile={pixiPlayerTile}
+                  playerPulse={playerPulse}
+                  playerEmoji={walkEmoji}
+                  onTileClick={handleTileClick}
+                />
+              )}
+              {!usePixiLayer && tiles.map(({
+                vx, vy, mx, my, tile, gardenPlayer, preview, ownPatchIndex, ownPlot,
+                neighborPatch, isMe, isMarketTile, structureDecor, poi, isWorldEdge, coOwners,
+              }) => {
                 const isHighlighted = isMe && !!nearGarden;
+                const biomePlotIndex = biomeCoordToPlot[`${mx},${my}`];
+                const biomePlot = Number.isInteger(biomePlotIndex)
+                  ? gameState?.plots?.[biomePlotIndex]
+                  : null;
+                const biomeKind = tile === 4 ? 'garden' : biomeForTileCode(tile);
                 const bg = tile === 4
                   ? (isHighlighted ? '#7bc67e' : '#8bc34a')
                   : (TILE_BG[tile] || '#5fa33a');
+                const sharedLabel = coOwners?.length > 1
+                  ? `${gardenPlayer?.username || ''} +${coOwners.length - 1}`
+                  : gardenPlayer?.username;
+
+                const villageBuilding = poi?.villageBuilding;
+                const villageClass = villageBuilding ? ` walk-tile--village-${villageBuilding}` : '';
+                const isVillage = isCastleVillageTile(mx, my);
+                const showDrawbridge = isCastleDrawbridge(mx, my);
+                const showCastleGate = isCastleGate(mx, my) && !poi;
 
                 return (
                   <div
                     key={`${vx},${vy}`}
-                    className={`walk-tile ${isMarketTile ? 'walk-tile--market' : ''}`}
+                    className={`walk-tile walk-tile--biome-${biomeKind}${isMarketTile ? ' walk-tile--market' : ''}${structureDecor ? ' walk-tile--structure' : ''}${Number.isInteger(biomePlotIndex) ? ' walk-tile--biome-plot' : ''}${isWorldEdge ? ' walk-tile--world-edge' : ''}${poi ? ' walk-tile--poi' : ''}${isVillage ? ' walk-tile--village' : ''}${villageClass}`}
                     style={{ left: vx * pxTile, top: vy * pxTile, width: pxTile, height: pxTile, background: bg }}
-                    onClick={() => handleTileClick({ mx, my, ownPlot, ownPatchIndex, tile, gardenPlayer })}
+                    onClick={() => handleTileClick({
+                      mx, my, ownPlot, ownPatchIndex, tile, gardenPlayer, structureDecor, poi,
+                    })}
                   >
+                    {poi && (
+                      <div className="world-poi-tile" title={localizedField(poi.label, poiLang)}>
+                        <span className="world-poi-tile__emoji" aria-hidden>{poi.emoji}</span>
+                        <span className="world-poi-tile__name">{localizedField(poi.label, poiLang)}</span>
+                      </div>
+                    )}
                     {/* Terrain decor */}
-                    {TILE_DECOR[tile] && <span className="tile-decor">{TILE_DECOR[tile]}</span>}
+                    {!poi && TILE_DECOR[tile] && (
+                      <span className={`tile-decor${tile === W || tile === T || tile === M ? ' tile-decor--animated' : ''}`}>
+                        {TILE_DECOR[tile]}
+                      </span>
+                    )}
+                    {showDrawbridge && (
+                      <span className="tile-decor tile-decor--castle-bridge" aria-hidden>🌉</span>
+                    )}
+                    {showCastleGate && (
+                      <span className="tile-decor tile-decor--castle-gate" aria-hidden>🏰</span>
+                    )}
+                    {biomePlot && (
+                      <div className={`world-own-plot world-own-plot--biome ${biomePlot.tilled ? 'world-own-plot--tilled' : ''} ${biomePlot.planted ? 'world-own-plot--planted' : ''} ${currentBiomePlotIndex === biomePlotIndex ? 'world-own-plot--active' : ''}`}>
+                        {biomePlot.planted ? (
+                          <span className="world-own-plot-emoji">{plotEmoji(biomePlot) || '🌱'}</span>
+                        ) : biomePlot.tilled ? (
+                          <span className="world-own-plot-dot">•</span>
+                        ) : null}
+                      </div>
+                    )}
 
                     {/* Garden tile label */}
                     {gardenPlayer && (
                       <div className="garden-tile-label">
                         <span className="garden-tile-house">🏡</span>
-                        <span className="garden-tile-name">{gardenPlayer.username}</span>
+                        <span className="garden-tile-name">{sharedLabel}</span>
+                        {coOwners?.length > 1 && (
+                          <span className="garden-tile-shared">{t('worldMap.shared_garden', { count: coOwners.length })}</span>
+                        )}
                       </div>
                     )}
-                    {!gardenPlayer && isMarketTile && (
+                    {!gardenPlayer && isMarketTile && !poi && (
                       <div className="garden-tile-label">
                         <span className="garden-tile-house">🏪</span>
-                        <span className="garden-tile-name">Marketplace</span>
+                        <span className="garden-tile-name">{t('marketplace')}</span>
                         <span className="market-tile-beacon" aria-hidden>✨</span>
                       </div>
                     )}
@@ -1355,8 +2093,16 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                         ) : null}
                       </div>
                     )}
+                    {structureDecor && (
+                      <div
+                        className="world-structure-tile"
+                        title={t(`structures.${structureDecor.id}_name`, { defaultValue: structureDecor.id })}
+                      >
+                        <span className="world-structure-tile__emoji" aria-hidden>{structureDecor.emoji}</span>
+                      </div>
+                    )}
                     {!ownPlot && neighborPatch && (
-                      <div className={`world-own-plot world-own-plot--neighbor ${neighborPatch.tilled ? 'world-own-plot--tilled' : ''} ${neighborPatch.planted ? 'world-own-plot--planted' : ''}`} title={`${neighborPatch.username} garden`}>
+                      <div className={`world-own-plot world-own-plot--neighbor ${neighborPatch.tilled ? 'world-own-plot--tilled' : ''} ${neighborPatch.planted ? 'world-own-plot--planted' : ''}`} title={t('worldMap.neighbor_garden', { name: neighborPatch.username })}>
                         {neighborPatch.emoji ? (
                           <span className="world-own-plot-emoji">{neighborPatch.emoji}</span>
                         ) : neighborPatch.tilled ? (
@@ -1367,14 +2113,14 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
 
                     {/* My character */}
                     {isMe && (
-                      <div className="walk-player-char" title={t('worldMap.you')}>
+                      <div className={`walk-player-char${playerPulse ? ' walk-player-char--pulse' : ''}`} title={t('worldMap.you')}>
                         {walkEmoji}
                       </div>
                     )}
                   </div>
                 );
               })}
-              {visibleWalkers.map(({ uid, username, virtual, vx, vy, stack }) => (
+              {!usePixiLayer && visibleWalkers.map(({ uid, username, virtual, vx, vy, stack }) => (
                 <div
                   key={uid}
                   className={`walk-other-player walk-other-player--floating ${virtual ? 'walk-other-player--virtual' : 'walk-other-player--real'}`}
@@ -1395,25 +2141,44 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
             </div>
             </div>
 
-            {/* HUD */}
-            {((nearGarden && !nearbyPlayer && !isCurrentPlayer(nearGarden)) || (nearbyPlayer && !nearbyPlayer.virtual) || nearMarketplace) && (
+            {findMeNotice && !activeInterior && (
+              <div className="walk-find-me-toast" role="status">{findMeNotice}</div>
+            )}
+
+            {nearPoi && !activeInterior && (
+              <div className="walk-enter-banner" role="status">
+                <button
+                  type="button"
+                  className="walk-enter-banner__btn"
+                  onClick={() => (poiWithInterior(nearPoi) ? enterInterior(nearPoi) : setActivePoi(nearPoi))}
+                >
+                  <span className="walk-enter-banner__emoji" aria-hidden>{nearPoi.emoji}</span>
+                  <span className="walk-enter-banner__label">{localizedField(nearPoi.label, poiLang)}</span>
+                  <span className="walk-enter-banner__action">
+                    {poiWithInterior(nearPoi)
+                      ? t('worldMap.hud_poi_enter_short', { defaultValue: 'Druk E om binnen te gaan' })
+                      : t('worldMap.hud_poi_hint', { name: localizedField(nearPoi.label, poiLang) })}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* HUD — bezoek / speler in de buurt */}
+            {((nearGarden && !nearbyPlayer && !isCurrentPlayer(nearGarden)) || (nearbyPlayer && !nearbyPlayer.virtual)) && (
               <div className="walk-hud">
                 {nearGarden && !nearbyPlayer && !isCurrentPlayer(nearGarden) && (
                   <span className="walk-interact-hint" onClick={() => openVisit(nearGarden)}>
                     {t('worldMap.hud_visit_hint', { name: nearGarden.username })}
                   </span>
                 )}
-                {nearbyPlayer && !isNearbyVirtual && (
+                {nearbyPlayer && (
                   <span className="walk-interact-hint walk-interact-hint--player">
                     {t('worldMap.hud_player_near', { name: nearbyPlayer.username })}
                   </span>
                 )}
-                {nearMarketplace && (
-                  <span className="walk-interact-hint" onClick={openMarketplace}>
-                    🏪 Marketplace dichtbij — druk E
-                  </span>
-                )}
               </div>
+            )}
+            </>
             )}
           </div>
 
@@ -1500,13 +2265,13 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                       style={{ fontSize: '0.78rem', padding: '0.28rem 0.5rem' }}
                       onClick={openMarketplace}
                     >
-                      🏪 Marketplace
+                      🏪 {t('marketplace')}
                     </button>
                   </div>
                 )}
                 {nearbyPlayer.virtual && (
                   <div style={{ marginBottom: '0.45rem' }}>
-                    <div className="walk-garden-note" style={{ marginBottom: '0.35rem' }}>🧺 Voorraad buur</div>
+                    <div className="walk-garden-note" style={{ marginBottom: '0.35rem' }}>🧺 {t('worldMap.neighbor_stock')}</div>
                     <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                       {Object.entries(nearbyNpcShop).map(([crop, qty]) => (
                         <button
@@ -1524,7 +2289,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                 )}
                 {nearbyPlayer.virtual && nearbyNpcGarden.length > 0 && (
                   <div style={{ marginBottom: '0.45rem' }}>
-                    <div className="walk-garden-note" style={{ marginBottom: '0.35rem' }}>🏡 Tuin van buur</div>
+                    <div className="walk-garden-note" style={{ marginBottom: '0.35rem' }}>🏡 {t('worldMap.neighbor_garden_short')}</div>
                     <div className="mini-garden-grid">
                       {nearbyNpcGarden.map((plot, i) => <MiniPlot key={i} plot={plot} />)}
                     </div>
@@ -1532,6 +2297,33 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                 )}
                 {nearbyPlayer.virtual && npcNotice && (
                   <div className="walk-garden-note" style={{ marginBottom: '0.45rem' }}>{npcNotice}</div>
+                )}
+
+                {nearbyPlayer.virtual && nearbyPlayer.lastAction && (
+                  <div className="walk-garden-note" style={{ marginBottom: '0.45rem' }}>
+                    🤖 {nearbyPlayer.lastAction}
+                  </div>
+                )}
+                {proposalNotice && (
+                  <div className="walk-garden-note" style={{ marginBottom: '0.45rem' }}>{proposalNotice}</div>
+                )}
+                {currentUserId && (
+                  <PlayerProposalsPanel
+                    compact
+                    currentUserId={currentUserId}
+                    targetUser={nearbyPlayer.id}
+                    targetUsername={nearbyPlayer.username}
+                    onNotice={setProposalNotice}
+                    onEconomyUpdate={({ inventory, coins }) => {
+                      onUpdateGame?.((prev) => ({
+                        ...prev,
+                        inventory: inventory ? { ...prev.inventory, ...inventory } : prev.inventory,
+                        playerStats: coins !== undefined
+                          ? { ...prev.playerStats, coins }
+                          : prev.playerStats,
+                      }));
+                    }}
+                  />
                 )}
 
                 {helpGivenNotice && (
@@ -1610,6 +2402,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                     </div>
                     {helpDone && <div className="walk-help-msg">{t('worldMap.help_thanks', { name: visitedData.player?.username })}</div>}
                     <div className="walk-garden-note">{t('worldMap.view_only')}</div>
+                    <div className="walk-garden-note walk-garden-note--warn">{t('worldMap.build_only_own')}</div>
                     <div className="mini-garden-grid">
                       {(visitedData.plots||[]).map((plot,i) => <MiniPlot key={i} plot={plot} />)}
                     </div>
@@ -1656,24 +2449,34 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                 </button>
                 <div className="walk-garden-header">
                   <div>
-                    <h3>{t('worldMap.own_garden_title')}</h3>
+                    <h3>
+                      {currentBiomeZone
+                        ? `${currentBiomeZone.emoji} ${t(currentBiomeZone.labelKey)}`
+                        : t('worldMap.own_garden_title')}
+                    </h3>
                     <div className="walk-garden-meta">
                       <span>📍 {pos.x},{pos.y}</span>
                       <span>{t('worldMap.own_garden_plot', { n: ownGardenTargetPlot + 1 })}</span>
                     </div>
                   </div>
                 </div>
-                <div className="walk-garden-note">{t('worldMap.own_garden_hint')}</div>
+                <div className="walk-garden-note">
+                  {currentBiomeZone
+                    ? t(currentBiomeZone.hintKey)
+                    : t('worldMap.own_garden_hint')}
+                </div>
+                {biomeNotice && (
+                  <div className="walk-biome-hint">{biomeNotice}</div>
+                )}
                 {lastOwnActionText && (
                   <div className="walk-garden-note">{lastOwnActionText}</div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.35rem' }}>
+                <div className="walk-own-tools-grid" data-tour="tools">
                   {ownGardenTools.map((tool) => (
                     <button
                       key={tool}
                       type="button"
-                      className={`btn btn-secondary ${gameState.selectedTool === tool ? 'world-action-item--active' : ''}`}
-                      style={{ fontSize: '0.72rem', padding: '0.28rem 0.35rem' }}
+                      className={`btn btn-secondary walk-own-tool-btn ${gameState.selectedTool === tool ? 'world-action-item--active' : ''}`}
                       onClick={() => {
                         onUpdateGame((prev) => ({ ...prev, selectedTool: tool }));
                         applyToolOnOwnPlot(ownGardenTargetPlot, tool);
@@ -1683,6 +2486,66 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                     </button>
                   ))}
                 </div>
+
+                <div className="walk-own-panel-sections">
+                  <button
+                    type="button"
+                    data-tour="inventory"
+                    className={`btn btn-secondary walk-own-section-tab${ownPanelSection === 'inventory' ? ' walk-own-section-tab--active' : ''}`}
+                    onClick={() => setOwnPanelSection((s) => (s === 'inventory' ? null : 'inventory'))}
+                  >
+                    🧺 {t('harvest_with_count', { count: harvestTotal })}
+                  </button>
+                  <button
+                    type="button"
+                    data-tour="structures"
+                    className={`btn btn-secondary walk-own-section-tab${ownPanelSection === 'structures' ? ' walk-own-section-tab--active' : ''}`}
+                    onClick={() => setOwnPanelSection((s) => (s === 'structures' ? null : 'structures'))}
+                  >
+                    🔨 {t('structures.title')}
+                  </button>
+                </div>
+
+                {ownPanelSection === 'inventory' && (
+                  <div className="walk-own-inline-panel">
+                    {Object.entries(gameState.inventory || {})
+                      .filter(([, qty]) => qty > 0)
+                      .map(([cropId, qty]) => {
+                        const seed = SEEDS.find((s) => s.id === cropId);
+                        const sellPrice = { tomato: 10, carrot: 6, lettuce: 5, radish: 4, corn: 12, potato: 8, pumpkin: 22, sunflower: 9, blueberry: 16 }[cropId] || 5;
+                        return (
+                          <div key={cropId} className="walk-own-inv-row">
+                            <span>{seed?.emoji || '🌱'} {t(seed?.labelKey || cropId, { defaultValue: cropId })} ×{qty}</span>
+                            {onSell && (
+                              <button type="button" className="btn btn-secondary walk-own-inv-sell" onClick={() => onSell(cropId, 1, sellPrice)}>
+                                +{sellPrice}🪙
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    {Object.values(gameState.inventory || {}).every((q) => !q) && (
+                      <p className="walk-garden-note">{t('inventory_empty', { defaultValue: 'Inventory is empty' })}</p>
+                    )}
+                  </div>
+                )}
+
+                {ownPanelSection === 'structures' && onBuildStructure && (
+                  <div className="walk-own-inline-panel walk-own-inline-panel--structures">
+                    <StructuresPanel
+                      hideTitle
+                      activeStructureId={activeStructureId}
+                      structures={gameState.structures}
+                      coins={gameState.playerStats?.coins || 0}
+                      onBuild={handleBuildStructureAtGarden}
+                      onUseWell={onUseWell}
+                      onUseCompost={onUseCompost}
+                      onCollectEggs={onCollectEggs}
+                      onCollectMilk={onCollectMilk}
+                    />
+                  </div>
+                )}
+
                 {gameState.selectedTool === 'plant' && (
                   <>
                     <label htmlFor="own-garden-seed-select" className="walk-garden-note">
@@ -1715,22 +2578,51 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
               </div>
             )}
 
-            {nearMarketplace && !showOwnGardenPanel && (
+            {nearPoi && !showOwnGardenPanel && (
               <div className="walk-garden-empty">
-                <div style={{ fontSize: '2.4rem' }}>🏪</div>
-                <div style={{ fontWeight: 700 }}>Marketplace</div>
-                <div>Druk E of klik om te handelen</div>
-                <button className="btn btn-primary" style={{ marginTop: '0.75rem' }} onClick={openMarketplace}>
-                  Open market
+                <div style={{ fontSize: '2.4rem' }}>{nearPoi.emoji}</div>
+                <div style={{ fontWeight: 700 }}>{localizedField(nearPoi.label, poiLang)}</div>
+                <div>
+                  {poiWithInterior(nearPoi)
+                    ? t('worldMap.press_poi_enter', { defaultValue: 'Druk E om naar binnen te gaan' })
+                    : t('worldMap.press_poi')}
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{ marginTop: '0.75rem' }}
+                  onClick={() => (poiWithInterior(nearPoi) ? enterInterior(nearPoi) : setActivePoi(nearPoi))}
+                >
+                  {poiWithInterior(nearPoi)
+                    ? t('worldMap.enter_poi', { defaultValue: 'Naar binnen' })
+                    : t('worldMap.open_poi')}
                 </button>
               </div>
             )}
 
+            {villageNotice && !showOwnGardenPanel && (
+              <div className="walk-garden-empty walk-village-notice">{villageNotice}</div>
+            )}
+
             {/* Geen losse empty-state panel meer */}
+          </div>
           </div>
         </div>
 
-        {typeof document !== 'undefined' &&
+        {!activeInterior && typeof document !== 'undefined' &&
+          createPortal(
+            <button
+              type="button"
+              className="walk-find-me-btn walk-find-me-btn--float"
+              onClick={findMyGarden}
+              title={t('worldMap.find_me')}
+              aria-label={t('worldMap.find_me')}
+            >
+              📍
+            </button>,
+            document.body
+          )}
+
+        {!hideDpad && !activeInterior && typeof document !== 'undefined' &&
           createPortal(
             <div className="walk-dpad walk-dpad--gameboy walk-dpad--world-float" role="group" aria-label={t('worldMap.header_hint')}>
               <button type="button" className="walk-dpad-btn walk-dpad-btn--up" onContextMenu={(e) => e.preventDefault()} onClick={() => { setClickTarget(null); move(0, -1, 'up'); }}>↑</button>
@@ -1741,6 +2633,10 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
             </div>,
             document.body
           )}
+
+        {activePoi && (
+          <WorldPoiModal poi={activePoi} onClose={() => setActivePoi(null)} onOpenTrade={openMarketplace} />
+        )}
       </div>
   );
 

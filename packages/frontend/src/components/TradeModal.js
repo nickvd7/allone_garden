@@ -171,7 +171,7 @@ function ListingRow({ listing, onBuy, ownUserId }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDeduct, onGuestSale }) {
+function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDeduct, onGuestSale, onSyncInventory }) {
   const hasAuth = userId > 0;
   const [tab, setTab]         = useState('browse'); // 'browse' | 'sell' | 'prices'
   const [listings, setListings] = useState([]);
@@ -291,9 +291,14 @@ function TradeModal({ inventory, coins, userId, socket, onBuy, onClose, onSellDe
     setSelling(true);
     setError('');
     try {
+      if (onSyncInventory) await onSyncInventory();
       await api.post('/api/trade/listings', sellForm);
+      if (typeof onSellDeduct === 'function') {
+        onSellDeduct(sellForm.cropId, sellForm.quantity);
+      }
       setSellForm({ cropId: 'tomato', quantity: 1, pricePerUnit: 10 });
       setTab('browse');
+      await fetchListings();
     } catch (err) {
       setError(err.message);
     } finally {

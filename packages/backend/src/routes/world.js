@@ -15,6 +15,9 @@ const worldMap      = require('../state/worldMap');
 const onlinePlayers = require('../state/onlinePlayers');
 const contentStore  = require('../state/contentStore');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { getWorldPois } = require('../data/worldPois');
+const worldPositions = require('../state/worldPositions');
+const npcWorld = require('../services/npcWorld');
 
 /**
  * Generate short-lived TURN credentials using the coturn REST-API / HMAC-SHA1 scheme.
@@ -47,6 +50,29 @@ const DEFAULT_SLOTS = [
   { x: 14, y: 5  },
   { x: 17, y: 14 },
 ];
+
+/** Hard cap — extra slots uitgeschakeld zodat spelers samenwerken op gedeelde plekken. */
+const MAX_WORLD_GARDEN_SLOTS = DEFAULT_SLOTS.length;
+
+function capGardenSlots(slots) {
+  const base = Array.isArray(slots) && slots.length ? slots : DEFAULT_SLOTS;
+  return base.slice(0, MAX_WORLD_GARDEN_SLOTS);
+}
+
+async function loadAllGardenOwners() {
+  const result = await safeQuery(
+    `SELECT g.user_id, u.username
+     FROM gardens g
+     JOIN users u ON u.id = g.user_id
+     ORDER BY g.user_id ASC
+     LIMIT 200`
+  );
+  if (!result?.rows?.length) return [];
+  return result.rows.map((row) => ({
+    userId: String(row.user_id),
+    username: row.username || `Player ${row.user_id}`,
+  }));
+}
 const WORLD_CACHE_TTL_MS = 1500;
 const projectionCache = new Map();
 let dbUnavailableWarned = false;
@@ -180,27 +206,45 @@ async function ensureStableSlots(playerIds, slots) {
   }
 
   const maxIdx = slots.length - 1;
+  if (maxIdx < 0) return assignments;
+
   for (const userId of uniqIds) {
     if (Number.isInteger(assignments[userId]) && assignments[userId] >= 0 && assignments[userId] <= maxIdx) {
       continue;
     }
-    let free = -1;
+
+    let assigned = false;
     for (let idx = 0; idx < slots.length; idx += 1) {
-      if (!used.has(idx)) {
-        free = idx;
-        break;
+      if (used.has(idx)) continue;
+      try {
+        const upserted = await safeQuery(
+          `INSERT INTO world_garden_slots (user_id, slot_index)
+           VALUES ($1, $2)
+           ON CONFLICT (user_id) DO UPDATE
+             SET slot_index = EXCLUDED.slot_index, updated_at = NOW()
+           RETURNING slot_index`,
+          [userId, idx]
+        );
+        if (upserted?.rows?.[0]) {
+          const slot = Number(upserted.rows[0].slot_index);
+          assignments[userId] = slot;
+          used.add(slot);
+          assigned = true;
+          break;
+        }
+      } catch (err) {
+        if (err.code === '23505') {
+          used.add(idx);
+          continue;
+        }
+        throw err;
       }
     }
-    if (free < 0) free = userId % slots.length;
-    assignments[userId] = free;
-    used.add(free);
-    const upserted = await safeQuery(
-      `INSERT INTO world_garden_slots (user_id, slot_index)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET slot_index = EXCLUDED.slot_index`,
-      [userId, free]
-    );
-    if (!upserted) return {};
+
+    if (!assigned) {
+      const fallback = userId % slots.length;
+      assignments[userId] = fallback;
+    }
   }
 
   return assignments;
@@ -229,18 +273,33 @@ router.get('/gardens', optionalAuth, async (req, res) => {
     }
 
     const world = await loadWorldConfig();
-    const slots = world?.gardenSlots || DEFAULT_SLOTS;
+    let slots = capGardenSlots(world?.gardenSlots);
 
     const roster = onlinePlayers.getAll().map((p) => ({
       userId: String(p.userId),
       username: p.username,
+      online: true,
     }));
     const maybeMe = req.user?.userId
-      ? [{ userId: String(req.user.userId), username: req.user.username || 'Guest' }]
+      ? [{ userId: String(req.user.userId), username: req.user.username || 'Guest', online: true }]
       : [];
-    const withMe = [...roster.filter((p) => p.userId !== maybeMe[0]?.userId), ...maybeMe];
-    const uniquePlayers = Array.from(new Map(withMe.map((p) => [p.userId, p])).values())
-      .filter((p) => !!p.userId);
+
+    const allGardenOwners = await loadAllGardenOwners();
+    const onlineIds = new Set([
+      ...roster.map((p) => p.userId),
+      ...maybeMe.map((p) => p.userId),
+    ]);
+
+    const mergedPlayers = new Map();
+    for (const p of allGardenOwners) {
+      mergedPlayers.set(p.userId, { ...p, online: onlineIds.has(p.userId) });
+    }
+    for (const p of [...roster, ...maybeMe]) {
+      if (!p.userId) continue;
+      mergedPlayers.set(p.userId, { userId: p.userId, username: p.username, online: true });
+    }
+
+    const uniquePlayers = Array.from(mergedPlayers.values()).filter((p) => !!p.userId);
 
     let slotByUserId = {};
     if (db.isConnected()) {
@@ -277,6 +336,7 @@ router.get('/gardens', optionalAuth, async (req, res) => {
       .map((p) => ({
         userId: p.userId,
         username: p.username,
+        online: !!p.online,
         slotId: slotByUserId[String(p.userId)] ?? slotByUserId[Number(p.userId)],
       }))
       .filter((o) => Number.isInteger(o.slotId))
@@ -312,10 +372,21 @@ router.get('/gardens', optionalAuth, async (req, res) => {
       }
     }
 
+    const slotShareCounts = {};
+    occupants.forEach((o) => {
+      slotShareCounts[o.slotId] = (slotShareCounts[o.slotId] || 0) + 1;
+    });
+
+    const occupantsWithShare = occupants.map((o) => ({
+      ...o,
+      sharedCount: slotShareCounts[o.slotId] || 1,
+    }));
+
     const payload = {
       map: world?.map || null,
       gardenSlots: slots,
-      occupants,
+      maxGardenSlots: MAX_WORLD_GARDEN_SLOTS,
+      occupants: occupantsWithShare,
       gardenPreviewByUserId,
     };
     projectionCache.set(viewerKey, { ts: Date.now(), data: payload });
@@ -324,6 +395,19 @@ router.get('/gardens', optionalAuth, async (req, res) => {
     console.error('GET /api/world/gardens error:', err);
     return res.status(500).json({ error: 'Could not load world gardens' });
   }
+});
+
+// ── GET /api/world/pois — museum, venues, future interactables ───────────────
+router.get('/pois', (req, res) => {
+  res.json({ pois: getWorldPois() });
+});
+
+router.get('/positions', (req, res) => {
+  res.json({ positions: worldPositions.getSnapshot() });
+});
+
+router.get('/npcs', (req, res) => {
+  res.json(npcWorld.getNpcWorld());
 });
 
 // ── GET /api/world/players ────────────────────────────────────────────────────

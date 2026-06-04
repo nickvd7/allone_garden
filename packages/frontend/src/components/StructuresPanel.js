@@ -1,5 +1,7 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGameContent } from '../context/GameContentContext';
+import { firstFreeStructureSlot } from '../utils/structureRing';
 
 // Static built-in structure definitions — exported for backward compatibility
 export const STRUCTURE_DEFS = [
@@ -80,8 +82,11 @@ function StructuresPanel({
   onCollectEggs,
   onCollectMilk,
   hideTitle = false,
+  activeStructureId = null,
 }) {
+  const { t } = useTranslation();
   const { structures: contentStructures } = useGameContent();
+  const ringFull = firstFreeStructureSlot(structures) < 0;
   // Keep the built-in STRUCTURE_DEFS as the base; append any custom structures from context
   // (those whose id isn't in the built-in list) so admins can add new structure types.
   const builtInIds    = new Set(STRUCTURE_DEFS.map((d) => d.id));
@@ -90,24 +95,26 @@ function StructuresPanel({
 
   return (
     <div className="card structures-panel">
-      {!hideTitle && <h3>🏗️ Structures</h3>}
+      {!hideTitle && <h3>🔨 {t('structures.title')}</h3>}
       <div className="structures-list">
         {allDefs.map((def) => {
           const state   = structures[def.id] || {};
           const isBuilt = !!state.built;
           // Check prerequisite structure (e.g. barn required for coop/stable)
           const prereqMet = !def.requires || !!structures[def.requires]?.built;
-          const canBuild = coins >= def.buildCost && prereqMet;
+          const canBuild = coins >= def.buildCost && prereqMet && !ringFull;
+          const name = t(`structures.${def.id}_name`, { defaultValue: def.name });
+          const desc = t(`structures.${def.id}_desc`, { defaultValue: def.description });
 
           return (
-            <div key={def.id} className={`structure-item${isBuilt ? ' structure-item--built' : ''}`}>
+            <div key={def.id} className={`structure-item${isBuilt ? ' structure-item--built' : ''}${activeStructureId === def.id ? ' structure-item--focused' : ''}`}>
               <div className="structure-top">
-                <span className="structure-emoji" role="img" aria-label={def.name}>
+                <span className="structure-emoji" role="img" aria-label={name}>
                   {def.emoji}
                 </span>
                 <div className="structure-info">
-                  <div className="structure-name">{def.name}</div>
-                  <div className="structure-desc">{def.description}</div>
+                  <div className="structure-name">{name}</div>
+                  <div className="structure-desc">{desc}</div>
                 </div>
                 {!isBuilt ? (
                   <button
@@ -115,17 +122,19 @@ function StructuresPanel({
                     disabled={!canBuild}
                     onClick={() => onBuild(def.id)}
                     title={
-                      !prereqMet
-                        ? `Requires ${def.requires} first`
-                        : canBuild
-                          ? `Build for 🪙${def.buildCost}`
-                          : `Need 🪙${def.buildCost}`
+                      ringFull
+                        ? t('structures.ring_full')
+                        : !prereqMet
+                          ? t('structures.requires_first', { id: def.requires })
+                          : canBuild
+                            ? t('structures.build_for', { cost: def.buildCost })
+                            : t('structures.need_coins', { cost: def.buildCost })
                     }
                   >
                     🔨 {def.buildCost}🪙
                   </button>
                 ) : (
-                  <span className="structure-tag">✅ Built</span>
+                  <span className="structure-tag">✅ {t('structures.built')}</span>
                 )}
               </div>
 

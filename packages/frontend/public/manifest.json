@@ -1,6 +1,6 @@
 {
   "name": "AllOne Garden",
-  "short_name": "Garden",
+  "short_name": "AllOne",
   "description": "Open-source multiplayer gardening game — grow together, own your world.",
   "start_url": "/",
   "display": "standalone",

@@ -40,11 +40,11 @@ describe('WorldBuilder — render', () => {
     expect(screen.getByText(/🏡 Garden/i)).toBeInTheDocument();
   });
 
-  it('renders 22×14 = 308 grid cells', async () => {
+  it('renders 32×20 = 640 grid cells', async () => {
     render(<WorldBuilder onClose={() => {}} />);
     await screen.findByRole('grid');
     const cells = screen.getAllByRole('gridcell');
-    expect(cells).toHaveLength(22 * 14);
+    expect(cells).toHaveLength(32 * 20);
   });
 
   it('renders Save, Load, and Reset buttons', async () => {

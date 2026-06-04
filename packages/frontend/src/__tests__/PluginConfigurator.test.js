@@ -29,6 +29,9 @@ const MOCK_STATS = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  if (typeof api.put !== 'function') {
+    api.put = jest.fn();
+  }
   api.get.mockImplementation((path) => {
     if (path === '/api/admin/stats')       return Promise.resolve(MOCK_STATS);
     if (path.includes('/config'))         return Promise.resolve({ enabled: true });
@@ -78,24 +81,30 @@ describe('PluginConfigurator — plugin editor', () => {
     expect(api.get).toHaveBeenCalledWith('/api/admin/plugins/events/config');
   });
 
-  // Helper: wait until all plugin editors have finished loading, then return save buttons
-  async function getSaveBtns() {
-    let captured;
+  // Helper: wait until all plugin editors have finished loading
+  async function waitForEditorsReady() {
     await waitFor(
       () => {
-        captured = screen.getAllByRole('button', { name: /save/i });
-        expect(captured.length).toBeGreaterThanOrEqual(2);
-        captured.forEach((b) => expect(b).not.toBeDisabled());
+        const saveBtns = screen.getAllByRole('button', { name: /save/i });
+        expect(saveBtns.length).toBeGreaterThanOrEqual(2);
+        saveBtns.forEach((b) => expect(b).not.toBeDisabled());
       },
       { timeout: 12000 }
     );
-    return captured;
+  }
+
+  async function clickShopSave() {
+    await waitFor(() => {
+      const btn = screen.getAllByRole('button', { name: /save/i })[0];
+      expect(btn).not.toBeDisabled();
+      fireEvent.click(btn);
+    });
   }
 
   it('calls api.put when Save is clicked', async () => {
     render(<PluginConfigurator />);
-    const btns = await getSaveBtns();
-    fireEvent.click(btns[0]);
+    await waitForEditorsReady();
+    await clickShopSave();
     await waitFor(
       () =>
         expect(api.put).toHaveBeenCalledWith(
@@ -108,14 +117,14 @@ describe('PluginConfigurator — plugin editor', () => {
 
   it('shows success message after save', async () => {
     render(<PluginConfigurator />);
-    const btns = await getSaveBtns();
-    fireEvent.click(btns[0]);
+    await waitForEditorsReady();
+    await clickShopSave();
     await screen.findByText('✅ Saved!', {}, { timeout: 12000 });
   });
 
   it('shows error for invalid JSON before saving', async () => {
     render(<PluginConfigurator />);
-    await getSaveBtns(); // wait for full load
+    await waitForEditorsReady();
     const textareas = screen.getAllByRole('textbox');
     fireEvent.change(textareas[0], { target: { value: 'NOT JSON' } });
     // Re-capture save buttons in case of re-render
@@ -130,8 +139,8 @@ describe('PluginConfigurator — plugin editor', () => {
   it('shows error when save request fails', async () => {
     api.put.mockRejectedValue(new Error('Server error'));
     render(<PluginConfigurator />);
-    const btns = await getSaveBtns();
-    fireEvent.click(btns[0]);
+    await waitForEditorsReady();
+    await clickShopSave();
     await screen.findByText(/Save failed/i);
   });
 });

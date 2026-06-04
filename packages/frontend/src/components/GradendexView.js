@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { AUTH_HTTPONLY, getBearerAuthHeader, readGardenToken } from '../auth/session';
 import { localizeGradendexEntry, categoryLabel, companionDisplayName } from '../utils/gradendexI18n';
 import i18n from '../i18n/config';
+import { buildGradendexFallbackEntries } from '../utils/gradendexFallback';
 
 const API = process.env.REACT_APP_API_URL || '';
 
@@ -299,11 +300,19 @@ function GradendexView({ token = null, compact = false }) {
 
   useEffect(() => {
     setLoading(true);
+    setError('');
     axios.get(`${API}/api/gradendex`)
-      .then(({ data }) => setEntries(data.entries || []))
-      .catch(() => setError(
-        i18n.t('gradendex.ui.error_load', { defaultValue: 'Could not load Gradendex. Is the server running?' })
-      ))
+      .then(({ data }) => {
+        const list = data.entries || [];
+        if (list.length > 0) {
+          setEntries(list);
+        } else {
+          setEntries(buildGradendexFallbackEntries());
+        }
+      })
+      .catch(() => {
+        setEntries(buildGradendexFallbackEntries());
+      })
       .finally(() => setLoading(false));
   }, []);
 

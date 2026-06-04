@@ -301,3 +301,4 @@ router.post('/reset-password', authLimiter, validateResetPassword, async (req, r
 });
 
 module.exports = router;
+module.exports.getMemUserById = (userId) => memUsers.find((u) => u.id === Number(userId)) || null;

@@ -34,8 +34,23 @@
   "weather_drought": "Droogte",
 
   "chat": "Chat",
-  "online_players": "Online Spelers",
+  "chat_direct": "Direct",
+  "chat_offline_stored": "Offline — bericht blijft bewaard",
+  "chat_direct_messages": "Directe berichten",
+  "chat_placeholder": "Typ een bericht…",
+  "chat_search_players": "Zoek op naam…",
+  "chat_kindness_note": "🌱 Vriendelijk chatten — wees aardig voor elkaar",
+  "online_players": "Online spelers",
   "inventory": "Inventaris",
+  "harvest": "Oogst",
+  "harvest_with_count": "Geoogst ({{count}})",
+  "language": "Taal",
+  "community_goal_short": "Teamdoel",
+  "header_world_status": "Spelstatus",
+  "header_menu_social": "Chat & spelers",
+  "header_menu_inventory": "Inventaris",
+  "account_settings": "Accountinstellingen",
+  "profile_hide_movement": "Bewegingsknoppen verbergen",
 
   "visit": "Bezoek",
   "help": "Help",
@@ -50,6 +65,8 @@
   "header_menu_scores": "Scores",
   "header_menu_admin": "Admin",
   "header_profile_title": "Profiel",
+  "header_notifications_short": "Meldingen",
+  "header_notifications_title": "Meldingen — voorstellen en acties",
   "header_gradendex_title": "Gradendex — gewassen en gebouwen",
   "header_content_wiki_title": "Content-wiki — voorstellen en bekijken",
   "header_leaderboard_title": "Ranglijst",
@@ -107,10 +124,13 @@
     "tagline": "Open-source multiplayer tuiniergame",
     "forgot_heading": "Wachtwoord vergeten",
     "new_password_heading": "Nieuw wachtwoord",
-    "placeholder_reset_token": "Reset token (from email)",
+    "placeholder_reset_token": "Resetcode (uit e-mail)",
     "placeholder_new_password": "Nieuw wachtwoord",
-    "btn_login_submit": "🚪 Login",
-    "btn_create_account": "🌱 Create account",
+    "btn_login_submit": "🚪 Inloggen",
+    "btn_create_account": "🌱 Account aanmaken",
+    "password_confirm": "Wachtwoord bevestigen",
+    "password_mismatch": "Wachtwoorden komen niet overeen",
+    "open_home": "Open startpagina",
     "btn_send_reset": "📧 Stuur resetlink",
     "btn_save_password": "🔐 Wachtwoord opslaan",
     "forgot_link": "Wachtwoord vergeten?",
@@ -353,8 +373,17 @@
     "end_call_title": "Gesprek beëindigen",
     "end_call": "📴 Beëindigen"
   },
+  "gardendex_hub": {
+    "title": "Kennisbank",
+    "wiki": "Wiki",
+    "recognize": "Plantherkenning",
+    "dex": "Gradendex",
+    "plant_selected": "Gewas {{plant}} geselecteerd om te planten"
+  },
+  "theme_dark": "Donkere modus",
+  "theme_light": "Lichte modus",
   "worldMap": {
-    "title": "🗺️ World Map",
+    "title": "🗺️ Wereldkaart",
     "header_hint": "← → ↑ ↓ bewegen · E bezoeken",
     "hud_visit_hint": "🏡 {{name}} — druk E om te bezoeken",
     "hud_player_near": "💬 {{name}} is dichtbij!",
@@ -374,7 +403,8 @@
     "help_done": "✅ Geholpen!",
     "help_button": "🤝 Help +15",
     "help_thanks": "🤝 Je hebt {{name}} geholpen!",
-    "view_only": "👁 Alleen weergave",
+    "view_only": "👁 Alleen kijken — hier mag je niet verbouwen",
+    "build_only_own": "🏡 Verbouwen kan alleen in je eigen tuin!",
     "stat_tilled": "Omgespade",
     "stat_planted": "Geplant",
     "stat_ready": "Klaar 🌟",
@@ -390,7 +420,7 @@
     "mini_untilled": "Onbewerkt",
     "own_garden_title": "🌿 Mijn moestuin",
     "own_garden_plot": "🌾 Vak {{n}}",
-    "own_garden_hint": "Kies een actie voor dit vak.",
+    "own_garden_hint": "Dit is jouw tuin! Hier mag je spitten, planten en oogsten.",
     "seed_picker_label": "🌱 Kies gewas",
     "tool_till": "Omspitten",
     "tool_plant": "Planten",
@@ -407,7 +437,324 @@
     "action_seed_required": "🌱 Kies eerst een gewas",
     "action_no_pests": "✅ Geen plagen op dit vak",
     "action_nothing_to_harvest": "🌾 Niets om te oogsten",
-    "action_not_ready": "⏳ Nog niet klaar om te oogsten"
+    "action_not_ready": "⏳ Nog niet klaar om te oogsten",
+    "overview_map_title": "Wereldkaart",
+    "overview_search_label": "Zoek speler",
+    "overview_search_placeholder": "Typ een naam…",
+    "overview_search_empty": "Geen speler gevonden",
+    "overview_terrain_legend": "Legenda",
+    "overview_tile_grass": "Gras",
+    "overview_tile_path": "Pad",
+    "overview_tile_water": "Water",
+    "overview_tile_forest": "Bos",
+    "overview_tile_mountain": "Gebergte",
+    "overview_tile_desert": "Woestijn",
+    "overview_tile_dock": "Dok",
+    "overview_tile_garden": "Tuin",
+    "overview_tile_village": "Dorp",
+    "overview_tile_poi": "Winkels & plekken",
+    "overview_go_to": "Ga",
+    "overview_jump_done": "📍 Je bent bij {{name}}",
+    "overview_jump_poi": "📍 Je bent bij {{name}}",
+    "overview_jump_blocked": "Daar kun je niet lopen — kies een ander punt",
+    "your_garden_marker": "Jouw moestuin",
+    "neighbor_garden": "Tuin van {{name}}",
+    "neighbor_garden_short": "Tuin van buur",
+    "neighbor_stock": "Voorraad buur",
+    "market_nearby": "Marktplaats dichtbij — druk E",
+    "biome_desert": "Woestijntuin",
+    "biome_desert_hint": "Woestijnvakken: droogte-bestendige gewassen groeien hier sneller.",
+    "biome_water": "Dok / watertuin",
+    "biome_water_hint": "Vissersdok: watergewassen en oesterputten.",
+    "biome_alpine": "Berghang",
+    "biome_alpine_hint": "Koele bergvakken: trage maar waardevolle oogst.",
+    "biome_interact_water": "🌊 Te diep om te lopen — gebruik het dok ernaast.",
+    "biome_interact_forest": "🌲 Bos — hak hout of plant schaduw-gewassen op bospaden.",
+    "biome_interact_mountain": "⛰️ Gebergte — onbegaanbaar, maar edelstenen vinden kan later.",
+    "map_edge_hint": "Wereldkaart-rand",
+    "shared_garden": "{{count}} tuiniers",
+    "hud_poi_hint": "{{name}} — druk E om te openen",
+    "press_poi": "Druk E om te bekijken",
+    "open_poi": "Openen",
+    "poi_culture": "Cultuur",
+    "poi_tips": "Tips",
+    "poi_trade_blurb": "Verkoop oogst of ruil met andere spelers op de markt.",
+    "open_market": "Open marktplaats",
+    "find_me": "Ga naar mijn tuin",
+    "find_me_done": "🏡 Je bent bij je tuin!",
+    "find_me_here": "📍 Hier ben je!",
+    "other_players_live": "Andere spelers (live)",
+    "proposals_title": "Voorstellen",
+    "proposals_empty": "Geen open voorstellen.",
+    "proposal_accept": "Accepteer",
+    "proposal_decline": "Weiger",
+    "proposal_send": "Voorstel sturen",
+    "proposal_sent": "Voorstel verstuurd — blijft bewaard tot reactie.",
+    "proposal_accepted": "Voorstel geaccepteerd",
+    "proposal_rejected": "Voorstel afgewezen",
+    "proposal_kind_trade": "Ruil",
+    "proposal_kind_collab": "Samenwerken",
+    "proposal_npc_hint": "Bots sturen zelf voorstellen — accepteer ze hierboven.",
+    "hud_poi_enter": "{{name}} — druk E om binnen te gaan",
+    "press_poi_enter": "Druk E om naar binnen te gaan",
+    "enter_poi": "Naar binnen",
+    "village_exit": "← Dorp",
+    "village_controls": "← → ↑ ↓ lopen · E interactie · Esc = uitgang",
+    "hud_poi_enter_short": "Druk E om binnen te gaan",
+    "village_cinema_hint": "Klik op een scherm bovenin of kies hieronder.",
+    "village_screen_hint": "Druk E om deze film te starten.",
+    "village_counter_hint": "Druk E bij de toonbank.",
+    "village_door_hint": "Druk E om het dorp in te gaan.",
+    "village_market_blurb": "Verkoop oogst of bekijk aanbod van andere spelers.",
+    "village_close_counter": "Weg van toonbank",
+    "village_bought": "Gekocht: {{name}}",
+    "village_buy_failed": "Aankoop mislukt",
+    "village_not_enough_coins": "Niet genoeg munten"
+  },
+  "inventory_empty": "Oogst is leeg",
+  "world_fab_hint": "Loop naar je moestuin 🏡 voor gereedschap, oogst en bouwen",
+  "structures": {
+    "title": "Bouwen",
+    "built": "Gebouwd",
+    "ring_full": "Geen ruimte meer rond je moestuin — maximaal 12 gebouwen",
+    "built_on_ring": "{{emoji}} Gebouwd naast je moestuin",
+    "requires_first": "Eerst {{id}} bouwen",
+    "build_for": "Bouw voor 🪙{{cost}}",
+    "need_coins": "Nog 🪙{{cost}} nodig",
+    "well_name": "Waterput",
+    "well_desc": "Geef alle omgespitte vakken water. 3 ladingen per dag.",
+    "compost_name": "Composthoop",
+    "compost_desc": "Elke 3 oogsten een gratis bemestingslading.",
+    "greenhouse_name": "Kas",
+    "greenhouse_desc": "Beschermt passief tegen storm en droogte.",
+    "barn_name": "Schuur",
+    "barn_desc": "Ontgrendelt dieren. Vereist voor kippenhok en stal.",
+    "chickenCoop_name": "Kippenhok",
+    "chickenCoop_desc": "Kippen leggen elke 2 dagen een ei (🪙8).",
+    "stable_name": "Stal",
+    "stable_desc": "Koe geeft elke 3 dagen melk (🪙12).",
+    "silo_name": "Silo",
+    "silo_desc": "Passief: +20% munten bij gewasverkoop."
+  },
+  "notifications": {
+    "title": "Meldingen",
+    "intro": "Ruilvoorstellen en wiki-updates op één plek.",
+    "all_empty": "Geen meldingen op dit moment.",
+    "section_incoming": "Inkomend",
+    "section_sent": "Verzonden",
+    "section_wiki": "Wiki",
+    "tab_inbox": "Inbox",
+    "tab_sent": "Verzonden",
+    "tab_wiki": "Wiki",
+    "inbox_empty": "Geen open voorstellen van andere spelers.",
+    "sent_empty": "Je hebt geen verzonden voorstellen die wachten.",
+    "wiki_empty": "Geen wiki-voorstellen.",
+    "waiting_reply": "Wacht op reactie…",
+    "refresh": "Vernieuwen",
+    "action_failed": "Actie mislukt",
+    "open_wiki_edit": "Aanpassen in wiki",
+    "open_wiki_review": "Bekijk in wiki",
+    "wiki_status_pending": "In behandeling",
+    "wiki_status_approved": "Goedgekeurd",
+    "wiki_status_rejected": "Afgewezen",
+    "wiki_status_revision": "Aanpassing nodig",
+    "wiki_approve": "Goedkeuren",
+    "wiki_reject": "Afwijzen",
+    "wiki_approved": "Wiki-voorstel goedgekeurd",
+    "wiki_rejected": "Wiki-voorstel afgewezen"
+  },
+  "helpPanel": {
+    "title": "❓ Help",
+    "closeAria": "Help sluiten",
+    "tourAgain": "🗺️ Rondleiding opnieuw",
+    "tabs": {
+      "start": "🚀 Start",
+      "plants": "🌱 Planten",
+      "garden": "🏡 Jouw tuin",
+      "village": "🏘️ Dorp",
+      "tips": "💡 Tips"
+    },
+    "sections": {
+      "start": [
+        {
+          "heading": "Zo oogst je voor het eerst",
+          "items": [
+            "Kies **Omspitten** ⛏️ en tik op een vakje in je tuin.",
+            "Kies **Planten** 🌱, kies een zaad (radijs is het snelst!) en tik op een vakje.",
+            "Kies **Water geven** 💧 en tik op je plant.",
+            "Druk op **Volgende dag** ⏭️. Groeit je plant? Oogst met **Oogsten** 🧺!"
+          ]
+        },
+        {
+          "heading": "Volgende dag",
+          "items": [
+            "Elke keer op **Volgende dag** groeien je planten.",
+            "Water geven helpt je plant extra hard groeien.",
+            "Zitten er beestjes op? Gebruik **Spuiten** 🧴."
+          ]
+        },
+        {
+          "heading": "Munten en XP",
+          "items": [
+            "Oogsten geeft munten 🪙 en sterren (XP) ⭐.",
+            "Met munten koop je spullen in het dorp.",
+            "Hoe meer XP, hoe hoger je level!"
+          ]
+        }
+      ],
+      "plants": [
+        {
+          "heading": "Hoe lang duurt het?",
+          "items": [
+            "🌸 Radijs — 1 dag (super snel!)",
+            "🥕 Wortel — 2 dagen · 🥬 Sla — 2 dagen",
+            "🍅 Tomaat — 3 dagen · 🥔 Aardappel — 3 dagen",
+            "🎃 Pompoen — 5 dagen (veel munten!)"
+          ]
+        },
+        {
+          "heading": "Buurtplanten",
+          "items": [
+            "💚 Sommige planten houden van elkaar — dan krijg je extra munten.",
+            "⚠️ Sommige combinaties zijn minder leuk — kijk naar de smileys op je vakjes."
+          ]
+        },
+        {
+          "heading": "Weer",
+          "items": [
+            "🌧️ Regen geeft water. ☀️ Droogte maakt planten dorstig.",
+            "⛈️ Storm kan schade geven — een **Kas** 🏡 helpt!"
+          ]
+        }
+      ],
+      "garden": [
+        {
+          "heading": "⚠️ Alleen in JOUW tuin!",
+          "items": [
+            "Spitten, planten en oogsten mag **alleen** bij jou thuis 🏡.",
+            "Bij een buur mag je **kijken**, maar **niet** verbouwen.",
+            "Loop naar je eigen huis op de kaart om te werken in je tuin."
+          ]
+        },
+        {
+          "heading": "Gebouwen bouwen",
+          "items": [
+            "🪣 **Waterput** — geeft alle vakjes water (50 🪙).",
+            "🌿 **Composthoop** — gratis bemesting na oogsten (30 🪙).",
+            "🏡 **Kas** — beschermt tegen storm (80 🪙).",
+            "Gebouwen zet je **alleen** naast je eigen tuin, niet ergens anders!"
+          ]
+        },
+        {
+          "heading": "Hoe werkt het?",
+          "items": [
+            "Loop op de kaart naar je tuin 🏡 en tik op een vakje.",
+            "Kies je gereedschap en tik op **Oogst** 🧺 of **Bouwen** 🔨.",
+            "Je oogst komt in je mand — daar kun je verkopen."
+          ]
+        }
+      ],
+      "village": [
+        {
+          "heading": "Moestuindorp ontdekken",
+          "items": [
+            "Op de wereldkaart ligt **Moestuindorp** 🏘️ — loop ernaartoe!",
+            "Tik op een winkel, museum of bioscoop om naar binnen te gaan.",
+            "Druk **Escape** of de ✕-knop om weer naar buiten te gaan."
+          ]
+        },
+        {
+          "heading": "Winkels in het dorp",
+          "items": [
+            "🔧 **Gereedschapswinkel** — koop spuitbus en emmer.",
+            "🌿 **Mestwinkel** — koop bemesting voor je planten.",
+            "🎬 **Bioscoop** — kijk leuke tuinfilms op YouTube.",
+            "🏛️ **Museum** — lees en bekijk exposities over planten.",
+            "🛒 **Markt** — ruil spullen met andere spelers."
+          ]
+        },
+        {
+          "heading": "Anderen bezoeken",
+          "items": [
+            "Loop naar een buur 🏡 om hun tuin te bekijken.",
+            "Je mag **helpen** met water geven 🤝 — dat geeft XP!",
+            "Onthoud: **verbouwen kan alleen in je eigen tuin.**"
+          ]
+        },
+        {
+          "heading": "Chat en vrienden",
+          "items": [
+            "Praat met andere spelers via 💬 Chat.",
+            "Wees lief voor elkaar — het is een vriendelijke tuin!"
+          ]
+        }
+      ],
+      "tips": [
+        {
+          "heading": "Handige tips",
+          "items": [
+            "🌸 Begin met radijs — die is het snelst klaar!",
+            "💧 Geef water vóór je op **Volgende dag** drukt.",
+            "🏘️ Bezoek het dorp als je spullen nodig hebt.",
+            "❓ Vraag je ouders als je iets niet snapt — of klik weer op Help!"
+          ]
+        },
+        {
+          "heading": "Opslaan",
+          "items": [
+            "Met een account wordt je tuin bewaard.",
+            "Als **gast** speel je alleen op deze computer — log in om op te slaan."
+          ]
+        }
+      ]
+    }
+  },
+  "tour": {
+    "skip": "Tour overslaan",
+    "back": "← Terug",
+    "next": "Volgende →",
+    "finish": "🌱 Start met spelen!",
+    "showAgain": "Opnieuw tonen bij volgende inlog",
+    "stepCounter": "{{current}} / {{total}}",
+    "goToStep": "Ga naar stap {{n}}",
+    "steps": {
+      "welcome": {
+        "title": "👋 Welkom in AllOne Garden!",
+        "body": "We laten je even zien hoe het werkt. Je kunt altijd overslaan. Later kun je Help ❓ opnieuw openen."
+      },
+      "tools": {
+        "title": "🔧 Gereedschap",
+        "body": "Hier kies je wat je doet: omspitten ⛏️, planten 🌱, water 💧 of oogsten 🧺. Loop eerst naar je eigen tuin 🏡 op de kaart!"
+      },
+      "garden": {
+        "title": "🌾 Jouw tuin",
+        "body": "Dit is de wereldkaart. Bij je huis 🏡 tik je op vakjes om te werken. **Alleen in je eigen tuin** mag je spitten, planten en oogsten!"
+      },
+      "structures": {
+        "title": "🏗️ Bouwen",
+        "body": "Met munten 🪙 bouw je een put, compost of kas. Dat doe je **alleen naast je eigen tuin** — niet bij buren!"
+      },
+      "village": {
+        "title": "🏘️ Het dorp",
+        "body": "Loop naar Moestuindorp voor winkels 🛒, museum 🏛️ en bioscoop 🎬. Koop spullen of ruil met anderen op de markt."
+      },
+      "inventory": {
+        "title": "🧺 Oogst",
+        "body": "Geoogste spullen komen hier. Verkoop ze voor munten 🪙 of ruil op de markt."
+      },
+      "chat": {
+        "title": "💬 Chat & buren",
+        "body": "Praat met vrienden. Bezoek hun tuin om te kijken — helpen mag, **verbouwen niet**."
+      },
+      "header": {
+        "title": "⏭️ Volgende dag",
+        "body": "Hier zie je welke dag het is en druk je op **Volgende dag**. Zo groeien je planten! Ook vind je hier Help ❓ en de wereldkaart 🗺️."
+      },
+      "done": {
+        "title": "🌱 Klaar om te spelen!",
+        "body": "Veel plezier met tuinieren! Onthoud: **verbouwen doe je alleen in je eigen tuin.** Klik op ❓ als je hulp nodig hebt."
+      }
+    }
   },
   "gardenConflict": {
     "title": "Tuin niet synchroon",

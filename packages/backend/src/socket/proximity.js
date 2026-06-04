@@ -19,6 +19,7 @@
  */
 const xss = require('xss');
 const db  = require('../db');
+const worldPositions = require('../state/worldPositions');
 
 const XSS_OPTS = {
   whiteList: {},
@@ -83,6 +84,14 @@ module.exports = function proximityHandler(socket, io) {
   const iceLimiter      = createRateLimiter(25, 50);  // ICE candidates are high-freq during setup
 
   // ── 1. Position broadcast ─────────────────────────────────────────────────
+  if (socket.userId) {
+    socket.emit('world:positions-snapshot', worldPositions.getSnapshot());
+  }
+
+  socket.on('world:request-positions', () => {
+    socket.emit('world:positions-snapshot', worldPositions.getSnapshot());
+  });
+
   socket.on('world:position', ({ x, y }) => {
     if (!positionLimiter()) return;
 
@@ -92,6 +101,12 @@ module.exports = function proximityHandler(socket, io) {
       !Number.isInteger(x)  || !Number.isInteger(y)  ||
       x < 0 || x >= MAP_W   || y < 0 || y >= MAP_H
     ) return;
+
+    worldPositions.setPosition(socket.userId, {
+      username: socket.username,
+      x,
+      y,
+    });
 
     socket.broadcast.emit('world:player-moved', {
       userId:   socket.userId,
@@ -103,6 +118,7 @@ module.exports = function proximityHandler(socket, io) {
 
   socket.once('disconnect', () => {
     if (socket.userId) {
+      worldPositions.removePosition(socket.userId);
       socket.broadcast.emit('world:player-offline', { userId: socket.userId });
     }
   });
@@ -132,6 +148,7 @@ module.exports = function proximityHandler(socket, io) {
       fromUsername: socket.username,
       text:         sanitized,
       timestamp,
+      persisted:    true,
     });
 
     // Persist to DB (fire-and-forget)

@@ -51,10 +51,10 @@ describe('GradendexView — loading state', () => {
 
 // ── Error state ───────────────────────────────────────────────────────────────
 describe('GradendexView — error state', () => {
-  it('shows error message when API call fails', async () => {
+  it('shows fallback entries when API call fails', async () => {
     axios.get.mockRejectedValue(new Error('Network error'));
     render(<GradendexView />);
-    await screen.findByText(/Could not load Gradendex/i);
+    await screen.findByText('Tomato');
   });
 });
 

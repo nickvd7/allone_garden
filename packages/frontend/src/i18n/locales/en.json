@@ -34,8 +34,23 @@
   "weather_drought": "Drought",
 
   "chat": "Chat",
-  "online_players": "Online Players",
+  "chat_direct": "Direct",
+  "chat_offline_stored": "Offline — message will be saved for later",
+  "chat_direct_messages": "Direct messages",
+  "chat_placeholder": "Type a message…",
+  "chat_search_players": "Search by name…",
+  "chat_kindness_note": "🌱 Be kind to each other",
+  "online_players": "Online players",
   "inventory": "Inventory",
+  "harvest": "Harvest",
+  "harvest_with_count": "Harvest ({{count}})",
+  "language": "Language",
+  "community_goal_short": "Team goal",
+  "header_world_status": "Game status",
+  "header_menu_social": "Chat & players",
+  "header_menu_inventory": "Inventory",
+  "account_settings": "Account settings",
+  "profile_hide_movement": "Hide movement buttons",
 
   "visit": "Visit",
   "help": "Help",
@@ -50,6 +65,8 @@
   "header_menu_scores": "Scores",
   "header_menu_admin": "Admin",
   "header_profile_title": "Profile",
+  "header_notifications_short": "Alerts",
+  "header_notifications_title": "Notifications — proposals and actions",
   "header_gradendex_title": "Gradendex — crop & structure reference",
   "header_content_wiki_title": "Content Wiki — browse & propose game content",
   "header_leaderboard_title": "Leaderboard",
@@ -119,7 +136,10 @@
     "guest_note": "No account needed to play offline. Create one to save progress and visit other gardens across the community.",
     "forgot_success": "If this address is registered, you will receive an email with a reset link.",
     "reset_success": "Password changed successfully. You can now log in.",
-    "error_generic": "Something went wrong"
+    "error_generic": "Something went wrong",
+    "password_confirm": "Confirm password",
+    "password_mismatch": "Passwords do not match",
+    "open_home": "Open homepage"
   },
   "home": {
     "nav": {
@@ -374,7 +394,8 @@
     "help_done": "✅ Helped!",
     "help_button": "🤝 Help +15",
     "help_thanks": "🤝 You helped {{name}}!",
-    "view_only": "👁 View only",
+    "view_only": "👁 Look only — you cannot build here",
+    "build_only_own": "🏡 You can only build in your own garden!",
     "stat_tilled": "Tilled",
     "stat_planted": "Planted",
     "stat_ready": "Ready 🌟",
@@ -390,7 +411,7 @@
     "mini_untilled": "Untilled",
     "own_garden_title": "🌿 My garden",
     "own_garden_plot": "🌾 Plot {{n}}",
-    "own_garden_hint": "Choose an action for this plot.",
+    "own_garden_hint": "This is your garden! Here you can till, plant and harvest.",
     "seed_picker_label": "🌱 Choose crop",
     "tool_till": "Till",
     "tool_plant": "Plant",
@@ -407,7 +428,334 @@
     "action_seed_required": "🌱 Pick a crop first",
     "action_no_pests": "✅ No pests on this plot",
     "action_nothing_to_harvest": "🌾 Nothing to harvest",
-    "action_not_ready": "⏳ Crop is not ready yet"
+    "action_not_ready": "⏳ Crop is not ready yet",
+    "overview_map_title": "World map",
+    "overview_search_label": "Find player",
+    "overview_search_placeholder": "Type a name…",
+    "overview_search_empty": "No player found",
+    "overview_terrain_legend": "Legend",
+    "overview_tile_grass": "Grass",
+    "overview_tile_path": "Path",
+    "overview_tile_water": "Water",
+    "overview_tile_forest": "Forest",
+    "overview_tile_mountain": "Mountains",
+    "overview_tile_desert": "Desert",
+    "overview_tile_dock": "Dock",
+    "overview_tile_garden": "Garden",
+    "overview_tile_village": "Village",
+    "overview_tile_poi": "Shops & places",
+    "overview_go_to": "Go",
+    "overview_jump_done": "📍 You are at {{name}}",
+    "overview_jump_poi": "📍 You are at {{name}}",
+    "overview_jump_blocked": "You cannot walk there — pick another spot",
+    "your_garden_marker": "Your garden",
+    "neighbor_garden": "{{name}}'s garden",
+    "neighbor_garden_short": "Neighbor's garden",
+    "neighbor_stock": "Neighbor stock",
+    "market_nearby": "Marketplace nearby — press E",
+    "biome_desert": "Desert plot",
+    "biome_desert_hint": "Desert tiles: drought-tolerant crops thrive here.",
+    "biome_water": "Dock / water garden",
+    "biome_water_hint": "Fishing dock: grow water crops and shellfish.",
+    "biome_alpine": "Alpine slope",
+    "biome_alpine_hint": "Cool mountain plots: slow but valuable harvests.",
+    "biome_interact_water": "🌊 Too deep to walk — use the dock nearby.",
+    "biome_interact_forest": "🌲 Forest — gather wood or plant shade crops on forest paths.",
+    "biome_interact_mountain": "⛰️ Mountains — impassable; mining may come later.",
+    "map_edge_hint": "World map edge",
+    "shared_garden": "{{count}} gardeners",
+    "hud_poi_hint": "{{name}} — press E to open",
+    "press_poi": "Press E to view",
+    "open_poi": "Open",
+    "poi_culture": "Culture",
+    "poi_tips": "Tips",
+    "poi_trade_blurb": "Sell harvest or trade with other players at the market.",
+    "open_market": "Open marketplace",
+    "find_me": "Go to my garden",
+    "find_me_done": "🏡 You're at your garden!",
+    "find_me_here": "📍 You are here!",
+    "other_players_live": "Other players (live)",
+    "proposals_title": "Proposals",
+    "proposals_empty": "No open proposals.",
+    "proposal_accept": "Accept",
+    "proposal_decline": "Decline",
+    "proposal_send": "Send proposal",
+    "proposal_sent": "Proposal sent — kept until they respond.",
+    "proposal_accepted": "Proposal accepted",
+    "proposal_rejected": "Proposal declined",
+    "proposal_kind_trade": "Trade",
+    "proposal_kind_collab": "Collaborate",
+    "proposal_npc_hint": "Bots send proposals — accept them above.",
+    "hud_poi_enter": "{{name}} — press E to enter",
+    "press_poi_enter": "Press E to go inside",
+    "enter_poi": "Enter",
+    "village_exit": "← Village",
+    "village_controls": "← → ↑ ↓ move · E interact · Esc = exit",
+    "hud_poi_enter_short": "Press E to enter",
+    "village_cinema_hint": "Click a screen above or pick a film below.",
+    "village_screen_hint": "Press E to start this film.",
+    "village_screen_hint": "Press E to start this film.",
+    "village_counter_hint": "Press E at the counter.",
+    "village_door_hint": "Press E to return to the village.",
+    "village_market_blurb": "Sell harvest or browse listings from other players.",
+    "village_close_counter": "Leave counter",
+    "village_bought": "Purchased: {{name}}",
+    "village_buy_failed": "Purchase failed",
+    "village_not_enough_coins": "Not enough coins"
+  },
+  "gardendex_hub": {
+    "title": "Garden knowledge",
+    "wiki": "Wiki",
+    "recognize": "Plant recognition",
+    "dex": "Gradendex",
+    "plant_selected": "Selected {{plant}} to plant"
+  },
+  "theme_dark": "Dark mode",
+  "theme_light": "Light mode",
+  "inventory_empty": "Harvest stash is empty",
+  "world_fab_hint": "Walk to your garden 🏡 for tools, harvest & building",
+  "structures": {
+    "title": "Build",
+    "built": "Built",
+    "ring_full": "No room left around your garden — max 12 buildings",
+    "built_on_ring": "{{emoji}} Built next to your garden",
+    "requires_first": "Build {{id}} first",
+    "build_for": "Build for 🪙{{cost}}",
+    "need_coins": "Need 🪙{{cost}}",
+    "well_name": "Water Well",
+    "well_desc": "Water all tilled plots at once. 3 charges per day.",
+    "compost_name": "Compost Heap",
+    "compost_desc": "Every 3 harvests generates a free fertilizer charge.",
+    "greenhouse_name": "Greenhouse",
+    "greenhouse_desc": "Passive protection from storm & drought.",
+    "barn_name": "Barn",
+    "barn_desc": "Unlocks animals. Required for coop & stable.",
+    "chickenCoop_name": "Chicken Coop",
+    "chickenCoop_desc": "Chickens lay 1 egg every 2 days (🪙8).",
+    "stable_name": "Stable",
+    "stable_desc": "Cow produces milk every 3 days (🪙12).",
+    "silo_name": "Silo",
+    "silo_desc": "Passive: +20% coins on crop sales."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "intro": "Trade proposals and wiki updates in one place.",
+    "all_empty": "No notifications right now.",
+    "section_incoming": "Incoming",
+    "section_sent": "Sent",
+    "section_wiki": "Wiki",
+    "tab_inbox": "Inbox",
+    "tab_sent": "Sent",
+    "tab_wiki": "Wiki",
+    "inbox_empty": "No open proposals from other players.",
+    "sent_empty": "You have no sent proposals waiting.",
+    "wiki_empty": "No wiki proposals.",
+    "waiting_reply": "Waiting for a reply…",
+    "refresh": "Refresh",
+    "action_failed": "Action failed",
+    "open_wiki_edit": "Edit in wiki",
+    "open_wiki_review": "Open in wiki",
+    "wiki_status_pending": "Pending review",
+    "wiki_status_approved": "Approved",
+    "wiki_status_rejected": "Rejected",
+    "wiki_status_revision": "Needs revision",
+    "wiki_approve": "Approve",
+    "wiki_reject": "Reject",
+    "wiki_approved": "Wiki proposal approved",
+    "wiki_rejected": "Wiki proposal rejected"
+  },
+  "helpPanel": {
+    "title": "❓ Help",
+    "closeAria": "Close help",
+    "tourAgain": "🗺️ Take the tour again",
+    "tabs": {
+      "start": "🚀 Start",
+      "plants": "🌱 Plants",
+      "garden": "🏡 Your garden",
+      "village": "🏘️ Village",
+      "tips": "💡 Tips"
+    },
+    "sections": {
+      "start": [
+        {
+          "heading": "Your first harvest",
+          "items": [
+            "Pick **Till** ⛏️ and tap a plot in your garden.",
+            "Pick **Plant** 🌱, choose a seed (radish is fastest!) and tap a plot.",
+            "Pick **Water** 💧 and tap your plant.",
+            "Press **Next Day** ⏭️. Did it grow? Harvest with **Harvest** 🧺!"
+          ]
+        },
+        {
+          "heading": "Next Day",
+          "items": [
+            "Each **Next Day** click makes your plants grow.",
+            "Watering helps your plant grow extra.",
+            "Bugs on a plant? Use **Spray** 🧴."
+          ]
+        },
+        {
+          "heading": "Coins and XP",
+          "items": [
+            "Harvesting gives coins 🪙 and stars (XP) ⭐.",
+            "Spend coins on things in the village.",
+            "More XP means a higher level!"
+          ]
+        }
+      ],
+      "plants": [
+        {
+          "heading": "How long does it take?",
+          "items": [
+            "🌸 Radish — 1 day (super fast!)",
+            "🥕 Carrot — 2 days · 🥬 Lettuce — 2 days",
+            "🍅 Tomato — 3 days · 🥔 Potato — 3 days",
+            "🎃 Pumpkin — 5 days (lots of coins!)"
+          ]
+        },
+        {
+          "heading": "Friendly neighbours",
+          "items": [
+            "💚 Some plants like each other — you get bonus coins.",
+            "⚠️ Some combos are not great — watch the faces on your plots."
+          ]
+        },
+        {
+          "heading": "Weather",
+          "items": [
+            "🌧️ Rain gives water. ☀️ Drought makes plants thirsty.",
+            "⛈️ Storm can hurt crops — a **Greenhouse** 🏡 helps!"
+          ]
+        }
+      ],
+      "garden": [
+        {
+          "heading": "⚠️ Only in YOUR garden!",
+          "items": [
+            "Till, plant and harvest **only** at your home 🏡.",
+            "At a neighbour's you may **look**, but **not** build or farm.",
+            "Walk to your house on the map to work in your garden."
+          ]
+        },
+        {
+          "heading": "Building things",
+          "items": [
+            "🪣 **Water Well** — waters all plots (50 🪙).",
+            "🌿 **Compost Heap** — free fertilizer after harvests (30 🪙).",
+            "🏡 **Greenhouse** — protects from storms (80 🪙).",
+            "Build **only** next to your own garden — nowhere else!"
+          ]
+        },
+        {
+          "heading": "How it works",
+          "items": [
+            "Walk to your garden 🏡 on the map and tap a plot.",
+            "Pick a tool and tap **Harvest** 🧺 or **Build** 🔨.",
+            "Harvest goes in your basket — sell it for coins."
+          ]
+        }
+      ],
+      "village": [
+        {
+          "heading": "Explore the village",
+          "items": [
+            "On the world map find **Garden Village** 🏘️ — walk there!",
+            "Tap a shop, museum or cinema to go inside.",
+            "Press **Escape** or ✕ to go back outside."
+          ]
+        },
+        {
+          "heading": "Shops in the village",
+          "items": [
+            "🔧 **Tool shop** — buy spray and buckets.",
+            "🌿 **Fertilizer shop** — food for your plants.",
+            "🎬 **Cinema** — watch fun garden videos.",
+            "🏛️ **Museum** — learn about plants.",
+            "🛒 **Market** — trade with other players."
+          ]
+        },
+        {
+          "heading": "Visiting others",
+          "items": [
+            "Walk to a neighbour 🏡 to see their garden.",
+            "You can **help** water 🤝 — that gives XP!",
+            "Remember: **you can only build in your own garden.**"
+          ]
+        },
+        {
+          "heading": "Chat",
+          "items": [
+            "Talk to other players in 💬 Chat.",
+            "Be kind — it's a friendly garden!"
+          ]
+        }
+      ],
+      "tips": [
+        {
+          "heading": "Helpful tips",
+          "items": [
+            "🌸 Start with radish — it's the quickest!",
+            "💧 Water before you press **Next Day**.",
+            "🏘️ Visit the village when you need supplies.",
+            "❓ Ask a grown-up if stuck — or click Help again!"
+          ]
+        },
+        {
+          "heading": "Saving",
+          "items": [
+            "An account saves your garden.",
+            "As a **guest** you only play on this device — log in to save."
+          ]
+        }
+      ]
+    }
+  },
+  "tour": {
+    "skip": "Skip tour",
+    "back": "← Back",
+    "next": "Next →",
+    "finish": "🌱 Start playing!",
+    "showAgain": "Show again on next login",
+    "stepCounter": "{{current}} / {{total}}",
+    "goToStep": "Go to step {{n}}",
+    "steps": {
+      "welcome": {
+        "title": "👋 Welcome to AllOne Garden!",
+        "body": "We'll show you how it works. You can skip anytime. Open Help ❓ later if you need it."
+      },
+      "tools": {
+        "title": "🔧 Tools",
+        "body": "Pick what to do: till ⛏️, plant 🌱, water 💧 or harvest 🧺. First walk to your home 🏡 on the map!"
+      },
+      "garden": {
+        "title": "🌾 Your garden",
+        "body": "This is the world map. At your house 🏡 tap plots to work. **Only in your own garden** may you till, plant and harvest!"
+      },
+      "structures": {
+        "title": "🏗️ Building",
+        "body": "Spend coins 🪙 on a well, compost or greenhouse. Build **only** next to your own garden — not at neighbours!"
+      },
+      "village": {
+        "title": "🏘️ The village",
+        "body": "Walk to Garden Village for shops 🛒, museum 🏛️ and cinema 🎬. Buy supplies or trade at the market."
+      },
+      "inventory": {
+        "title": "🧺 Harvest",
+        "body": "Harvested crops land here. Sell for coins 🪙 or trade at the market."
+      },
+      "chat": {
+        "title": "💬 Chat & neighbours",
+        "body": "Talk to friends. Visit their garden to look — helping is OK, **building is not**."
+      },
+      "header": {
+        "title": "⏭️ Next Day",
+        "body": "See what day it is and press **Next Day** so plants grow! Also find Help ❓ and the world map 🗺️ here."
+      },
+      "done": {
+        "title": "🌱 Ready to play!",
+        "body": "Have fun gardening! Remember: **build only in your own garden.** Click ❓ if you need help."
+      }
+    }
   },
   "gardenConflict": {
     "title": "Garden out of sync",

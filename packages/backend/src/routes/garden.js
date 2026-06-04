@@ -11,6 +11,7 @@ const contentStore = require('../state/contentStore');
 const { updateMemGardenDay } = require('./leaderboard');
 const { recordSeasonScoresOnGardenSave } = require('./leaderboardSeasonHistory');
 const worldRoutes = require('./world');
+const { loadInventory, addCrop, syncInventory } = require('../lib/inventory');
 
 // In-memory fallback
 const memGardens = {};
@@ -59,10 +60,11 @@ router.get('/', requireAuth, async (req, res) => {
          VALUES ($1, $2, $3, $4)`,
         [userId, JSON.stringify(def.plots), def.currentDay, def.weather]
       );
-      return res.json({ ...def, serverUpdatedAt: null });
+      return res.json({ ...def, inventory: {}, serverUpdatedAt: null });
     }
 
     const row = result.rows[0];
+    const inventory = await loadInventory(userId);
     const serverUpdatedAt = row.updated_at
       ? new Date(row.updated_at).toISOString()
       : null;
@@ -84,6 +86,7 @@ router.get('/', requireAuth, async (req, res) => {
         plots: row.plots,
         currentDay: newDay,
         weather: newWeather,
+        inventory,
         serverUpdatedAt: new Date().toISOString(),
         autoAdvanced: daysToAdvance,
       });
@@ -93,6 +96,7 @@ router.get('/', requireAuth, async (req, res) => {
       plots: row.plots,
       currentDay: row.current_day,
       weather: row.weather,
+      inventory,
       serverUpdatedAt,
     });
   }
@@ -101,14 +105,14 @@ router.get('/', requireAuth, async (req, res) => {
   if (!memGardens[userId]) memGardens[userId] = defaultGarden();
   const g = memGardens[userId];
   updateMemGardenDay(userId, g.currentDay);
-  res.json(g);
+  res.json({ ...g, inventory: g.inventory || {} });
 });
 
 // ── POST /api/garden  — save full garden state ────────────────────────────────
 
 router.post('/', requireAuth, validateGardenSave, async (req, res) => {
   const { userId } = req.user;
-  const { plots, currentDay, weather, ifUnmodifiedSince } = req.body;
+  const { plots, currentDay, weather, ifUnmodifiedSince, inventory } = req.body;
 
   if (!plots || !Array.isArray(plots)) {
     return res.status(400).json({ error: 'plots array required' });
@@ -156,6 +160,11 @@ router.post('/', requireAuth, validateGardenSave, async (req, res) => {
 
     await recordSeasonScoresOnGardenSave(userId, oldDay, newDay);
 
+    let syncedInventory = null;
+    if (inventory && typeof inventory === 'object') {
+      syncedInventory = await syncInventory(userId, inventory);
+    }
+
     const after = await db.query(
       'SELECT updated_at FROM gardens WHERE user_id = $1',
       [userId]
@@ -164,10 +173,15 @@ router.post('/', requireAuth, validateGardenSave, async (req, res) => {
       ? new Date(after.rows[0].updated_at).toISOString()
       : null;
     emitGardenPreviewUpdated(req, userId);
-    return res.json({ success: true, serverUpdatedAt });
+    return res.json({ success: true, serverUpdatedAt, inventory: syncedInventory });
   }
 
-  memGardens[userId] = { plots, currentDay: currentDay || 1, weather: weather || 'sunny' };
+  memGardens[userId] = {
+    plots,
+    currentDay: currentDay || 1,
+    weather: weather || 'sunny',
+    inventory: inventory || memGardens[userId]?.inventory || {},
+  };
   updateMemGardenDay(userId, currentDay || 1);
   emitGardenPreviewUpdated(req, userId);
   res.json({ success: true });
@@ -223,11 +237,30 @@ router.post('/action', requireAuth, validateGardenAction, async (req, res) => {
       if (!plot.planted || (plot.daysPlanted || 0) < required) {
         return res.status(400).json({ error: 'Crop is not ready to harvest yet' });
       }
+      const harvestedCrop = plot.plantType;
       Object.assign(plot, {
         planted: false, plantType: null,
         waterLevel: 0, fertilized: false, daysPlanted: 0, pest: false,
       });
-      break;
+      garden.plots[plotIndex] = plot;
+
+      if (db.isConnected()) {
+        await db.query(
+          'UPDATE gardens SET plots = $1, updated_at = NOW() WHERE user_id = $2',
+          [JSON.stringify(garden.plots), userId],
+        );
+        const inventory = await addCrop(userId, harvestedCrop, 1);
+        emitGardenPreviewUpdated(req, userId);
+        return res.json({ success: true, plot, harvestedCrop, inventory });
+      }
+
+      if (!memGardens[userId]) memGardens[userId] = defaultGarden();
+      memGardens[userId].plots = garden.plots;
+      const inv = memGardens[userId].inventory || {};
+      inv[harvestedCrop] = (inv[harvestedCrop] || 0) + 1;
+      memGardens[userId].inventory = inv;
+      emitGardenPreviewUpdated(req, userId);
+      return res.json({ success: true, plot, harvestedCrop, inventory: inv });
     }
     default:
       return res.status(400).json({ error: `Unknown action: ${type}` });
@@ -318,8 +351,24 @@ router.post('/nextday', requireAuth, async (req, res) => {
     );
   }
 
+  let serverUpdatedAt = null;
+  if (db.isConnected()) {
+    const after = await db.query(
+      'SELECT updated_at FROM gardens WHERE user_id = $1',
+      [userId]
+    );
+    if (after.rows[0]?.updated_at) {
+      serverUpdatedAt = new Date(after.rows[0].updated_at).toISOString();
+    }
+  }
+
   emitGardenPreviewUpdated(req, userId);
-  res.json({ currentDay: garden.currentDay, weather: garden.weather, plots: garden.plots });
+  res.json({
+    currentDay: garden.currentDay,
+    weather: garden.weather,
+    plots: garden.plots,
+    serverUpdatedAt,
+  });
 });
 
 // ── GET /api/garden/visit/:userId  — view another player's garden (read-only) ─
@@ -356,3 +405,8 @@ router.get('/visit/:targetId', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.getMemInventory = (userId) => {
+  if (!memGardens[userId]) memGardens[userId] = defaultGarden();
+  if (!memGardens[userId].inventory) memGardens[userId].inventory = {};
+  return memGardens[userId].inventory;
+};

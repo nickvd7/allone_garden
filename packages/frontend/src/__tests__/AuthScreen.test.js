@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import axios from 'axios';
-import '../i18n/config';
+import i18n from '../i18n/config';
 import AuthScreen from '../components/AuthScreen';
 
 jest.mock('axios');
@@ -11,6 +11,8 @@ describe('AuthScreen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.setItem('garden_lang', 'en');
+    i18n.changeLanguage('en');
     // Reset URL so the reset-token useEffect doesn't activate by default
     delete window.location;
     window.location = { search: '' };
@@ -123,6 +125,7 @@ describe('AuthScreen', () => {
     fireEvent.change(screen.getByPlaceholderText('Username'), { target: { value: 'Bob' } });
     fireEvent.change(screen.getByPlaceholderText('Email'),    { target: { value: 'bob@example.com' } });
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'pass12345' } });
+    fireEvent.change(screen.getByPlaceholderText(/Confirm password/i), { target: { value: 'pass12345' } });
     // Submit button in register mode reads "🌱 Create account"
     fireEvent.click(screen.getByRole('button', { name: /Create account/i }));
 

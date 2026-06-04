@@ -205,7 +205,7 @@ describe('StructuresPanel', () => {
       <StructuresPanel structures={{}} coins={500} onBuild={noop} onUseWell={noop} onUseCompost={noop} />
     );
     // Both coop and stable require barn — both should be disabled with this title
-    const prereqBtns = screen.getAllByTitle(/requires barn first/i);
+    const prereqBtns = screen.getAllByTitle(/build barn first/i);
     expect(prereqBtns).toHaveLength(2);
     prereqBtns.forEach((btn) => expect(btn).toBeDisabled());
   });

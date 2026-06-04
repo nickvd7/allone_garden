@@ -46,7 +46,11 @@ const recognizeRoutes   = require('./routes/recognize');
 const { router: pushRouter } = require('./routes/push');
 const serversRouter = require('./routes/servers');
 const dmRoutes      = require('./routes/dm');
+const playerProposalRoutes = require('./routes/playerProposals');
+const villageShopRoutes = require('./routes/villageShop');
 const proposalStore   = require('./state/proposalStore');
+const npcWorld = require('./services/npcWorld');
+const onlinePlayers = require('./state/onlinePlayers');
 const chatHandler      = require('./socket/chat');
 const gameHandler      = require('./socket/game');
 const proximityHandler = require('./socket/proximity');
@@ -109,6 +113,8 @@ app.use('/api/leaderboard',  bodyLimitSmall, leaderboardRoutes);
 app.use('/api/gradendex',    bodyLimitSmall, gradendexRoutes);
 app.use('/api/world',        bodyLimitSmall, worldRoutes);
 app.use('/api/dm',           bodyLimitSmall, dmRoutes);
+app.use('/api/player-proposals', bodyLimitSmall, playerProposalRoutes);
+app.use('/api/village/shop', bodyLimitSmall, villageShopRoutes);
 app.use('/api/content',      bodyLimitSmall, contentRoutes);
 app.use('/api/analytics',    bodyLimitSmall, analyticsRoutes);
 app.use('/api/weather',      bodyLimitSmall, weatherRoutes);
@@ -201,6 +207,25 @@ if (process.env.P2P_ENABLED === 'true') {
   });
 }
 
+// ── NPC world simulation (gardens, patrol, bot proposals) ─────────────────────
+let npcTickTimer = null;
+function startNpcWorldTick() {
+  if (npcTickTimer || process.env.NODE_ENV === 'test') return;
+  npcTickTimer = setInterval(() => {
+    const onlineIds = onlinePlayers.getAll().map((p) => p.userId);
+    npcWorld.tickNpcs(onlineIds);
+    io.emit('npc:world-updated', npcWorld.getNpcWorld());
+  }, 12000);
+  if (typeof npcTickTimer.unref === 'function') npcTickTimer.unref();
+}
+function stopNpcWorldTick() {
+  if (npcTickTimer) {
+    clearInterval(npcTickTimer);
+    npcTickTimer = null;
+  }
+}
+startNpcWorldTick();
+
 // ── Start server ──────────────────────────────────────────────────────────────
 // Only listen when run directly (not when imported by tests)
 if (require.main === module) {
@@ -224,4 +249,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, server };
+module.exports = { app, server, stopNpcWorldTick };

@@ -7,6 +7,12 @@ const db     = require('../db');
 const { requireAuth }                         = require('../middleware/auth');
 const { tradeLimiter }                        = require('../middleware/security');
 const { validateCreateListing, validateBuy }  = require('../middleware/validate');
+const { loadInventory, deductCrop } = require('../lib/inventory');
+
+const CROP_BASE_PRICES = {
+  tomato: 20, carrot: 15, lettuce: 16, radish: 12, corn: 24,
+  potato: 18, pumpkin: 30, sunflower: 22, blueberry: 26,
+};
 
 // In-memory fallback
 const memListings = {};
@@ -202,6 +208,70 @@ router.delete('/listings/:listingId', requireAuth, async (req, res) => {
   }
   delete memListings[listingId];
   res.json({ success: true });
+});
+
+// ── POST /api/trade/quick-sell — direct NPC-style sale at marketplace ─────────
+
+router.post('/quick-sell', requireAuth, tradeLimiter, async (req, res) => {
+  const { userId } = req.user;
+  const cropId = String(req.body.cropId || '');
+  const quantity = Math.max(1, parseInt(req.body.quantity, 10) || 1);
+  const pricePerUnit = Math.max(
+    1,
+    parseInt(req.body.pricePerUnit, 10) || CROP_BASE_PRICES[cropId] || 10,
+  );
+  const siloBonus = Number(req.body.siloBonus) > 1 ? Number(req.body.siloBonus) : 1;
+  const earned = Math.round(quantity * pricePerUnit * siloBonus);
+
+  if (!CROP_BASE_PRICES[cropId]) {
+    return res.status(400).json({ error: 'Invalid crop' });
+  }
+
+  if (db.isConnected()) {
+    const client = await db.getClient();
+    try {
+      await client.query('BEGIN');
+      const inv = await client.query(
+        'SELECT quantity FROM inventory WHERE user_id = $1 AND plant_type = $2 FOR UPDATE',
+        [userId, cropId],
+      );
+      if (!inv.rows[0] || inv.rows[0].quantity < quantity) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Not enough crops in inventory' });
+      }
+      await client.query(
+        'UPDATE inventory SET quantity = quantity - $1 WHERE user_id = $2 AND plant_type = $3',
+        [quantity, userId, cropId],
+      );
+      await client.query('UPDATE users SET coins = coins + $1 WHERE id = $2', [earned, userId]);
+      const coinsResult = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
+      await client.query('COMMIT');
+      const inventory = await loadInventory(userId);
+      return res.json({
+        success: true,
+        earned,
+        coins: coinsResult.rows[0]?.coins || 0,
+        inventory,
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[trade] quick-sell error:', err.message);
+      return res.status(500).json({ error: 'Quick sell failed' });
+    } finally {
+      client.release();
+    }
+  }
+
+  res.json({ success: true, earned, inventory: {} });
+});
+
+// ── GET /api/trade/inventory ──────────────────────────────────────────────────
+
+router.get('/inventory', requireAuth, async (req, res) => {
+  const inventory = db.isConnected()
+    ? await loadInventory(req.user.userId)
+    : {};
+  res.json({ inventory });
 });
 
 module.exports = router;

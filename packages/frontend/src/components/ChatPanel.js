@@ -11,9 +11,9 @@ function avatarColor(userId) {
   return `hsl(${hue},60%,45%)`;
 }
 
-function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall }) {
+function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall, dmOnly = false }) {
   const { t } = useTranslation();
-  const [tab, setTab] = useState('everyone'); // 'everyone' | 'direct'
+  const [tab, setTab] = useState(dmOnly ? 'direct' : 'everyone'); // 'everyone' | 'direct'
 
   // ── Global chat state ─────────────────────────────────────────────────────
   const [messages,    setMessages]    = useState([
@@ -71,7 +71,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
 
   // ── Fetch conversation list when DM tab opens ─────────────────────────────
   useEffect(() => {
-    if (tab !== 'direct' || !currentUserId || convsLoading) return;
+    if ((!dmOnly && tab !== 'direct') || !currentUserId || convsLoading) return;
     setConvsLoading(true);
     api.get('/api/dm/conversations')
       .then((data) => {
@@ -226,6 +226,9 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       [key]: [...(prev[key] || []), myMsg],
     }));
     setDmInput('');
+    if (selectedUser.offline) {
+      // Bericht is opgeslagen in DB; ontvanger leest het bij volgende login.
+    }
   }, [dmInput, selectedUser, socket, currentUserId, username]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -260,50 +263,42 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="card">
-      {/* ── Tab bar ── */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--border, #e0e0e0)', marginBottom: '0.5rem' }}>
-        <button
-          type="button"
-          onClick={() => setTab('everyone')}
-          style={{
-            flex: 1, padding: '0.45rem 0.5rem', border: 'none', background: 'none', cursor: 'pointer',
-            fontWeight: tab === 'everyone' ? 700 : 400,
-            borderBottom: tab === 'everyone' ? '2px solid #4caf50' : '2px solid transparent',
-            color: tab === 'everyone' ? '#2e7d32' : '#666',
-            fontSize: '0.88rem',
-          }}
-        >
-          💬 {t('chat')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('direct')}
-          style={{
-            flex: 1, padding: '0.45rem 0.5rem', border: 'none', background: 'none', cursor: 'pointer',
-            fontWeight: tab === 'direct' ? 700 : 400,
-            borderBottom: tab === 'direct' ? '2px solid #4caf50' : '2px solid transparent',
-            color: tab === 'direct' ? '#2e7d32' : '#666',
-            fontSize: '0.88rem',
-            position: 'relative',
-          }}
-        >
-          ✉️ Direct
+    <div className="card chat-panel">
+      {!dmOnly && (
+        <div className="chat-panel__tabs">
+          <button
+            type="button"
+            className={`chat-panel__tab${tab === 'everyone' ? ' chat-panel__tab--active' : ''}`}
+            onClick={() => setTab('everyone')}
+          >
+            💬 {t('chat')}
+          </button>
+          <button
+            type="button"
+            className={`chat-panel__tab${tab === 'direct' ? ' chat-panel__tab--active' : ''}`}
+            onClick={() => setTab('direct')}
+          >
+            ✉️ {t('chat_direct', { defaultValue: 'Direct' })}
+            {totalUnread > 0 && (
+              <span className="chat-panel__tab-badge">
+                {totalUnread > 9 ? '9+' : totalUnread}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
+
+      {dmOnly && (
+        <div className="chat-panel__dm-heading">
+          <strong>✉️ {t('chat_direct_messages', { defaultValue: 'Direct messages' })}</strong>
           {totalUnread > 0 && (
-            <span style={{
-              position: 'absolute', top: 4, right: 8,
-              background: '#e53935', color: '#fff',
-              borderRadius: '9px', fontSize: '0.68rem', fontWeight: 700,
-              padding: '0 5px', lineHeight: '16px', minWidth: 16, textAlign: 'center',
-            }}>
-              {totalUnread > 9 ? '9+' : totalUnread}
-            </span>
+            <span className="chat-panel__tab-badge">{totalUnread > 9 ? '9+' : totalUnread}</span>
           )}
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* ── Everyone tab ── */}
-      {tab === 'everyone' && (
+      {!dmOnly && tab === 'everyone' && (
         <>
           <div className="chat-messages">
             {messages.map((msg) => (
@@ -331,7 +326,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
             <input
               className="chat-input"
               type="text"
-              placeholder="Type a message…"
+              placeholder={t('chat_placeholder', { defaultValue: 'Type a message…' })}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -342,13 +337,13 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
             </button>
           </div>
           <div style={{ fontSize: '0.7rem', color: '#aaa', textAlign: 'center', padding: '0.25rem 0', borderTop: '1px solid var(--border-subtle, #e8f5e9)' }}>
-            🌱 Vriendelijk chatten — wees aardig voor elkaar
+            {t('chat_kindness_note', { defaultValue: '🌱 Be kind to each other' })}
           </div>
         </>
       )}
 
       {/* ── Direct tab ── */}
-      {tab === 'direct' && (
+      {(dmOnly || tab === 'direct') && (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {!selectedUser ? (
             /* Player list / search */
@@ -356,7 +351,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
               <input
                 className="chat-input"
                 type="text"
-                placeholder="Zoek op naam…"
+                placeholder={t('chat_search_players', { defaultValue: 'Search by name…' })}
                 value={dmSearch}
                 onChange={(e) => setDmSearch(e.target.value)}
                 style={{ marginBottom: '0.5rem', width: '100%', boxSizing: 'border-box' }}
@@ -457,6 +452,11 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                 <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{selectedUser.username}</span>
                 {!selectedUser.offline && (
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf50', display: 'inline-block' }} />
+                )}
+                {selectedUser.offline && (
+                  <span style={{ fontSize: '0.72rem', color: '#888' }}>
+                    {t('chat_offline_stored', { defaultValue: 'Offline — bericht blijft bewaard' })}
+                  </span>
                 )}
                 {!selectedUser.offline && onStartCall && (
                   <>

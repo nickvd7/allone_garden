@@ -1,24 +1,21 @@
 /**
  * Tests — HelpPanel
- *
- * Covers:
- *  - Renders all five tab buttons
- *  - Default tab shows Quick Start content
- *  - Tab switching shows correct content
- *  - Close button calls onClose
  */
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import HelpPanel from '../components/HelpPanel';
+import i18n from '../i18n/config';
+
+const t = (...args) => i18n.t(...args);
 
 describe('HelpPanel — tabs', () => {
   it('renders all five tab buttons', () => {
     render(<HelpPanel onClose={() => {}} />);
-    expect(screen.getByText(/🚀 Quick Start/i)).toBeInTheDocument();
-    expect(screen.getByText(/🌱 Plants/i)).toBeInTheDocument();
-    expect(screen.getByText(/🏗️ Structures/i)).toBeInTheDocument();
-    expect(screen.getByText(/🌍 Multiplayer/i)).toBeInTheDocument();
-    expect(screen.getByText(/💡 Tips/i)).toBeInTheDocument();
+    expect(screen.getByText(t('helpPanel.tabs.start'))).toBeInTheDocument();
+    expect(screen.getByText(t('helpPanel.tabs.plants'))).toBeInTheDocument();
+    expect(screen.getByText(t('helpPanel.tabs.garden'))).toBeInTheDocument();
+    expect(screen.getByText(t('helpPanel.tabs.village'))).toBeInTheDocument();
+    expect(screen.getByText(t('helpPanel.tabs.tips'))).toBeInTheDocument();
   });
 
   it('shows Quick Start content by default', () => {
@@ -28,26 +25,26 @@ describe('HelpPanel — tabs', () => {
 
   it('switches to Plants tab', () => {
     render(<HelpPanel onClose={() => {}} />);
-    fireEvent.click(screen.getByText(/🌱 Plants/i));
-    expect(screen.getByText(/Growth times/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(t('helpPanel.tabs.plants')));
+    expect(screen.getByText(/How long does it take/i)).toBeInTheDocument();
   });
 
-  it('switches to Structures tab', () => {
+  it('switches to Garden tab', () => {
     render(<HelpPanel onClose={() => {}} />);
-    fireEvent.click(screen.getByText(/🏗️ Structures/i));
-    expect(screen.getByText(/Structures/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(t('helpPanel.tabs.garden')));
+    expect(screen.getByText(/Only in YOUR garden/i)).toBeInTheDocument();
   });
 
-  it('switches to Multiplayer tab', () => {
+  it('switches to Village tab', () => {
     render(<HelpPanel onClose={() => {}} />);
-    fireEvent.click(screen.getByText(/🌍 Multiplayer/i));
-    expect(screen.getByText(/Multiplayer/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(t('helpPanel.tabs.village')));
+    expect(screen.getByText(/Explore the village/i)).toBeInTheDocument();
   });
 
   it('switches to Tips tab', () => {
     render(<HelpPanel onClose={() => {}} />);
-    fireEvent.click(screen.getByText(/💡 Tips/i));
-    expect(screen.getByText(/Tips/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(t('helpPanel.tabs.tips')));
+    expect(screen.getByText(/Helpful tips/i)).toBeInTheDocument();
   });
 });
 
@@ -55,7 +52,14 @@ describe('HelpPanel — close', () => {
   it('calls onClose when close button is clicked', () => {
     const onClose = jest.fn();
     render(<HelpPanel onClose={onClose} />);
-    fireEvent.click(screen.getByRole('button', { name: /Close help panel/i }));
+    fireEvent.click(screen.getByRole('button', { name: t('helpPanel.closeAria') }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onClose on Escape', () => {
+    const onClose = jest.fn();
+    render(<HelpPanel onClose={onClose} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

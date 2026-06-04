@@ -23,7 +23,8 @@ const router = express.Router();
 // ── In-memory fallback (used when DATABASE_URL is not configured) ─────────────
 // Seeded by migrate-gradendex.js; here we only keep a tiny stub so the
 // frontend can render something even without a database.
-const MEM_ENTRIES = [];
+const GRADENDEX_SEED = require('../data/gradendexSeed');
+const MEM_ENTRIES = [...GRADENDEX_SEED];
 
 function validate(req, res) {
   const errors = validationResult(req);
@@ -49,12 +50,21 @@ router.get('/',
           ? 'SELECT * FROM gradendex_entries WHERE category = $1 ORDER BY category, name'
           : 'SELECT * FROM gradendex_entries ORDER BY category, name';
         const result = await db.query(sql, cat ? [cat] : []);
-        return res.json({ entries: result.rows });
+        if (result.rows.length > 0) {
+          return res.json({ entries: result.rows });
+        }
+        const fallback = cat ? MEM_ENTRIES.filter((e) => e.category === cat) : MEM_ENTRIES;
+        return res.json({ entries: fallback });
       }
       const entries = cat ? MEM_ENTRIES.filter((e) => e.category === cat) : MEM_ENTRIES;
       res.json({ entries });
     } catch (err) {
-      res.status(500).json({ error: 'Could not load Gradendex entries' });
+      console.warn('[gradendex] DB error, using built-in seed:', err.message);
+      const catFallback = req.query.category;
+      const entries = catFallback
+        ? MEM_ENTRIES.filter((e) => e.category === catFallback)
+        : MEM_ENTRIES;
+      res.json({ entries });
     }
   }
 );

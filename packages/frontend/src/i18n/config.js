@@ -65,7 +65,9 @@ i18n
       uk: { translation: withGdex(uk, gradendexUk) },
       el: { translation: withGdex(el, gradendexEl) },
     },
-    lng: 'en',
+    lng: process.env.NODE_ENV === 'test'
+      ? 'en'
+      : ((typeof window !== 'undefined' && localStorage.getItem('garden_lang')) || 'nl'),
     fallbackLng: 'en',
     interpolation: {
       escapeValue: false

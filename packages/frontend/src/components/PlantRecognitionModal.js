@@ -22,7 +22,7 @@ function getStoredKey(providerId) {
   return p ? (localStorage.getItem(p.storageKey) || '') : '';
 }
 
-export default function PlantRecognitionModal({ onClose, onPlantIdentified }) {
+export default function PlantRecognitionModal({ onClose, onPlantIdentified, embedded = false }) {
   const [provider,    setProvider]    = useState('openai');
   const [apiKey,      setApiKey]      = useState(() => getStoredKey('openai'));
   const [imageData,   setImageData]   = useState(null);  // base64 string
@@ -92,16 +92,16 @@ export default function PlantRecognitionModal({ onClose, onPlantIdentified }) {
 
   const currentProvider = PROVIDERS.find((p) => p.id === provider);
 
-  return (
-    <div style={s.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div style={s.modal}>
-        {/* Header */}
+  const inner = (
+    <>
+        {!embedded && (
         <div style={s.header}>
           <h2 style={s.title}>🌿 Plant Recognition</h2>
-          <button style={s.closeBtn} onClick={onClose}>✕</button>
+          <button type="button" style={s.closeBtn} onClick={onClose}>✕</button>
         </div>
+        )}
 
-        <div style={s.body}>
+        <div style={embedded ? s.embeddedBody : s.body}>
           {/* Provider + API key */}
           <div style={s.section}>
             <label style={s.label}>AI Provider</label>
@@ -204,6 +204,17 @@ export default function PlantRecognitionModal({ onClose, onPlantIdentified }) {
             🔒 Your API key is sent only to the selected provider via our server proxy. It is never stored or logged.
           </p>
         </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="plant-recognition-embedded">{inner}</div>;
+  }
+
+  return (
+    <div style={s.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div style={s.modal}>
+        {inner}
       </div>
     </div>
   );
@@ -229,6 +240,7 @@ const s = {
   title:   { margin: 0, color: '#2e7d32', fontSize: '1.2rem', flex: 1 },
   closeBtn:{ border: 'none', background: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#555' },
   body:    { flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' },
+  embeddedBody: { padding: '0.5rem 0.25rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' },
   section: { marginBottom: '0.75rem' },
   label:   { display: 'block', fontWeight: 600, fontSize: '0.85rem', color: '#444', marginBottom: '0.35rem' },
   select:  { width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px', border: '1px solid #ccc', fontSize: '0.9rem' },

@@ -31,13 +31,14 @@ describe('StatsBar — display values', () => {
 
   it('renders plants grown value', () => {
     render(<StatsBar stats={DEFAULT_STATS} />);
-    expect(screen.getByText(/🌿 12/)).toBeInTheDocument();
+    expect(screen.getByText(/🌱 12/)).toBeInTheDocument();
   });
 
   it('renders XP label with current and max', () => {
     render(<StatsBar stats={DEFAULT_STATS} />);
-    // level 3 → xpForLevel(3) = 9*100 = 900
-    expect(screen.getByText(/250 \/ 900/)).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar');
+    expect(bar).toHaveAttribute('aria-valuenow', '250');
+    expect(bar).toHaveAttribute('aria-valuemax', '900');
   });
 });
 

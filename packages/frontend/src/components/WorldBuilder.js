@@ -10,6 +10,7 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../hooks/useApi';
+import { applyCastleVillage, CASTLE_DRAWBRIDGE } from '../utils/castleVillageMap';
 
 // ── Map constants ─────────────────────────────────────────────────────────────
 const MAP_W = 32;
@@ -42,12 +43,14 @@ const TILE_BG = {
   [TILE_TREE]:   '#3a7a22',
   [TILE_DESERT]: '#d2b56b',
   [TILE_MOUNTAIN]: '#8a9099',
+  8: '#8b7b62',
 };
 
 // ── Default map + garden slots (mirrors WorldMap.js) ─────────────────────────
 const G = TILE_GRASS, P = TILE_PATH, W = TILE_WATER, T = TILE_TREE;
 
 const DEFAULT_MAP = Array.from({ length: MAP_H }, () => Array.from({ length: MAP_W }, () => G));
+const V = 8;
 for (let y = 0; y < MAP_H; y += 1) DEFAULT_MAP[y][Math.floor(MAP_W / 2)] = P;
 for (let x = 0; x < MAP_W; x += 1) DEFAULT_MAP[Math.floor(MAP_H / 2)][x] = P;
 [
@@ -72,13 +75,7 @@ for (let y = 0; y <= 6; y += 1) {
 ].forEach(([x, y]) => {
   if (DEFAULT_MAP[y] && DEFAULT_MAP[y][x] !== W) DEFAULT_MAP[y][x] = TILE_MOUNTAIN;
 });
-[
-  [15, 1], [16, 1], [17, 1],
-  [15, 2], [16, 2], [17, 2],
-  [15, 3], [16, 3], [17, 3],
-].forEach(([x, y]) => {
-  if (DEFAULT_MAP[y][x] !== W && DEFAULT_MAP[y][x] !== T) DEFAULT_MAP[y][x] = P;
-});
+applyCastleVillage(DEFAULT_MAP, { W, T, V, P, G });
 
 const DEFAULT_GARDEN_SLOTS = [
   { x: 3,  y: 3  }, { x: 28, y: 16 },
@@ -89,11 +86,11 @@ const DEFAULT_GARDEN_SLOTS = [
   { x: 14, y: 5  }, { x: 17, y: 14 },
 ];
 
-const MARKET_TILE = { x: 16, y: 2 };
 const WORLD_HUB = { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
 const roadTile = (x, y) => {
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return;
   if (DEFAULT_MAP[y][x] === W) return;
+  if (DEFAULT_MAP[y][x] === V) return;
   DEFAULT_MAP[y][x] = P;
 };
 const roadBetween = (from, to) => {
@@ -102,7 +99,7 @@ const roadBetween = (from, to) => {
   const stepY = from.y <= to.y ? 1 : -1;
   for (let y = from.y; y !== to.y + stepY; y += stepY) roadTile(to.x, y);
 };
-[MARKET_TILE, ...DEFAULT_GARDEN_SLOTS].forEach((slot) => roadBetween(WORLD_HUB, slot));
+[CASTLE_DRAWBRIDGE, ...DEFAULT_GARDEN_SLOTS].forEach((slot) => roadBetween(WORLD_HUB, slot));
 
 const MAX_GARDENS = 12;
 

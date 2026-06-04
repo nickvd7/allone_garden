@@ -1,117 +1,96 @@
 /**
- * GradendexPanel — in-game modal overlay for the Gradendex wiki
- *
- * Wraps GradendexView in a full-screen modal with a close button.
- * Passes the player's JWT so admins get edit controls inline.
+ * GradendexPanel — in-game hub: wiki, plant recognition, gradendex reference
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import GradendexView from './GradendexView';
+import ContentWikiPage from './ContentWikiPage';
+import PlantRecognitionModal from './PlantRecognitionModal';
 
-const OVERLAY = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0,0,0,0.55)',
-  zIndex: 1300,
-  display: 'flex',
-  alignItems: 'flex-start',
-  justifyContent: 'center',
-  padding: '2vh 1rem',
-  overflowY: 'auto',
-};
-
-const PANEL = {
-  background: 'var(--card-bg, #fff)',
-  borderRadius: '14px',
-  boxShadow: '0 8px 48px rgba(0,0,0,0.3)',
-  width: '100%',
-  maxWidth: '960px',
-  maxHeight: '94vh',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
-
-const PANEL_HEADER = {
-  background: 'linear-gradient(135deg, #2e7d32, #1b5e20)',
-  color: '#fff',
-  padding: '0.85rem 1.25rem',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  flexShrink: 0,
-};
-
-const CLOSE_BTN = {
-  background: 'rgba(255,255,255,0.15)',
-  border: 'none',
-  color: '#fff',
-  borderRadius: '6px',
-  padding: '0.3rem 0.65rem',
-  cursor: 'pointer',
-  fontSize: '1rem',
-  lineHeight: 1,
-};
-
-function GradendexPanel({ token = null, onClose }) {
+function GradendexPanel({ token = null, onClose, onPlantIdentified }) {
   const { t } = useTranslation();
-  // Close on Escape key
+  const [tab, setTab] = useState('wiki');
+
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Close when clicking on the dark backdrop (not the panel itself)
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) onClose();
   };
 
+  const tabs = [
+    { id: 'wiki', label: t('gardendex_hub.wiki'), icon: '📚' },
+    { id: 'recognize', label: t('gardendex_hub.recognize'), icon: '📷' },
+    { id: 'dex', label: t('gardendex_hub.dex'), icon: '📖' },
+  ];
+
   return (
     <div
-      style={OVERLAY}
+      className="gardendex-hub-overlay"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
-      aria-label={t('gradendex.page.aria_dialog', { defaultValue: 'Gradendex' })}
+      aria-label={t('gardendex_hub.title')}
     >
-      <div style={PANEL}>
-        {/* ── Panel header ── */}
-        <div style={PANEL_HEADER}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '1.3rem' }}>📖</span>
-            <span style={{ fontWeight: 700, fontSize: '1.05rem' }}>
-              {t('gradendex.page.title', { defaultValue: '📖 Gradendex' })}
-            </span>
-            <span style={{ fontSize: '0.8rem', opacity: 0.7, marginLeft: '0.3rem' }}>
-              {t('gradendex.page.subtitle', { defaultValue: '— crop & structure reference' })}
-            </span>
+      <div className="gardendex-hub-panel">
+        <div className="gardendex-hub-panel__header">
+          <div className="gardendex-hub-panel__title">
+            <span aria-hidden>🌿</span>
+            <span>{t('gardendex_hub.title')}</span>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            {/* Open in full page */}
+          <div className="gardendex-hub-panel__header-actions">
             <a
               href="/gradendex"
               target="_blank"
               rel="noopener noreferrer"
-              style={{
-                ...CLOSE_BTN,
-                textDecoration: 'none',
-                fontSize: '0.82rem',
-                padding: '0.3rem 0.7rem',
-              }}
-              title={t('gradendex.page.open_full_title', { defaultValue: 'Open Gradendex in full page' })}
+              className="gardendex-hub-panel__link"
+              title={t('gradendex.page.open_full_title', { defaultValue: 'Open full page' })}
             >
               {t('gradendex.page.open_full', { defaultValue: '↗ Full page' })}
             </a>
-            <button type="button" onClick={onClose} style={CLOSE_BTN} title={t('gradendex.page.close', { defaultValue: 'Close Gradendex' })}>
+            <button type="button" className="gardendex-hub-panel__close" onClick={onClose} aria-label={t('gradendex.page.close', { defaultValue: 'Close' })}>
               ✕
             </button>
           </div>
         </div>
 
-        {/* ── Scrollable content ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
-          <GradendexView token={token} compact={true} />
+        <div className="gardendex-hub-tabs" role="tablist">
+          {tabs.map(({ id, label, icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={tab === id}
+              className={`gardendex-hub-tab${tab === id ? ' gardendex-hub-tab--active' : ''}`}
+              onClick={() => setTab(id)}
+            >
+              <span aria-hidden>{icon}</span> {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="gardendex-hub-panel__body">
+          <div className="gardendex-hub-tab-panels">
+            <div className="gardendex-hub-tab-panel" hidden={tab !== 'wiki'} aria-hidden={tab !== 'wiki'}>
+              <ContentWikiPage />
+            </div>
+            <div className="gardendex-hub-tab-panel" hidden={tab !== 'recognize'} aria-hidden={tab !== 'recognize'}>
+              <PlantRecognitionModal
+                embedded
+                onClose={onClose}
+                onPlantIdentified={(slug) => {
+                  onPlantIdentified?.(slug);
+                  onClose();
+                }}
+              />
+            </div>
+            <div className="gardendex-hub-tab-panel" hidden={tab !== 'dex'} aria-hidden={tab !== 'dex'}>
+              <GradendexView token={token} compact />
+            </div>
+          </div>
         </div>
       </div>
     </div>
