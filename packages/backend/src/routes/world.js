@@ -188,62 +188,93 @@ function buildEmptyPreview() {
 async function ensureStableSlots(playerIds, slots) {
   if (!Array.isArray(slots) || slots.length === 0) return {};
   if (!Array.isArray(playerIds) || playerIds.length === 0) return {};
+  if (!db.isConnected()) return {};
 
   const uniqIds = Array.from(new Set(playerIds.map(Number).filter((id) => Number.isInteger(id) && id > 0)));
   if (uniqIds.length === 0) return {};
 
-  const idPlaceholders = uniqIds.map((_, i) => `$${i + 1}`).join(', ');
-  const current = await safeQuery(
-    `SELECT user_id, slot_index FROM world_garden_slots WHERE user_id IN (${idPlaceholders})`,
-    uniqIds
-  );
-  if (!current) return {};
+  const maxIdx = slots.length - 1;
   const assignments = {};
   const used = new Set();
-  for (const row of current.rows) {
-    assignments[Number(row.user_id)] = Number(row.slot_index);
-    used.add(Number(row.slot_index));
+
+  const allRows = await safeQuery('SELECT user_id, slot_index FROM world_garden_slots');
+  for (const row of allRows?.rows || []) {
+    const uid = Number(row.user_id);
+    const slot = Number(row.slot_index);
+    if (Number.isInteger(uid) && Number.isInteger(slot) && slot >= 0 && slot <= maxIdx) {
+      assignments[uid] = slot;
+      used.add(slot);
+    }
   }
 
-  const maxIdx = slots.length - 1;
-  if (maxIdx < 0) return assignments;
+  async function tryAssign(userId, slotIndex) {
+    const inserted = await safeQuery(
+      `INSERT INTO world_garden_slots (user_id, slot_index)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO NOTHING
+       RETURNING slot_index`,
+      [userId, slotIndex],
+    );
+    if (inserted?.rows?.[0]) {
+      return Number(inserted.rows[0].slot_index);
+    }
+
+    const updated = await safeQuery(
+      `UPDATE world_garden_slots
+       SET slot_index = $2, updated_at = NOW()
+       WHERE user_id = $1
+         AND slot_index IS DISTINCT FROM $2
+         AND NOT EXISTS (
+           SELECT 1 FROM world_garden_slots w2
+           WHERE w2.slot_index = $2 AND w2.user_id <> $1
+         )
+       RETURNING slot_index`,
+      [userId, slotIndex],
+    );
+    if (updated?.rows?.[0]) {
+      return Number(updated.rows[0].slot_index);
+    }
+
+    const existing = await safeQuery(
+      'SELECT slot_index FROM world_garden_slots WHERE user_id = $1',
+      [userId],
+    );
+    if (existing?.rows?.[0]) {
+      const slot = Number(existing.rows[0].slot_index);
+      if (Number.isInteger(slot) && slot >= 0 && slot <= maxIdx) return slot;
+    }
+    return null;
+  }
 
   for (const userId of uniqIds) {
     if (Number.isInteger(assignments[userId]) && assignments[userId] >= 0 && assignments[userId] <= maxIdx) {
       continue;
     }
 
-    let assigned = false;
+    let assigned = null;
     for (let idx = 0; idx < slots.length; idx += 1) {
       if (used.has(idx)) continue;
       try {
-        const upserted = await safeQuery(
-          `INSERT INTO world_garden_slots (user_id, slot_index)
-           VALUES ($1, $2)
-           ON CONFLICT (user_id) DO UPDATE
-             SET slot_index = EXCLUDED.slot_index, updated_at = NOW()
-           RETURNING slot_index`,
-          [userId, idx]
-        );
-        if (upserted?.rows?.[0]) {
-          const slot = Number(upserted.rows[0].slot_index);
+        const slot = await tryAssign(userId, idx);
+        if (Number.isInteger(slot)) {
           assignments[userId] = slot;
           used.add(slot);
-          assigned = true;
+          assigned = slot;
           break;
         }
+        used.add(idx);
       } catch (err) {
         if (err.code === '23505') {
           used.add(idx);
           continue;
         }
-        throw err;
+        console.warn(`[world] slot assign failed for user ${userId}:`, err.message);
+        break;
       }
     }
 
-    if (!assigned) {
-      const fallback = userId % slots.length;
-      assignments[userId] = fallback;
+    if (!Number.isInteger(assigned)) {
+      assignments[userId] = userId % slots.length;
     }
   }
 
@@ -306,7 +337,12 @@ router.get('/gardens', optionalAuth, async (req, res) => {
       const numericIds = uniquePlayers
         .map((p) => Number(p.userId))
         .filter((id) => Number.isInteger(id) && id > 0);
-      slotByUserId = await ensureStableSlots(numericIds, slots);
+      try {
+        slotByUserId = await ensureStableSlots(numericIds, slots);
+      } catch (err) {
+        console.warn('[world] ensureStableSlots failed, using hash fallback:', err.message);
+        slotByUserId = {};
+      }
     }
 
     const usedSlots = new Set(Object.values(slotByUserId).filter((s) => Number.isInteger(s)));

@@ -979,9 +979,22 @@ function WorldMap({
       setEmbeddedMapFit((prev) => (prev.scale === scale ? prev : { scale }));
     };
     measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
+
+    let resizeObserver = null;
+    if (typeof window !== 'undefined' && typeof window.ResizeObserver === 'function') {
+      resizeObserver = new window.ResizeObserver(measure);
+      resizeObserver.observe(el);
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', measure);
+    }
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', measure);
+      }
+    };
   }, [embedded, mapW, mapH]);
 
   useEffect(() => {
