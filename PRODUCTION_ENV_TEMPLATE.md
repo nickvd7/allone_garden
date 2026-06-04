@@ -106,6 +106,8 @@ Create React App only reads variables starting with `REACT_APP_` **during `npm r
 
 **Capacitor / mobile:** same build; often empty `REACT_APP_API_URL` when API is on the same domain.
 
+**Pi / bare-metal:** `packages/frontend/.env.production` in the repo is loaded automatically on `npm run build` during `update.sh` / `install.sh`. Backend defaults to merge via `packages/backend/env.production.defaults` + `scripts/merge-production-env.sh` (runs on deploy/update; never overwrites existing keys).
+
 ---
 
 ## 4) Desktop (Electron)

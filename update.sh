@@ -138,6 +138,11 @@ info "Database migraties…"
 run_as "cd '${INSTALL_DIR}/packages/backend' && npm run db:migrate"
 success "Database up-to-date"
 
+if [[ -x "${INSTALL_DIR}/scripts/merge-production-env.sh" ]]; then
+  info "Productie .env aanvullen (ontbrekende keys)…"
+  bash "${INSTALL_DIR}/scripts/merge-production-env.sh" "$INSTALL_DIR" "$SERVICE_USER" || true
+fi
+
 if [[ $EUID -eq 0 ]]; then
   if systemctl list-unit-files 'allone-garden.service' &>/dev/null 2>&1; then
     info "Herstart allone-garden…"

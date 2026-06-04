@@ -14,7 +14,7 @@ import StructuresPanel, { STRUCTURE_DEFS } from './StructuresPanel';
 import { getStructureRingCoords, firstFreeStructureSlot } from '../utils/structureRing';
 import { buildBiomeCoordMaps, biomeForTileCode, BIOME_ZONES } from '../utils/worldBiomes';
 import { shouldUsePixiMap } from '../utils/deviceProfile';
-import { tileBackgroundHex, tilePixiGradient } from '../utils/mapTileVisuals';
+import { tilePixiGradient } from '../utils/mapTileVisuals';
 import { FALLBACK_WORLD_POIS, poiAt, poiNear, localizedField, poiWithInterior } from '../utils/worldPois';
 import { applyCastleVillage, CASTLE_DRAWBRIDGE, isCastleDrawbridge, isCastleGate, isCastleVillageTile } from '../utils/castleVillageMap';
 import { getInteriorById } from '../data/villageInteriors';
@@ -28,8 +28,6 @@ const MAP_W  = 32;
 const MAP_H  = 20;
 const VIEW_W = 11;
 const VIEW_H = 9;
-/** Wereldrand (tegels) pas in beeld als de speler dichter bij die kant komt */
-const WORLD_EDGE_REVEAL = 3;
 const EMBEDDED_VIEW_W = 16;
 const EMBEDDED_VIEW_H = 10;
 const EMBEDDED_MIN_VIEW_W = 11;
@@ -159,10 +157,6 @@ BIOME_ZONES.forEach((zone) => {
     else if (zone.id === 'dock' && BASE_MAP[y]) BASE_MAP[y][x] = K;
   });
 });
-const NPC_HOME_BY_ID = VIRTUAL_NEIGHBORS.reduce((acc, npc) => {
-  acc[npc.id] = { x: npc.x, y: npc.y };
-  return acc;
-}, {});
 const NPC_ROLE_META = {
   merchant: { label: 'Handelaar', buyDelta: -2, sellDelta: +2, helpXp: 5 },
   helper: { label: 'Helper', buyDelta: +1, sellDelta: 0, helpXp: 14 },
@@ -239,21 +233,6 @@ function npcGardenToPreview(plots) {
     planted: safePlots.filter((p) => p?.planted).length,
     ready: safePlots.filter((p) => p?.planted && (p.daysPlanted || 0) >= (GROWTH_STAGES[p.plantType] || 3)).length,
   };
-}
-
-function npcPatrolPath(home) {
-  if (!home) return [];
-  return [
-    { x: home.x, y: home.y },
-    { x: home.x + 1, y: home.y },
-    { x: home.x + 1, y: home.y + 1 },
-    { x: home.x, y: home.y + 1 },
-    { x: home.x - 1, y: home.y + 1 },
-    { x: home.x - 1, y: home.y },
-    { x: home.x - 1, y: home.y - 1 },
-    { x: home.x, y: home.y - 1 },
-    { x: home.x + 1, y: home.y - 1 },
-  ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -413,7 +392,6 @@ function WorldMap({
   const [playerPositions,setPlayerPositions]= useState({}); // userId → {x,y,username,level}
   const [pos,            setPos]            = useState({ x: START_X, y: START_Y });
   const [facing,         setFacing]         = useState('down');  // eslint-disable-line
-  const [step,           setStep]           = useState(0);
 
   // Overview map (optionally controlled from App header)
   const [showOverviewMapInternal, setShowOverviewMapInternal] = useState(false);
@@ -453,8 +431,6 @@ function WorldMap({
   const spawnedAtOwnGardenRef = useRef(false);
   const hasUserMovedRef = useRef(false);
   const lockedOwnHomeRef = useRef(null);
-  const marketplaceAutoOpenedRef = useRef(false);
-
   // ── Socket: keep player list in sync ─────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
@@ -653,14 +629,17 @@ function WorldMap({
         ? { x: ownHomeResolved.x, y: ownHomeResolved.y }
       : null)
   ), [myOccupant, ownHomeResolved]);
-  const ownPatchCoordToIndex = {};
-  if (ownHome && gameState?.plots?.length) {
-    for (let i = 0; i < 9; i += 1) {
-      const px = ownHome.x - 1 + (i % 3);
-      const py = ownHome.y + 1 + Math.floor(i / 3);
-      ownPatchCoordToIndex[`${px},${py}`] = i;
+  const ownPatchCoordToIndex = useMemo(() => {
+    const map = {};
+    if (ownHome && gameState?.plots?.length) {
+      for (let i = 0; i < 9; i += 1) {
+        const px = ownHome.x - 1 + (i % 3);
+        const py = ownHome.y + 1 + Math.floor(i / 3);
+        map[`${px},${py}`] = i;
+      }
     }
-  }
+    return map;
+  }, [ownHome, gameState?.plots]);
   const currentOwnPlotIndex = Number.isInteger(ownPatchCoordToIndex[`${pos.x},${pos.y}`])
     ? ownPatchCoordToIndex[`${pos.x},${pos.y}`]
     : null;
@@ -745,7 +724,7 @@ function WorldMap({
       }
     });
     return map;
-  }, [displayGardenOwners, isCurrentPlayer, gardenPreviews, virtualGardenPreviews]);
+  }, [displayGardenOwners, isCurrentPlayer, gardenPreviews, virtualGardenPreviews, mapW, mapH]);
   const homeDefaultPlotIndex = 1;
 
   const applyToolOnOwnPlot = useCallback((index, forcedTool) => {
@@ -931,7 +910,6 @@ function WorldMap({
       broadcastPos(nx, ny);
       return { x: nx, y: ny };
     });
-    setStep(s => s + 1);
   }, [broadcastPos, isPassable]);
 
   useEffect(() => {
@@ -1004,7 +982,7 @@ function WorldMap({
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [embedded]);
+  }, [embedded, mapW, mapH]);
 
   useEffect(() => {
     if (!clickTarget) return undefined;
@@ -1029,7 +1007,6 @@ function WorldMap({
         }
         setFacing(candidate.dir);
         broadcastPos(candidate.x, candidate.y);
-        setStep((s) => s + 1);
         return { x: candidate.x, y: candidate.y };
       });
     }, 95);
@@ -1283,7 +1260,7 @@ function WorldMap({
         }));
       })
       .catch(() => {});
-  }, [nearbyPlayer?.id, nearbyPlayer?.virtual, currentUserId]);
+  }, [nearbyPlayer, currentUserId]);
 
   const nearbyIdKey = nearbyPlayer?.id !== null && nearbyPlayer?.id !== undefined ? String(nearbyPlayer.id) : null;
   useEffect(() => {
@@ -1444,34 +1421,45 @@ function WorldMap({
   const mapFitScale = embedded ? embeddedMapFit.scale : 1;
 
   // ── Render tile grid ──────────────────────────────────────────────────────
-  const tiles = [];
-  for (let vy = 0; vy < viewH; vy++) {
-    for (let vx = 0; vx < viewW; vx++) {
-      const mx = camX + vx;
-      const my = camY + vy;
-      const tile = getTile(mx, my);
-      const gardenPlayer = gardenMap[`${mx},${my}`];
-      const isMe   = mx === pos.x && my === pos.y;
-      const preview = gardenPlayer
-        ? (gardenPlayer.virtual ? virtualGardenPreviews[String(gardenPlayer.id)] : gardenPreviews[String(gardenPlayer.id)])
-        : null;
-      const ownPatchIndex = Number.isInteger(ownPatchCoordToIndex[`${mx},${my}`])
-        ? ownPatchCoordToIndex[`${mx},${my}`]
-        : null;
-      const ownPlot = (ownPatchIndex !== null && ownPatchIndex !== undefined) ? gameState?.plots?.[ownPatchIndex] : null;
-      const neighborPatch = neighborPatchCoordMap[`${mx},${my}`];
-      const structureDecor = structureByCoord[`${mx},${my}`];
-      const poi = poiAt(worldPois, mx, my);
-      const isMarketTile = poi?.type === 'market';
-      const isWorldEdge = mx === 0 || mx === mapW - 1 || my === 0 || my === mapH - 1;
-      const coOwners = gardenCoOwnersByCoord[`${mx},${my}`] || [];
+  const tiles = useMemo(() => {
+    const grid = [];
+    for (let vy = 0; vy < viewH; vy += 1) {
+      for (let vx = 0; vx < viewW; vx += 1) {
+        const mx = camX + vx;
+        const my = camY + vy;
+        const tile = getTile(mx, my);
+        const gardenPlayer = gardenMap[`${mx},${my}`];
+        const isMe = mx === pos.x && my === pos.y;
+        const preview = gardenPlayer
+          ? (gardenPlayer.virtual
+            ? virtualGardenPreviews[String(gardenPlayer.id)]
+            : gardenPreviews[String(gardenPlayer.id)])
+          : null;
+        const ownPatchIndex = Number.isInteger(ownPatchCoordToIndex[`${mx},${my}`])
+          ? ownPatchCoordToIndex[`${mx},${my}`]
+          : null;
+        const ownPlot = (ownPatchIndex !== null && ownPatchIndex !== undefined)
+          ? gameState?.plots?.[ownPatchIndex]
+          : null;
+        const neighborPatch = neighborPatchCoordMap[`${mx},${my}`];
+        const structureDecor = structureByCoord[`${mx},${my}`];
+        const poi = poiAt(worldPois, mx, my);
+        const isMarketTile = poi?.type === 'market';
+        const isWorldEdge = mx === 0 || mx === mapW - 1 || my === 0 || my === mapH - 1;
+        const coOwners = gardenCoOwnersByCoord[`${mx},${my}`] || [];
 
-      tiles.push({
-        vx, vy, mx, my, tile, gardenPlayer, preview, ownPatchIndex, ownPlot,
-        neighborPatch, isMe, isMarketTile, structureDecor, poi, isWorldEdge, coOwners,
-      });
+        grid.push({
+          vx, vy, mx, my, tile, gardenPlayer, preview, ownPatchIndex, ownPlot,
+          neighborPatch, isMe, isMarketTile, structureDecor, poi, isWorldEdge, coOwners,
+        });
+      }
     }
-  }
+    return grid;
+  }, [
+    viewH, viewW, camX, camY, mapW, mapH, pos.x, pos.y, getTile, gardenMap,
+    virtualGardenPreviews, gardenPreviews, ownPatchCoordToIndex, gameState?.plots,
+    neighborPatchCoordMap, structureByCoord, worldPois, gardenCoOwnersByCoord,
+  ]);
 
   const usePixiLayer = pixiEnabled && WalkMapPixi;
 
@@ -1782,9 +1770,10 @@ function WorldMap({
               />
             ) : (
             <>
+            {!embedded && (
             <button
               type="button"
-              className={`walk-overview-btn${embedded ? ' walk-overview-btn--embedded' : ''}`}
+              className="walk-overview-btn"
               onClick={() => setShowOverviewMap((v) => !v)}
               title={t('worldMap.overview_map_title')}
               aria-label={t('worldMap.overview_map_title')}
@@ -1792,6 +1781,7 @@ function WorldMap({
             >
               {'\u{1F5FA}️'}
             </button>
+            )}
             {showOverviewMap && (
               <div className={`walk-overview-panel${embedded ? ' walk-overview-panel--dock' : ''}`}>
                 <div className="walk-overview-header">

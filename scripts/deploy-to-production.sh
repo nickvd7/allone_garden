@@ -51,4 +51,10 @@ rsync -a --delete \
   "${SOURCE_DIR}/" "${PRODUCTION_DIR}/"
 
 chown -R "${PRODUCTION_USER}:${PRODUCTION_USER}" "$PRODUCTION_DIR"
+
+if [[ -x "${PRODUCTION_DIR}/scripts/merge-production-env.sh" && -f "${PRODUCTION_DIR}/packages/backend/.env" ]]; then
+  info "Productie .env aanvullen (ontbrekende keys)…"
+  bash "${PRODUCTION_DIR}/scripts/merge-production-env.sh" "$PRODUCTION_DIR" "$PRODUCTION_USER" || true
+fi
+
 success "Code in ${PRODUCTION_DIR}"
