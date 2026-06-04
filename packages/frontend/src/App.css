@@ -2278,6 +2278,13 @@ body,
   left: 3px;
   font-size: 9px;
   line-height: 1;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.plot:hover .companion-indicator,
+.plot:focus .companion-indicator {
+  opacity: 1;
 }
 
 .companion-legend {
@@ -4992,4 +4999,159 @@ body,
 
 .world-social-dropdown {
   scroll-behavior: smooth;
+}
+
+/* ─── Child-UX: Break Reminder ───────────────── */
+.break-reminder-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.break-reminder-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.break-reminder-card h2 {
+  color: #2e7d32;
+  font-size: 1.6rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.break-reminder-card p {
+  color: #555;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+[data-theme="dark"] .break-reminder-card {
+  background: #1e2f20;
+  color: #c8e6c9;
+}
+[data-theme="dark"] .break-reminder-card p { color: #a5d6a7; }
+
+/* ─── Child-UX: Community Goal Banner ────────── */
+.community-goal-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(90deg, #e8f5e9 0%, #f1f8e9 100%);
+  border-bottom: 1px solid #c8e6c9;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  color: #2e7d32;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+[data-theme="dark"] .community-goal-banner {
+  background: linear-gradient(90deg, #162318 0%, #1a2b1c 100%);
+  border-bottom-color: #2e4f31;
+  color: #a5d6a7;
+}
+
+.community-goal-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+.community-goal-text { flex: 1; min-width: 0; }
+
+.community-goal-bar-wrap {
+  width: 80px;
+  height: 8px;
+  background: #c8e6c9;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.community-goal-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #43a047, #66bb6a);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.community-goal-count {
+  font-weight: 700;
+  flex-shrink: 0;
+  color: #2e7d32;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
+  .community-goal-banner { font-size: 0.75rem; padding: 0.4rem 0.75rem; }
+  .community-goal-bar-wrap { width: 60px; }
+}
+
+/* ─── Child-UX: Tool Hint ────────────────────── */
+.tool-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #546e7a);
+  background: var(--surface-tint, #e8f5e9);
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  margin-top: 0.4rem;
+  line-height: 1.4;
+  border-left: 3px solid var(--primary, #43a047);
+}
+
+/* ─── Child-UX: Pest Decay ───────────────────── */
+.plot--sick {
+  background: linear-gradient(135deg, #795548 0%, #5d4037 100%) !important;
+  border: 1px solid #e53935;
+}
+
+.plant-emoji--sick {
+  filter: grayscale(0.6) sepia(0.3);
+  opacity: 0.75;
+}
+
+/* ─── Child-UX: Plants Grown Stat ───────────── */
+.stat-grown { color: var(--primary, #43a047); font-weight: 700; }
+
+/* ─── Child-UX: Empty State Guidance ────────── */
+.garden-start-hint {
+  text-align: center;
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  border: 2px dashed #81c784;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  color: #2e7d32;
+  font-size: 0.9rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { border-color: #81c784; }
+  50%       { border-color: #43a047; box-shadow: 0 0 0 3px rgba(67,160,71,0.15); }
+}
+
+/* ─── Child-UX: Mobile Touch Targets ────────── */
+@media (pointer: coarse) {
+  .plot {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .tool-btn, .btn-tool {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  .player-action-btn {
+    min-height: 40px;
+    padding: 0.5rem 0.75rem;
+  }
 }

@@ -20,6 +20,18 @@ const XSS_OPTIONS = {
 
 const MAX_MESSAGE_LENGTH = 500;
 
+// ── Child-friendly word filter ────────────────────────────────────────────────
+const BLOCKED_WORDS = ['fuck', 'shit', 'kut', 'lul', 'eikel', 'klootzak', 'bitch', 'asshole', 'damn', 'crap'];
+function filterChat(text) {
+  if (!text) return text;
+  let filtered = text;
+  BLOCKED_WORDS.forEach((word) => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    filtered = filtered.replace(regex, '***');
+  });
+  return filtered;
+}
+
 /**
  * Simple token-bucket rate limiter per socket.
  * Allows a burst of up to BURST messages,
@@ -67,11 +79,14 @@ module.exports = function chatHandler(socket, io) {
     // Sanitize: strip all HTML/JS before broadcasting
     const sanitized = xss(raw, XSS_OPTIONS);
 
+    // Apply child-friendly word filter
+    const filtered = filterChat(sanitized);
+
     const message = {
       id:        Date.now(),
       userId:    socket.userId,                    // set by socketAuthMiddleware (never from client)
       username:  socket.username || 'Guest',       // idem
-      text:      sanitized,
+      text:      filtered,
       timestamp: new Date(),
     };
 
@@ -82,7 +97,7 @@ module.exports = function chatHandler(socket, io) {
       db.pool
         .query(
           'INSERT INTO chat_messages (user_id, message) VALUES ($1, $2)',
-          [socket.userId, sanitized]
+          [socket.userId, filtered]
         )
         .catch((err) => console.error('[chat] DB write failed:', err.message));
     }

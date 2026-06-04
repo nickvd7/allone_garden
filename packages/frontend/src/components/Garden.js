@@ -159,6 +159,7 @@ function Plot({ plot, index, companionIcon, onPlotClick, growthStages, plantEmoj
   if (tilled) plotClass += ' tilled';
   if (waterLevel > 0) plotClass += ' watered';
   if (fertilized) plotClass += ' fertilized';
+  if (pest) plotClass += ' plot--sick';
 
   const companionLabel = companionIcon === '💚'
     ? 'Beneficial companions nearby — bonus yield!'
@@ -179,7 +180,7 @@ function Plot({ plot, index, companionIcon, onPlotClick, growthStages, plantEmoj
       aria-label={`Plot ${index + 1}`}
     >
       {plantEmoji && (
-        <span className={`plant-emoji ${stageClass}`}>{plantEmoji}</span>
+        <span className={`plant-emoji ${stageClass}${pest ? ' plant-emoji--sick' : ''}`}>{plantEmoji}</span>
       )}
 
       {/* Companion indicator */}
@@ -529,6 +530,30 @@ function Garden({ plots, selectedTool, selectedSeed, currentDay, weather, curren
           ⏭ Next Day
         </button>
       </div>
+
+      {(() => {
+        const allUntilled = plots.every((p) => !p.tilled);
+        const hasNoPlants = plots.every((p) => !p.planted);
+        return (
+          <>
+            {allUntilled && (
+              <div className="garden-start-hint">
+                <div style={{ fontSize: '2rem' }}>👆</div>
+                <strong>Kies het schoffelgereedschap en klik op een vakje!</strong>
+                <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '0.25rem' }}>
+                  Schoffel eerst de grond, dan kun je planten.
+                </div>
+              </div>
+            )}
+            {!allUntilled && hasNoPlants && (
+              <div className="garden-start-hint">
+                <div style={{ fontSize: '2rem' }}>🌱</div>
+                <strong>Kies een zaadje en klik op een bruin vakje!</strong>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <div
         className="garden-grid"

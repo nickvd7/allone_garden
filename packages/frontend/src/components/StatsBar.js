@@ -26,9 +26,9 @@ function StatsBar({ stats }) {
           <div className="stat-label">{t('coins')}</div>
         </div>
 
-        <div className="stat-item">
-          <div className="stat-value">🌿 {plantsGrown}</div>
-          <div className="stat-label">{t('plants_grown')}</div>
+        <div className="stat-item stat-grown">
+          <div className="stat-value">🌱 {plantsGrown}</div>
+          <div className="stat-label">Gegroeid</div>
         </div>
 
         {/* XP progress spans remaining columns */}

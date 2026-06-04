@@ -341,6 +341,9 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
               {t('send')}
             </button>
           </div>
+          <div style={{ fontSize: '0.7rem', color: '#aaa', textAlign: 'center', padding: '0.25rem 0', borderTop: '1px solid var(--border-subtle, #e8f5e9)' }}>
+            🌱 Vriendelijk chatten — wees aardig voor elkaar
+          </div>
         </>
       )}
 

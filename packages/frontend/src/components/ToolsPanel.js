@@ -2,6 +2,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameContent } from '../context/GameContentContext';
 
+const TOOL_HINTS = {
+  till:      '🪓 Schoffel de grond om te kunnen planten',
+  plant:     '🌱 Plant een zaad in geschoffelde grond',
+  water:     '💧 Geef je plant water — doe dit elke dag!',
+  fertilize: '🧪 Voedingsstoffen laten je plant sneller groeien',
+  spray:     '🫧 Verwijder plagen van je plant',
+  harvest:   '🧺 Oogst als de plant klaar is',
+};
+
 const TOOLS = [
   { id: 'till',      emoji: '⛏️',  labelKey: 'tool_till' },
   { id: 'plant',     emoji: '🌱',  labelKey: 'tool_plant' },
@@ -52,6 +61,12 @@ function ToolsPanel({ selectedTool, selectedSeed, onToolSelect, onSeedSelect }) 
           {tool.emoji} {t(tool.labelKey)}
         </button>
       ))}
+
+      {selectedTool && (
+        <div className="tool-hint">
+          {TOOL_HINTS[selectedTool]}
+        </div>
+      )}
 
       <div className="section-title">{t('seeds')}</div>
 

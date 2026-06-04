@@ -363,6 +363,7 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
   // Proximity chat
   const [nearbyPlayer, setNearbyPlayer] = useState(null);     // closest walking player within range
   const [proximityPanelDismissed, setProximityPanelDismissed] = useState(false);
+  const [helpGivenNotice, setHelpGivenNotice] = useState('');
   const [dmHistory,    setDmHistory]    = useState({});        // { userId: [msg, ...] }
   const [dmInput,      setDmInput]      = useState('');
   const [npcNotice, setNpcNotice] = useState('');
@@ -1486,7 +1487,11 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                     <button
                       className="btn btn-secondary"
                       style={{ fontSize: '0.78rem', padding: '0.28rem 0.5rem' }}
-                      onClick={() => socket?.emit('player:help', { targetUserId: nearbyPlayer.id, amount: 12 })}
+                      onClick={() => {
+                        socket?.emit('player:help', { targetUserId: nearbyPlayer.id, amount: 12 });
+                        setHelpGivenNotice(`🤝 Jij hebt ${nearbyPlayer.username} geholpen!`);
+                        setTimeout(() => setHelpGivenNotice(''), 2500);
+                      }}
                     >
                       🤝 Samenwerken
                     </button>
@@ -1527,6 +1532,12 @@ function WorldMap({ socket, currentUserId, currentUsername, gameState, onUpdateG
                 )}
                 {nearbyPlayer.virtual && npcNotice && (
                   <div className="walk-garden-note" style={{ marginBottom: '0.45rem' }}>{npcNotice}</div>
+                )}
+
+                {helpGivenNotice && (
+                  <div style={{ fontSize: '0.82rem', color: '#2e7d32', fontWeight: 600, padding: '0.3rem 0', textAlign: 'center' }}>
+                    {helpGivenNotice}
+                  </div>
                 )}
 
                 {!isNearbyVirtual && (

@@ -198,6 +198,26 @@ function App() {
 
   const [gardenConflict, setGardenConflict] = useState(null);
 
+  // ── Child-friendly: break reminder ───────────────────────────────────────────
+  const [showBreakReminder, setShowBreakReminder] = useState(false);
+  const sessionStartRef = useRef(Date.now());
+
+  // ── Child-friendly: community daily goal ─────────────────────────────────────
+  const [communityGoal, setCommunityGoal] = useState(null);
+  const [communityProgress, setCommunityProgress] = useState(0);
+
+  // ── Break reminder after 45 minutes ─────────────────────────────────────────
+  useEffect(() => {
+    if (!authUser || authUser.id === 0) return;
+    const interval = setInterval(() => {
+      const minutesPlayed = (Date.now() - sessionStartRef.current) / 60000;
+      if (minutesPlayed >= 45 && !showBreakReminder) {
+        setShowBreakReminder(true);
+      }
+    }, 60000); // check every minute
+    return () => clearInterval(interval);
+  }, [authUser, showBreakReminder]); // eslint-disable-line
+
   useCapacitorPreferencesMirror({
     enabled: !!authUser && Capacitor.getPlatform() !== 'web',
   });
@@ -382,6 +402,19 @@ function App() {
     debouncedSave(gameState);
   }, [gameState.plots, gameState.currentDay, gameState.weather, debouncedSave]); // eslint-disable-line
 
+  // ── Community daily goal — local fallback based on current day ────────────────
+  useEffect(() => {
+    if (!socket || !gameState.currentDay) return;
+    if (communityGoal) return; // already set (via server or previous effect run)
+    const goals = [
+      { text: 'Water samen 20 gewassen vandaag! 💧', target: 20, type: 'water', icon: '💧' },
+      { text: 'Oogst samen 15 gewassen vandaag! 🧺', target: 15, type: 'harvest', icon: '🧺' },
+      { text: 'Plant samen 10 nieuwe gewassen vandaag! 🌱', target: 10, type: 'plant', icon: '🌱' },
+    ];
+    const dayIndex = (gameState.currentDay || 1) % goals.length;
+    setCommunityGoal({ ...goals[dayIndex], progress: 0 });
+  }, [gameState.currentDay, socket]); // eslint-disable-line
+
   // ── Socket.IO ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!authUser) return;
@@ -436,7 +469,7 @@ function App() {
       showNotification(`🌱 ${username} is visiting your garden!`);
 
     const onHelped = ({ username, amount }) => {
-      showNotification(`🤝 ${username} helped you (+${amount} XP)!`);
+      showNotification(`🤝 ${username} heeft jou geholpen! +${amount} XP`, 'success');
       setGameState((prev) => ({
         ...prev,
         playerStats: { ...prev.playerStats, xp: prev.playerStats.xp + amount },
@@ -452,6 +485,21 @@ function App() {
     socket.on('garden:visitor',  onVisitor);
     socket.on('player:helped',   onHelped);
     socket.on('chat:message',    onFederatedChat);
+
+    // ── Community goal (server-side + action tracking) ─────────────────────
+    const onCommunityGoal     = (goal) => setCommunityGoal(goal);
+    const onCommunityProgress = ({ progress }) => setCommunityProgress(progress);
+    const onGameAction = (action) => {
+      setCommunityGoal((goal) => {
+        if (goal && ['harvest', 'water', 'plant'].includes(action.type) && action.type === goal.type) {
+          setCommunityProgress((p) => p + 1);
+        }
+        return goal;
+      });
+    };
+    socket.on('community:goal',     onCommunityGoal);
+    socket.on('community:progress', onCommunityProgress);
+    socket.on('game:action',        onGameAction);
 
     // ── Plugin: daily-bonus ────────────────────────────────────────────────
     const onDailyBonus = (data) => {
@@ -526,6 +574,9 @@ function App() {
       socket.off('plugin:server-motd:data',    onMotd);
       socket.off('call:offer',      onCallOffer);
       socket.off('proposal:status_changed', onProposalStatus);
+      socket.off('community:goal',     onCommunityGoal);
+      socket.off('community:progress', onCommunityProgress);
+      socket.off('game:action',        onGameAction);
     };
   }, [socket, showNotification, hasServerAuth]);
 
@@ -976,6 +1027,19 @@ function App() {
         </div>
       )}
 
+      {communityGoal && authUser && authUser.id !== 0 && (
+        <div className="community-goal-banner">
+          <span className="community-goal-icon">{communityGoal.icon}</span>
+          <div className="community-goal-text">
+            <strong>Dagelijks teamdoel:</strong> {communityGoal.text}
+          </div>
+          <div className="community-goal-bar-wrap">
+            <div className="community-goal-bar" style={{ width: `${Math.min(100, (communityProgress / communityGoal.target) * 100)}%` }} />
+          </div>
+          <span className="community-goal-count">{communityProgress}/{communityGoal.target}</span>
+        </div>
+      )}
+
       <div className="game-container game-container--world">
         <div data-tour="garden">
           <div className="world-playfield-wrap">
@@ -1385,6 +1449,25 @@ function App() {
       {/* ── First-time tour (or manual replay) ── */}
       {showTour && (
         <TourOverlay onFinish={handleTourFinish} />
+      )}
+
+      {/* ── Session break reminder (45 min) ── */}
+      {showBreakReminder && (
+        <div className="break-reminder-overlay">
+          <div className="break-reminder-card">
+            <div style={{ fontSize: '3rem' }}>🌳</div>
+            <h2>Even een pauze?</h2>
+            <p>Je speelt al 45 minuten. Ga even buiten kijken naar echte planten — je tuin wacht op je! 🌱</p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="btn btn-primary" onClick={() => { setShowBreakReminder(false); sessionStartRef.current = Date.now(); }}>
+                🎮 Nog even doorgaan
+              </button>
+              <button className="btn btn-secondary" onClick={handleLogout}>
+                🚪 Uitloggen
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
