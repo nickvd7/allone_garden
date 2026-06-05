@@ -3895,7 +3895,12 @@ body,
 }
 
 .prox-overview__stats {
-  margin: 0;
+  margin: 0.5rem 0 0;
+}
+
+.prox-overview__visit,
+.prox-overview__help {
+  width: 100%;
 }
 
 .prox-overview__grid {
@@ -3941,7 +3946,8 @@ body,
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-4);
+  margin-bottom: 0.35rem;
   border-bottom: 1.5px solid var(--border-subtle);
   flex-shrink: 0;
   flex-wrap: wrap;

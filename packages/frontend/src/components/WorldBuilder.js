@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../hooks/useApi';
 import { applyCastleVillage, CASTLE_DRAWBRIDGE } from '../utils/castleVillageMap';
+import { DEFAULT_PLAYER_GARDEN_SLOTS } from '../utils/gardenSlotRules';
 
 // ── Map constants ─────────────────────────────────────────────────────────────
 const MAP_W = 32;
@@ -77,14 +78,7 @@ for (let y = 0; y <= 6; y += 1) {
 });
 applyCastleVillage(DEFAULT_MAP, { W, T, V, P, G });
 
-const DEFAULT_GARDEN_SLOTS = [
-  { x: 3,  y: 3  }, { x: 28, y: 16 },
-  { x: 3,  y: 16 }, { x: 28, y: 3  },
-  { x: 9,  y: 4  }, { x: 23, y: 15 },
-  { x: 8,  y: 14 }, { x: 23, y: 4  },
-  { x: 5,  y: 9  }, { x: 26, y: 9  },
-  { x: 14, y: 5  }, { x: 17, y: 14 },
-];
+const DEFAULT_GARDEN_SLOTS = DEFAULT_PLAYER_GARDEN_SLOTS;
 
 const WORLD_HUB = { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
 const roadTile = (x, y) => {

@@ -21,6 +21,7 @@ import { getInteriorById } from '../data/villageInteriors';
 import WorldPoiModal from './WorldPoiModal';
 import VillageInteriorView from './VillageInteriorView';
 import PlayerProposalsPanel from './PlayerProposalsPanel';
+import { DEFAULT_PLAYER_GARDEN_SLOTS, NPC_HOMES } from '../utils/gardenSlotRules';
 
 // ─── Map constants ────────────────────────────────────────────────────────────
 const TILE   = 52;
@@ -78,20 +79,7 @@ for (let y = 0; y <= 6; y += 1) {
 // Kasteeldorp — gracht, binnenplein en loopbrug (sync met castleVillageMap.js).
 applyCastleVillage(BASE_MAP, { W, T, V, P, G });
 
-const GARDEN_SLOTS = [
-  { x: 3,  y: 3  },
-  { x: 28, y: 16 },
-  { x: 3,  y: 16 },
-  { x: 28, y: 3  },
-  { x: 9,  y: 4  },
-  { x: 23, y: 15 },
-  { x: 8,  y: 14 },
-  { x: 23, y: 4  },
-  { x: 5,  y: 9  },
-  { x: 26, y: 9  },
-  { x: 14, y: 5  },
-  { x: 17, y: 14 },
-];
+const GARDEN_SLOTS = DEFAULT_PLAYER_GARDEN_SLOTS;
 
 const START_X = 11;
 const START_Y = 7;
@@ -125,11 +113,7 @@ const CROP_COINS = {
   tomato: 20, carrot: 15, lettuce: 16, radish: 12, corn: 24,
   potato: 18, pumpkin: 30, sunflower: 22, blueberry: 26,
 };
-const VIRTUAL_NEIGHBORS = [
-  { id: 'npc:mila', username: 'Mila', x: 9, y: 7, role: 'merchant' },
-  { id: 'npc:bo', username: 'Bo', x: 13, y: 7, role: 'helper' },
-  { id: 'npc:ivy', username: 'Ivy', x: 11, y: 5, role: 'trader' },
-];
+const VIRTUAL_NEIGHBORS = NPC_HOMES;
 const CASTLE_ENTRANCE = CASTLE_DRAWBRIDGE;
 
 const WORLD_HUB = { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
@@ -1496,18 +1480,10 @@ function WorldMap({
   }, [tiles]);
 
   const visibleWalkers = useMemo(() => {
-    const fallbackOccupants = otherPlayers
-      .filter((p) => Number.isInteger(p?.x) && Number.isInteger(p?.y))
-      .map((p) => ({ uid: String(p.id), username: p.username, x: p.x, y: p.y, virtual: false }));
-    const liveWalkers = Object.entries(playerPositions)
-      .filter(([, p]) => Number.isInteger(p?.x) && Number.isInteger(p?.y))
-      .map(([uid, p]) => ({ uid: String(uid), username: p.username, x: p.x, y: p.y, virtual: false }));
-    const walkersById = {};
-    [...fallbackOccupants, ...liveWalkers].forEach((walker) => {
-      walkersById[walker.uid] = walker;
-    });
-
-    const inView = Object.values(walkersById)
+    // Alleen online spelers met live socket-positie — offline tuineigenaren niet als poppetje.
+    const inView = Object.entries(playerPositions)
+      .filter(([uid, p]) => String(uid) !== String(currentUserId) && Number.isInteger(p?.x) && Number.isInteger(p?.y))
+      .map(([uid, p]) => ({ uid: String(uid), username: p.username, x: p.x, y: p.y, virtual: false }))
       .filter((w) => w.x >= camX && w.x < camX + viewW && w.y >= camY && w.y < camY + viewH)
       .sort((a, b) => (a.y - b.y) || (a.x - b.x));
 
@@ -1523,7 +1499,7 @@ function WorldMap({
         stack,
       };
     });
-  }, [otherPlayers, playerPositions, camX, camY, viewW, viewH]);
+  }, [playerPositions, currentUserId, camX, camY, viewW, viewH]);
 
   const pixiWalkers = useMemo(() => (
     usePixiLayer
@@ -1703,9 +1679,9 @@ function WorldMap({
   useEffect(() => {
     onWorldHudChange?.({
       coords: `${pos.x},${pos.y}`,
-      onlineCount: otherPlayers.length,
+      onlineCount: players.length + (currentUserId && String(currentUserId) !== '0' ? 1 : 0),
     });
-  }, [onWorldHudChange, pos.x, pos.y, otherPlayers.length]);
+  }, [onWorldHudChange, pos.x, pos.y, players.length, currentUserId]);
 
   const body = (
       <div className={embedded ? 'world-map-embedded' : 'modal world-map-modal-walk'}>
@@ -2228,26 +2204,28 @@ function WorldMap({
                     )}
 
                     {!isNearbyVirtual && (
-                      <button
-                        type="button"
-                        className="btn btn-primary prox-overview__help"
-                        onClick={handleHelp}
-                        disabled={helpDone}
-                      >
-                        {helpDone ? t('worldMap.help_done') : t('worldMap.help_button')}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-primary prox-overview__visit"
+                          onClick={() => openVisitFromPanel(nearGarden || nearbyPlayer)}
+                        >
+                          🏡 {t('worldMap.visit_garden')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary prox-overview__help"
+                          onClick={handleHelp}
+                          disabled={helpDone}
+                        >
+                          {helpDone ? t('worldMap.help_done') : t('worldMap.help_button')}
+                        </button>
+                      </>
                     )}
 
                     <div className="prox-action-grid">
                       {!isNearbyVirtual && (
                         <>
-                          <button
-                            type="button"
-                            className="btn btn-primary"
-                            onClick={() => openVisitFromPanel(nearGarden || nearbyPlayer)}
-                          >
-                            🏡 {t('worldMap.visit_garden')}
-                          </button>
                           <button type="button" className="btn btn-secondary" onClick={openMarketplace}>
                             🏪 {t('marketplace')}
                           </button>

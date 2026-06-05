@@ -35,28 +35,16 @@ function generateTemporalTurnCredentials(userId, ttlSeconds = 3600) {
   return { username, credential };
 }
 
+const { filterValidGardenSlots, DEFAULT_PLAYER_GARDEN_SLOTS, isValidGardenCenter } = require('../utils/gardenSlotRules');
+
 const DEFAULT_WORLD = null;
-const DEFAULT_SLOTS = [
-  { x: 3,  y: 3  },
-  { x: 28, y: 16 },
-  { x: 3,  y: 16 },
-  { x: 28, y: 3  },
-  { x: 9,  y: 4  },
-  { x: 23, y: 15 },
-  { x: 8,  y: 14 },
-  { x: 23, y: 4  },
-  { x: 5,  y: 9  },
-  { x: 26, y: 9  },
-  { x: 14, y: 5  },
-  { x: 17, y: 14 },
-];
+const DEFAULT_SLOTS = DEFAULT_PLAYER_GARDEN_SLOTS;
 
 /** Hard cap — extra slots uitgeschakeld zodat spelers samenwerken op gedeelde plekken. */
 const MAX_WORLD_GARDEN_SLOTS = DEFAULT_SLOTS.length;
 
 function capGardenSlots(slots) {
-  const base = Array.isArray(slots) && slots.length ? slots : DEFAULT_SLOTS;
-  return base.slice(0, MAX_WORLD_GARDEN_SLOTS);
+  return filterValidGardenSlots(slots).slice(0, MAX_WORLD_GARDEN_SLOTS);
 }
 
 async function loadAllGardenOwners() {
@@ -345,7 +333,8 @@ router.get('/gardens', optionalAuth, async (req, res) => {
     }
 
     const world = await loadWorldConfig();
-    let slots = capGardenSlots(world?.gardenSlots);
+    let slots = capGardenSlots(world?.gardenSlots).filter((s) => isValidGardenCenter(s.x, s.y));
+    if (!slots.length) slots = capGardenSlots(null);
 
     const roster = onlinePlayers.getAll().map((p) => ({
       userId: String(p.userId),

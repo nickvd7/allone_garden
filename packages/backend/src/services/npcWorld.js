@@ -4,10 +4,12 @@
 const db = require('../db');
 const CROP_TYPES = ['tomato', 'carrot', 'lettuce', 'corn', 'potato', 'pumpkin'];
 
+const { NPC_HOMES } = require('../utils/gardenSlotRules');
+
 const NPC_DEFS = [
-  { id: 'npc:mila', username: 'Mila', role: 'merchant', home: { x: 9, y: 7 } },
-  { id: 'npc:bo', username: 'Bo', role: 'helper', home: { x: 13, y: 7 } },
-  { id: 'npc:ivy', username: 'Ivy', role: 'trader', home: { x: 11, y: 5 } },
+  { id: 'npc:mila', username: 'Mila', role: 'merchant', home: { x: NPC_HOMES[0].x, y: NPC_HOMES[0].y } },
+  { id: 'npc:bo', username: 'Bo', role: 'helper', home: { x: NPC_HOMES[1].x, y: NPC_HOMES[1].y } },
+  { id: 'npc:ivy', username: 'Ivy', role: 'trader', home: { x: NPC_HOMES[2].x, y: NPC_HOMES[2].y } },
 ];
 
 const PLANT_EMOJI = {
