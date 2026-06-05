@@ -33,11 +33,12 @@ function avatarColor(userId) {
 
 /** Conversation bucket for a DM (incoming: from sender; outgoing echo: keyed by `to`). */
 function dmThreadKey(msg, currentUserId) {
-  if (msg?.from == null && msg?.from !== 0) return null;
-  if (String(msg.from) === String(currentUserId) && msg.to != null) {
+  const from = msg?.from;
+  if (from === null || from === undefined) return null;
+  if (String(from) === String(currentUserId) && msg.to !== null && msg.to !== undefined) {
     return String(msg.to);
   }
-  return String(msg.from);
+  return String(from);
 }
 
 function isDuplicateTail(list, msg) {
