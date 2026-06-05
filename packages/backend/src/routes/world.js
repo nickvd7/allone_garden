@@ -44,7 +44,16 @@ const DEFAULT_SLOTS = DEFAULT_PLAYER_GARDEN_SLOTS;
 const MAX_WORLD_GARDEN_SLOTS = DEFAULT_SLOTS.length;
 
 function capGardenSlots(slots) {
-  return filterValidGardenSlots(slots).slice(0, MAX_WORLD_GARDEN_SLOTS);
+  const canonical = filterValidGardenSlots(DEFAULT_PLAYER_GARDEN_SLOTS);
+  if (!Array.isArray(slots) || slots.length === 0) {
+    return canonical.slice(0, MAX_WORLD_GARDEN_SLOTS);
+  }
+  const filtered = filterValidGardenSlots(slots);
+  // Oude admin-config of gedeeltelijk ongeldige slots → canonieke layout uit gardenSlotRules
+  if (filtered.length < canonical.length) {
+    return canonical.slice(0, MAX_WORLD_GARDEN_SLOTS);
+  }
+  return filtered.slice(0, MAX_WORLD_GARDEN_SLOTS);
 }
 
 async function loadAllGardenOwners() {

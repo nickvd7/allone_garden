@@ -10,6 +10,11 @@ const CONTENT_STATUS_KEYS = {
   revision_requested: 'notifications.wiki_status_revision',
 };
 
+function avatarColor(userId) {
+  const hue = ((Number(userId) || 0) * 73 + 137) % 360;
+  return `hsl(${hue},60%,45%)`;
+}
+
 /** Badge count: incoming player proposals + wiki items needing your attention. */
 export async function fetchNotificationBadgeCount({ userId, isAdmin, hasServerAuth }) {
   if (!userId || userId === 0) return 0;
@@ -151,59 +156,82 @@ export default function NotificationsPanel({
     }
   };
 
-  const renderPlayerCard = (p, { showActions }) => (
-    <article key={`p-${p.id}`} className="notification-card">
-      <div className="notification-card__head">
-        <span className="notification-card__icon">{p.virtual ? '🤖' : '👤'}</span>
-        <div>
-          <strong>
-            {showActions
-              ? (p.fromUsername || p.fromUserId)
-              : (p.toUsername || p.toUserId || '—')}
-          </strong>
-          <span className="notification-card__meta">
-            {p.kind === 'trade'
-              ? t('worldMap.proposal_kind_trade', { defaultValue: 'Ruil' })
-              : t('worldMap.proposal_kind_collab', { defaultValue: 'Samenwerken' })}
-          </span>
+  const renderPlayerCard = (p, { showActions }) => {
+    const name = showActions
+      ? (p.fromUsername || p.fromUserId)
+      : (p.toUsername || p.toUserId || '—');
+    const kindLabel = p.kind === 'trade'
+      ? t('worldMap.proposal_kind_trade', { defaultValue: 'Ruil' })
+      : t('worldMap.proposal_kind_collab', { defaultValue: 'Samenwerken' });
+    const payloadText = formatProposalPayload(p.payload);
+    const userId = showActions ? p.fromUserId : p.toUserId;
+
+    return (
+      <article key={`p-${p.id}`} className="notification-item">
+        <div className="chat-panel__contact chat-panel__contact--static">
+          <div
+            className="chat-panel__contact-avatar"
+            style={{ background: p.virtual ? '#78909c' : avatarColor(userId) }}
+          >
+            {String(name)[0]?.toUpperCase() || '?'}
+          </div>
+          <div className="chat-panel__contact-body">
+            <div className="chat-panel__contact-name">{name}</div>
+            <div className="chat-panel__contact-preview">
+              {kindLabel}
+              {p.message ? ` · ${p.message}` : ''}
+            </div>
+            {payloadText && (
+              <div className="chat-panel__contact-preview chat-panel__contact-preview--empty">
+                {payloadText}
+              </div>
+            )}
+            {!showActions && (
+              <div className="chat-panel__contact-preview chat-panel__contact-preview--empty">
+                {t('notifications.waiting_reply', { defaultValue: 'Wacht op reactie…' })}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      {p.message && <p className="notification-card__msg">{p.message}</p>}
-      {formatProposalPayload(p.payload) && (
-        <p className="notification-card__detail">{formatProposalPayload(p.payload)}</p>
-      )}
-      {showActions ? (
-        <div className="notification-card__actions">
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => respond(p.id, 'accept')}>
-            {t('worldMap.proposal_accept', { defaultValue: 'Accepteer' })}
-          </button>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => respond(p.id, 'reject')}>
-            {t('worldMap.proposal_decline', { defaultValue: 'Weiger' })}
-          </button>
-        </div>
-      ) : (
-        <p className="notification-card__waiting">
-          {t('notifications.waiting_reply', { defaultValue: 'Wacht op reactie…' })}
-        </p>
-      )}
-    </article>
-  );
+        {showActions && (
+          <div className="notification-item__actions">
+            <button type="button" className="btn btn-primary btn-sm" onClick={() => respond(p.id, 'accept')}>
+              {t('worldMap.proposal_accept', { defaultValue: 'Accepteer' })}
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => respond(p.id, 'reject')}>
+              {t('worldMap.proposal_decline', { defaultValue: 'Weiger' })}
+            </button>
+          </div>
+        )}
+      </article>
+    );
+  };
 
   const renderWikiCard = (p) => {
     const statusKey = CONTENT_STATUS_KEYS[p.status] || 'notifications.wiki_status_pending';
     const needsAction = p.status === 'revision_requested' || (isAdmin && p.status === 'pending');
+    const title = contentProposalTitle(p);
+
     return (
-      <article key={`c-${p.id}`} className={`notification-card${needsAction ? ' notification-card--action' : ''}`}>
-        <div className="notification-card__head">
-          <span className="notification-card__icon">📖</span>
-          <div>
-            <strong>{contentProposalTitle(p)}</strong>
-            <span className="notification-card__meta">{p.type} · {t(statusKey, { defaultValue: p.status })}</span>
+      <article key={`c-${p.id}`} className={`notification-item${needsAction ? ' notification-item--action' : ''}`}>
+        <div className="chat-panel__contact chat-panel__contact--static">
+          <div className="chat-panel__contact-avatar" style={{ background: '#5c6bc0' }}>
+            W
+          </div>
+          <div className="chat-panel__contact-body">
+            <div className="chat-panel__contact-name">{title}</div>
+            <div className="chat-panel__contact-preview">
+              {p.type} · {t(statusKey, { defaultValue: p.status })}
+            </div>
+            {p.note && (
+              <div className="chat-panel__contact-preview chat-panel__contact-preview--empty">
+                {p.note}
+              </div>
+            )}
           </div>
         </div>
-        {p.note && <p className="notification-card__msg">{p.note}</p>}
         {needsAction && (
-          <div className="notification-card__actions">
+          <div className="notification-item__actions">
             {isAdmin && p.status === 'pending' && (
               <>
                 <button type="button" className="btn btn-primary btn-sm" onClick={() => handleWikiApprove(p.id)}>
@@ -230,18 +258,37 @@ export default function NotificationsPanel({
   if (!currentUserId) return null;
 
   return (
-    <div className="notifications-panel">
-      <p className="notifications-panel__intro">
-        {t('notifications.intro', { defaultValue: 'Ruilvoorstellen en wiki-updates op één plek.' })}
-      </p>
+    <div className="card chat-panel notifications-panel">
+      <div className="chat-panel__list-header">
+        <strong>✉️ {t('notifications.overview', { defaultValue: 'Overzicht' })}</strong>
+        <div className="chat-panel__list-header-actions">
+          {(incoming.length + wikiActionable.length) > 0 && (
+            <span className="chat-panel__tab-badge">
+              {(incoming.length + wikiActionable.length) > 9
+                ? '9+'
+                : incoming.length + wikiActionable.length}
+            </span>
+          )}
+          <button
+            type="button"
+            className="chat-panel__search-btn"
+            onClick={load}
+            disabled={loading}
+            aria-label={t('notifications.refresh', { defaultValue: 'Vernieuwen' })}
+            title={t('notifications.refresh', { defaultValue: 'Vernieuwen' })}
+          >
+            ↻
+          </button>
+        </div>
+      </div>
 
-      <div className="notifications-panel__list">
+      <div className="notifications-panel__list chat-panel__contact-list">
         {loading && (
-          <p className="notifications-panel__loading">{t('loading', { defaultValue: 'Laden…' })}</p>
+          <p className="chat-panel__empty-hint">{t('loading', { defaultValue: 'Laden…' })}</p>
         )}
 
         {!loading && !hasAny && (
-          <p className="notifications-panel__empty">
+          <p className="chat-panel__empty-hint">
             {t('notifications.all_empty', { defaultValue: 'Geen meldingen op dit moment.' })}
           </p>
         )}
@@ -280,10 +327,6 @@ export default function NotificationsPanel({
           </section>
         )}
       </div>
-
-      <button type="button" className="btn btn-secondary btn-sm notifications-panel__refresh" onClick={load}>
-        {t('notifications.refresh', { defaultValue: 'Vernieuwen' })}
-      </button>
     </div>
   );
 }

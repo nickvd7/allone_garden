@@ -21,7 +21,7 @@ import { getInteriorById } from '../data/villageInteriors';
 import WorldPoiModal from './WorldPoiModal';
 import VillageInteriorView from './VillageInteriorView';
 import PlayerProposalsPanel from './PlayerProposalsPanel';
-import { DEFAULT_PLAYER_GARDEN_SLOTS, NPC_HOMES } from '../utils/gardenSlotRules';
+import { DEFAULT_PLAYER_GARDEN_SLOTS, NPC_HOMES, resolveGardenSlots } from '../utils/gardenSlotRules';
 import { buildProtectedGardenTileSet } from '../utils/worldBaseTerrain';
 
 // ─── Map constants ────────────────────────────────────────────────────────────
@@ -329,7 +329,7 @@ function WorldMap({
     try {
       const data = await api.get('/api/world/gardens');
       if (data && Array.isArray(data.map)) setServerMap(data.map);
-      if (Array.isArray(data?.gardenSlots) && data.gardenSlots.length > 0) setServerSlots(data.gardenSlots);
+      setServerSlots(resolveGardenSlots(data?.gardenSlots));
       const merged = mergeOccupantsFromApi(data?.occupants);
       if (merged) setWorldOccupants(merged);
       if (data?.gardenPreviewByUserId) {
@@ -345,7 +345,7 @@ function WorldMap({
       const data = await api.get('/api/world/map');
       if (data && Array.isArray(data.map)) {
         setServerMap(data.map);
-        setServerSlots(Array.isArray(data.gardenSlots) ? data.gardenSlots : GARDEN_SLOTS);
+        setServerSlots(resolveGardenSlots(data.gardenSlots));
       }
     } catch {
       // Keep defaults

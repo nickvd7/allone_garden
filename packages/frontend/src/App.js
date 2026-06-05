@@ -607,6 +607,17 @@ function App() {
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [showSocialMenu]);
 
+  // ── Click-outside: close notifications ───────────────────────
+  useEffect(() => {
+    if (!showNotifications) return;
+    const onPointerDown = (e) => {
+      const isInside = e.target.closest('.notifications-dropdown') || e.target.closest('[data-notifications-toggle]');
+      if (!isInside) setShowNotifications(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [showNotifications]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleLogin = (user, token) => {
     setAuthUser(user);
@@ -1102,9 +1113,14 @@ function App() {
           setShowSocialMenu(false);
           setShowWorldOverview(false);
           setShowGradendex(false);
+          setShowNotifications(false);
           setShowProfile(true);
         }}
+        onProfileMenuToggle={() => {
+          setShowNotifications(false);
+        }}
         onOpenSocialMenu={toggleSocialMenu}
+        socialOpen={showSocialMenu}
         onOpenNotifications={!isGuestMode ? toggleNotifications : undefined}
         notificationsBadge={notificationsBadge}
         notificationsOpen={showNotifications}

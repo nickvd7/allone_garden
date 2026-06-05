@@ -55,7 +55,9 @@ describe('gardenSlotRules', () => {
     expect(filtered.length).toBe(1);
   });
 
-  it('filterValidGardenSlots falls back to defaults when input is empty', () => {
+  it('filterValidGardenSlots falls back to defaults when legacy slots are invalid', () => {
+    const legacy = [{ x: 25, y: 15 }, { x: 11, y: 17 }];
+    expect(filterValidGardenSlots(legacy)).toEqual(DEFAULT_PLAYER_GARDEN_SLOTS);
     expect(filterValidGardenSlots([])).toEqual(DEFAULT_PLAYER_GARDEN_SLOTS);
   });
 

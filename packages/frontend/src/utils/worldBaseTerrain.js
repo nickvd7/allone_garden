@@ -115,3 +115,23 @@ export function buildProtectedGardenTileSet(centers) {
   });
   return set;
 }
+
+export function countGardenPlots(cx, cy) {
+  let count = 0;
+  for (let i = 0; i < 9; i += 1) {
+    const tx = cx - 1 + (i % 3);
+    const ty = cy + 1 + Math.floor(i / 3);
+    if (isOnMap(tx, ty)) count += 1;
+  }
+  return count;
+}
+
+/** Alleen volledige 3×3 op gras — geen water, bomen, bergen, paden, dok, woestijn, dorp. */
+export function isGardenSuitableCenter(cx, cy, terrainMap = BASE_TERRAIN) {
+  if (countGardenPlots(cx, cy) !== 9) return false;
+  for (const key of gardenFootprint(cx, cy)) {
+    const [x, y] = key.split(',').map(Number);
+    if (terrainMap[y][x] !== G) return false;
+  }
+  return true;
+}

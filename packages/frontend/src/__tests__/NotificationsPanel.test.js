@@ -40,7 +40,7 @@ describe('NotificationsPanel', () => {
     );
 
     expect(await screen.findByText('Mila')).toBeInTheDocument();
-    expect(screen.getByText('Ruil?')).toBeInTheDocument();
+    expect(screen.getByText(/Ruil\?/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Accept|Accepteer/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Decline|Weiger/i })).toBeInTheDocument();
   });

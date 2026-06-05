@@ -21,6 +21,7 @@ function Header({
   onOpenWorldMap,
   onOpenSocialMenu,
   socialBadge,
+  socialOpen = false,
   worldSummary,
   communityGoal,
   communityProgress,
@@ -32,6 +33,7 @@ function Header({
   onOpenNotifications,
   notificationsBadge = 0,
   notificationsOpen = false,
+  onProfileMenuToggle,
   worldMapOpen,
 }) {
   const { t } = useTranslation();
@@ -135,10 +137,13 @@ function Header({
         {onOpenSocialMenu && (
           <button
             type="button"
-            className="header-action-btn header-action-btn--badge-wrap"
+            className={`header-action-btn header-action-btn--badge-wrap${socialOpen ? ' header-action-btn--active' : ''}`}
             onClick={onOpenSocialMenu}
             title={t('header_menu_social')}
             aria-label={t('header_menu_social')}
+            aria-pressed={socialOpen}
+            data-social-toggle
+            data-tour="chat-toggle"
           >
             <span className="header-action-btn__icon" aria-hidden><IconChat /></span>
             <span className="header-action-btn__label">{t('chat')}</span>
@@ -158,6 +163,7 @@ function Header({
             title={t('header_notifications_title')}
             aria-label={t('header_notifications_title')}
             aria-pressed={notificationsOpen}
+            data-notifications-toggle
             data-tour="notifications"
           >
             <span className="header-action-btn__icon" aria-hidden><IconBell /></span>
@@ -180,6 +186,7 @@ function Header({
             id="header-profile-btn"
             onClick={(e) => {
               e.stopPropagation();
+              onProfileMenuToggle?.();
               setProfileOpen((o) => !o);
             }}
             title={username ? `${t('header_profile_title')} — ${username}` : t('header_profile_title')}
