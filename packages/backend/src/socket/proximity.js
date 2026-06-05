@@ -143,13 +143,17 @@ module.exports = function proximityHandler(socket, io) {
 
     const timestamp = Date.now();
 
-    io.to(targetId).emit('dm:receive', {
-      from:         socket.userId,                      // set server-side — cannot be spoofed
+    const payload = {
+      from:         socket.userId,
+      to:           targetId,
       fromUsername: socket.username,
       text:         sanitized,
       timestamp,
       persisted:    true,
-    });
+    };
+
+    io.to(targetId).emit('dm:receive', payload);
+    io.to(String(socket.userId)).emit('dm:receive', payload);
 
     // Persist to DB (fire-and-forget)
     if (db.isConnected()) {

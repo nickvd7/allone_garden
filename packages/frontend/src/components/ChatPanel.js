@@ -31,6 +31,30 @@ function avatarColor(userId) {
   return `hsl(${hue},60%,45%)`;
 }
 
+/** Conversation bucket for a DM (incoming: from sender; outgoing echo: keyed by `to`). */
+function dmThreadKey(msg, currentUserId) {
+  if (msg?.from == null && msg?.from !== 0) return null;
+  if (String(msg.from) === String(currentUserId) && msg.to != null) {
+    return String(msg.to);
+  }
+  return String(msg.from);
+}
+
+function isDuplicateTail(list, msg) {
+  if (!list?.length || !msg) return false;
+  const last = list[list.length - 1];
+  return (
+    String(last.from) === String(msg.from)
+    && last.text === msg.text
+    && Math.abs(Number(last.timestamp || 0) - Number(msg.timestamp || 0)) < 5000
+  );
+}
+
+function appendChatMessage(list, msg) {
+  if (isDuplicateTail(list, msg)) return list || [];
+  return [...(list || []), msg];
+}
+
 function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall, onStartGroupCall, dmOnly = false, isOpen = false, onUnreadChange }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState(dmOnly ? 'direct' : 'everyone'); // 'everyone' | 'direct'
@@ -159,7 +183,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       const key = String(msg.groupId);
       setGroupHistory((prev) => ({
         ...prev,
-        [key]: [...(prev[key] || []), msg],
+        [key]: appendChatMessage(prev[key], msg),
       }));
       setGroups((prev) => {
         const next = prev.map((g) => (
@@ -297,18 +321,18 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     if (!socket) return;
 
     const onDm = (msg) => {
-      // Discard messages with no valid sender
       if (!msg.from && msg.from !== 0) return;
-      const fromId = String(msg.from);
-      if (!fromId || fromId === 'null' || fromId === 'undefined') return;
+      const threadKey = dmThreadKey(msg, currentUserId);
+      if (!threadKey || threadKey === 'null' || threadKey === 'undefined') return;
 
       setDmHistory((prev) => ({
         ...prev,
-        [fromId]: [...(prev[fromId] || []), msg],
+        [threadKey]: appendChatMessage(prev[threadKey], msg),
       }));
       setUnreadDm((prev) => {
-        if (isOpen && tab === 'direct' && selectedUser && String(selectedUser.id) === fromId) return prev;
-        return { ...prev, [fromId]: (prev[fromId] || 0) + 1 };
+        if (String(msg.from) === String(currentUserId)) return prev;
+        if (isOpen && tab === 'direct' && selectedUser && threadKey === String(selectedUser.id)) return prev;
+        return { ...prev, [threadKey]: (prev[threadKey] || 0) + 1 };
       });
     };
 
@@ -328,7 +352,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       socket.off('dm:receive', onDm);
       socket.off('dm:typing', onDmTyping);
     };
-  }, [socket, tab, selectedUser, isOpen]);
+  }, [socket, tab, selectedUser, isOpen, currentUserId]);
 
   // ── Global chat: send ─────────────────────────────────────────────────────
   const sendMessage = () => {
@@ -360,17 +384,8 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     const text = dmInput.trim();
     if (!text || !selectedUser || !socket) return;
     socket.emit('dm:send', { to: selectedUser.id, text });
-    const key = String(selectedUser.id);
-    const myMsg = { from: currentUserId, fromUsername: username || 'You', text, timestamp: Date.now() };
-    setDmHistory((prev) => ({
-      ...prev,
-      [key]: [...(prev[key] || []), myMsg],
-    }));
     setDmInput('');
-    if (selectedUser.offline) {
-      // Bericht is opgeslagen in DB; ontvanger leest het bij volgende login.
-    }
-  }, [dmInput, selectedUser, socket, currentUserId, username]);
+  }, [dmInput, selectedUser, socket]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const totalUnread = Object.values(unreadDm).reduce((s, n) => s + n, 0)
@@ -490,20 +505,8 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     const text = groupInput.trim();
     if (!text || !selectedGroup || !socket) return;
     socket.emit('group-chat:message', { groupId: selectedGroup.id, text });
-    const key = String(selectedGroup.id);
-    const myMsg = {
-      groupId: selectedGroup.id,
-      from: currentUserId,
-      fromUsername: username || 'You',
-      text,
-      timestamp: Date.now(),
-    };
-    setGroupHistory((prev) => ({
-      ...prev,
-      [key]: [...(prev[key] || []), myMsg],
-    }));
     setGroupInput('');
-  }, [groupInput, selectedGroup, socket, currentUserId, username]);
+  }, [groupInput, selectedGroup, socket]);
 
   const selectedKey       = selectedUser ? String(selectedUser.id) : null;
   const selectedDmMessages = selectedKey ? (dmHistory[selectedKey] || []) : [];
@@ -837,7 +840,12 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                   placeholder={t('chat_group_placeholder', { defaultValue: 'Bericht aan groep…' })}
                   value={groupInput}
                   onChange={(e) => setGroupInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendGroupMessage()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      sendGroupMessage();
+                    }
+                  }}
                   maxLength={300}
                 />
                 <button className="btn btn-primary" onClick={sendGroupMessage} style={{ padding: '0.4rem 0.8rem' }}>➤</button>
@@ -940,7 +948,12 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                       }, 1500);
                     }
                   }}
-                  onKeyDown={(e) => e.key === 'Enter' && sendDm()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      sendDm();
+                    }
+                  }}
                   maxLength={300}
                 />
                 <button className="btn btn-primary" onClick={sendDm} style={{ padding: '0.4rem 0.8rem' }}>

@@ -147,3 +147,38 @@ describe('ChatPanel — cleanup', () => {
     expect(socket.off).toHaveBeenCalledWith('chat:error', expect.any(Function));
   });
 });
+
+describe('ChatPanel — group chat dedupe', () => {
+  it('does not duplicate group messages on send + receive echo', async () => {
+    const socket = makeSocket();
+    render(<ChatPanel socket={socket} username="Alice" dmOnly isOpen />);
+
+    await act(async () => {
+      socket._trigger('group-chat:registered', {
+        groupId: 'grp-test',
+        name: 'AllOne',
+        memberIds: ['1', '2'],
+      });
+    });
+
+    fireEvent.click(await screen.findByText('AllOne'));
+
+    const input = await screen.findByPlaceholderText('chat_group_placeholder');
+    fireEvent.change(input, { target: { value: 'Hoi' } });
+    fireEvent.click(screen.getByRole('button', { name: '➤' }));
+
+    expect(socket.emit).toHaveBeenCalledWith('group-chat:message', { groupId: 'grp-test', text: 'Hoi' });
+
+    await act(async () => {
+      socket._trigger('group-chat:receive', {
+        groupId: 'grp-test',
+        from: 1,
+        fromUsername: 'Alice',
+        text: 'Hoi',
+        timestamp: Date.now(),
+      });
+    });
+
+    expect(screen.getAllByText('Hoi')).toHaveLength(1);
+  });
+});
