@@ -636,6 +636,12 @@ function App() {
     setDmTarget(player);
   }, []);
 
+  const handleStartGroupCall = useCallback(({ roomId }) => {
+    if (!socket || !roomId) return;
+    setShowSocialMenu(false);
+    setGroupCallState({ roomId, participants: [] });
+  }, [socket]);
+
   const toggleSocialMenu = useCallback(() => {
     setShowSocialMenu((prev) => {
       const next = !prev;
@@ -1256,6 +1262,7 @@ function App() {
                 dmTarget={dmTarget}
                 onDmTargetClear={() => setDmTarget(null)}
                 onStartCall={(state) => setCallState(state)}
+                onStartGroupCall={handleStartGroupCall}
                 dmOnly
                 isOpen={showSocialMenu}
                 onUnreadChange={setSocialUnread}

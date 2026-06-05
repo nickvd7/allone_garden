@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // Manages mesh WebRTC connections for group calls.
 // Each participant creates a PeerConnection to every other participant.
-function GroupCallManager({ socket, currentUserId, currentUsername, participants, onLeave }) {
+function GroupCallManager({ socket, currentUserId, currentUsername, roomId, participants, onLeave }) {
   const pcsRef = useRef({}); // { peerId: RTCPeerConnection }
   const localStreamRef = useRef(null);
   const [remoteStreams, setRemoteStreams] = useState({}); // { peerId: MediaStream }
@@ -87,13 +87,33 @@ function GroupCallManager({ socket, currentUserId, currentUsername, participants
     };
   }, [socket, createPcForPeer]);
 
+  // Join group call room on mount
+  useEffect(() => {
+    if (!socket || !roomId) return undefined;
+    socket.emit('group-call:create', { roomId });
+    socket.emit('group-call:join', { roomId });
+    const onJoined = ({ participants: existing }) => {
+      existing?.forEach((p) => {
+        if (p?.socketId && p.socketId !== socket.id) {
+          createPcForPeer(p.socketId);
+        }
+      });
+      setStatus('active');
+    };
+    socket.on('group-call:joined', onJoined);
+    return () => {
+      socket.emit('group-call:leave', { roomId });
+      socket.off('group-call:joined', onJoined);
+    };
+  }, [socket, roomId, createPcForPeer]);
+
   const handleLeave = useCallback(() => {
-    socket.emit('group-call:leave', {});
+    socket.emit('group-call:leave', { roomId });
     Object.values(pcsRef.current).forEach((pc) => pc.close());
     pcsRef.current = {};
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     onLeave();
-  }, [socket, onLeave]);
+  }, [socket, roomId, onLeave]);
 
   const toggleAudio = () => {
     const track = localStreamRef.current?.getAudioTracks()[0];

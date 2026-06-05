@@ -1,6 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../hooks/useApi';
+
+const GROUPS_STORAGE_KEY = 'garden_group_chats';
+
+function loadStoredGroups() {
+  try {
+    const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
+    return Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredGroups(groups) {
+  localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(groups));
+}
 
 function formatTime(date) {
   return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -11,7 +26,7 @@ function avatarColor(userId) {
   return `hsl(${hue},60%,45%)`;
 }
 
-function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall, dmOnly = false, isOpen = false, onUnreadChange }) {
+function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall, onStartGroupCall, dmOnly = false, isOpen = false, onUnreadChange }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState(dmOnly ? 'direct' : 'everyone'); // 'everyone' | 'direct'
 
@@ -43,6 +58,15 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   const [unreadGlobal,       setUnreadGlobal]       = useState(0);
   const [historyLoading,     setHistoryLoading]     = useState(false);
   const [convsLoading,       setConvsLoading]       = useState(false);
+  const [groups,             setGroups]             = useState(() => loadStoredGroups());
+  const [selectedGroup,      setSelectedGroup]      = useState(null);
+  const [groupHistory,       setGroupHistory]       = useState({});
+  const [groupInput,         setGroupInput]         = useState('');
+  const [creatingGroup,      setCreatingGroup]      = useState(false);
+  const [groupName,          setGroupName]          = useState('');
+  const [groupPick,          setGroupPick]          = useState([]);
+  const [unreadGroup,        setUnreadGroup]        = useState({});
+  const groupBottomRef = useRef(null);
   const dmBottomRef = useRef(null);
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
@@ -55,6 +79,8 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     if (!dmTarget) return;
     setTab('direct');
     setSelectedUser(dmTarget);
+    setSelectedGroup(null);
+    setCreatingGroup(false);
     setUnreadDm((prev) => {
       const key = String(dmTarget.id);
       return prev[key] ? { ...prev, [key]: 0 } : prev;
@@ -68,6 +94,55 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     const key = String(selectedUser.id);
     setUnreadDm((prev) => prev[key] ? { ...prev, [key]: 0 } : prev);
   }, [selectedUser]);
+
+  useEffect(() => {
+    if (!socket || !groups.length) return;
+    socket.emit('group-chat:sync', { groupIds: groups.map((g) => g.id) });
+  }, [socket, groups]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const onGroupMsg = (msg) => {
+      if (!msg?.groupId) return;
+      const key = String(msg.groupId);
+      setGroupHistory((prev) => ({
+        ...prev,
+        [key]: [...(prev[key] || []), msg],
+      }));
+      setGroups((prev) => {
+        const next = prev.map((g) => (
+          String(g.id) === key
+            ? { ...g, lastMessage: msg.text, lastAt: msg.timestamp }
+            : g
+        ));
+        saveStoredGroups(next);
+        return next;
+      });
+      if (!isOpen || selectedGroup?.id !== key) {
+        setUnreadGroup((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+      }
+    };
+    const onRegistered = ({ groupId, name, memberIds }) => {
+      setGroups((prev) => {
+        if (prev.some((g) => String(g.id) === String(groupId))) return prev;
+        const next = [...prev, { id: groupId, name, memberIds, lastAt: Date.now() }];
+        saveStoredGroups(next);
+        return next;
+      });
+    };
+    socket.on('group-chat:receive', onGroupMsg);
+    socket.on('group-chat:registered', onRegistered);
+    return () => {
+      socket.off('group-chat:receive', onGroupMsg);
+      socket.off('group-chat:registered', onRegistered);
+    };
+  }, [socket, isOpen, selectedGroup?.id]);
+
+  useEffect(() => {
+    if (!selectedGroup) return;
+    const key = String(selectedGroup.id);
+    setUnreadGroup((prev) => (prev[key] ? { ...prev, [key]: 0 } : prev));
+  }, [selectedGroup]);
 
   // ── Fetch conversation list when DM tab opens ─────────────────────────────
   useEffect(() => {
@@ -237,7 +312,8 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   }, [dmInput, selectedUser, socket, currentUserId, username]);
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const totalUnread = Object.values(unreadDm).reduce((s, n) => s + n, 0);
+  const totalUnread = Object.values(unreadDm).reduce((s, n) => s + n, 0)
+    + Object.values(unreadGroup).reduce((s, n) => s + n, 0);
   const badgeCount = isOpen ? 0 : totalUnread + unreadGlobal;
 
   useEffect(() => {
@@ -275,15 +351,6 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     ? searchResults
     : conversationContacts;
 
-  const selectedKey       = selectedUser ? String(selectedUser.id) : null;
-  const selectedDmMessages = selectedKey ? (dmHistory[selectedKey] || []) : [];
-
-  useEffect(() => {
-    if (!selectedKey) return;
-    dmBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [selectedKey, selectedDmMessages.length]);
-
-  // Last-message snippet per user (from live history or conversations API)
   function lastMsgFor(userId) {
     const key = String(userId);
     const live = dmHistory[key];
@@ -292,6 +359,98 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     if (conv) return { text: conv.last_message, from: conv.from_user_id, timestamp: conv.created_at };
     return null;
   }
+
+  const inboxItems = useMemo(() => {
+    const groupItems = groups.map((g) => ({
+      kind: 'group',
+      id: g.id,
+      name: g.name,
+      preview: g.lastMessage,
+      lastAt: g.lastAt || 0,
+      unread: unreadGroup[String(g.id)] || 0,
+    }));
+    const dmItems = conversationContacts.map((p) => ({
+      kind: 'dm',
+      id: p.id,
+      name: p.username,
+      player: p,
+      preview: lastMsgFor(p.id)?.text,
+      lastAt: lastMsgFor(p.id)?.timestamp || 0,
+      unread: unreadDm[String(p.id)] || 0,
+    }));
+    return [...groupItems, ...dmItems].sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+  }, [groups, conversationContacts, unreadGroup, unreadDm, dmHistory, conversations]);
+
+  const selectedGroupMessages = selectedGroup
+    ? (groupHistory[String(selectedGroup.id)] || [])
+    : [];
+
+  useEffect(() => {
+    if (!selectedGroup) return;
+    groupBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedGroup, selectedGroupMessages.length]);
+
+  const toggleGroupPick = useCallback((player) => {
+    setGroupPick((prev) => {
+      const key = String(player.id);
+      if (prev.some((p) => String(p.id) === key)) {
+        return prev.filter((p) => String(p.id) !== key);
+      }
+      return [...prev, player];
+    });
+  }, []);
+
+  const createGroupChat = useCallback(() => {
+    const name = groupName.trim() || t('chat_group_default_name', { defaultValue: 'Groepschat' });
+    if (groupPick.length < 1 || !socket || !currentUserId) return;
+    const memberIds = [...new Set([String(currentUserId), ...groupPick.map((p) => String(p.id))])];
+    const groupId = `grp-${Date.now()}-${memberIds.sort().join('-').slice(0, 48)}`;
+    const group = {
+      id: groupId,
+      name,
+      memberIds,
+      memberNames: Object.fromEntries(groupPick.map((p) => [String(p.id), p.username])),
+      lastAt: Date.now(),
+    };
+    const next = [...groups, group];
+    setGroups(next);
+    saveStoredGroups(next);
+    socket.emit('group-chat:register', { groupId, name, memberIds });
+    setCreatingGroup(false);
+    setGroupName('');
+    setGroupPick([]);
+    setSearchOpen(false);
+    setDmSearch('');
+    setSelectedGroup(group);
+    setSelectedUser(null);
+  }, [groupName, groupPick, socket, currentUserId, groups, t]);
+
+  const sendGroupMessage = useCallback(() => {
+    const text = groupInput.trim();
+    if (!text || !selectedGroup || !socket) return;
+    socket.emit('group-chat:message', { groupId: selectedGroup.id, text });
+    const key = String(selectedGroup.id);
+    const myMsg = {
+      groupId: selectedGroup.id,
+      from: currentUserId,
+      fromUsername: username || 'You',
+      text,
+      timestamp: Date.now(),
+    };
+    setGroupHistory((prev) => ({
+      ...prev,
+      [key]: [...(prev[key] || []), myMsg],
+    }));
+    setGroupInput('');
+  }, [groupInput, selectedGroup, socket, currentUserId, username]);
+
+  const selectedKey       = selectedUser ? String(selectedUser.id) : null;
+  const selectedDmMessages = selectedKey ? (dmHistory[selectedKey] || []) : [];
+
+  useEffect(() => {
+    if (!selectedKey) return;
+    dmBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedKey, selectedDmMessages.length]);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -320,7 +479,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
         </div>
       )}
 
-      {(dmOnly || tab === 'direct') && !selectedUser && (
+      {(dmOnly || tab === 'direct') && !selectedUser && !selectedGroup && !creatingGroup && (
         <div className="chat-panel__list-header">
           <strong>✉️ {t('chat_conversations', { defaultValue: 'Gesprekken' })}</strong>
           <div className="chat-panel__list-header-actions">
@@ -329,8 +488,18 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
             )}
             <button
               type="button"
-              className={`chat-panel__search-btn${searchOpen ? ' chat-panel__search-btn--active' : ''}`}
+              className="chat-panel__search-btn"
+              onClick={() => { setCreatingGroup(true); setSearchOpen(true); setGroupPick([]); setGroupName(''); }}
+              aria-label={t('chat_create_group', { defaultValue: 'Nieuwe groep' })}
+              title={t('chat_create_group', { defaultValue: 'Nieuwe groep' })}
+            >
+              👥
+            </button>
+            <button
+              type="button"
+              className={`chat-panel__search-btn${searchOpen && !creatingGroup ? ' chat-panel__search-btn--active' : ''}`}
               onClick={() => {
+                setCreatingGroup(false);
                 setSearchOpen((open) => {
                   const next = !open;
                   if (!next) setDmSearch('');
@@ -394,7 +563,65 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       {/* ── Direct tab ── */}
       {(dmOnly || tab === 'direct') && (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          {!selectedUser ? (
+          {creatingGroup && !selectedUser && !selectedGroup && (
+            <div className="chat-panel__group-form">
+              <button type="button" className="chat-panel__back-btn" onClick={() => { setCreatingGroup(false); setGroupPick([]); setGroupName(''); }}>
+                ← {t('worldMap.back', { defaultValue: 'Terug' })}
+              </button>
+              <input
+                className="chat-input"
+                type="text"
+                placeholder={t('chat_group_name', { defaultValue: 'Groepsnaam…' })}
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+              <input
+                className="chat-input chat-panel__search-input"
+                type="text"
+                placeholder={t('chat_search_players', { defaultValue: 'Zoek spelers…' })}
+                value={dmSearch}
+                onChange={(e) => setDmSearch(e.target.value)}
+              />
+              <div className="chat-panel__group-picks">
+                {groupPick.map((p) => (
+                  <button key={p.id} type="button" className="chat-panel__group-chip" onClick={() => toggleGroupPick(p)}>
+                    {p.username} ✕
+                  </button>
+                ))}
+              </div>
+              <div className="chat-panel__contact-list chat-panel__contact-list--compact">
+                {filteredPlayers.map((player) => {
+                  const picked = groupPick.some((p) => String(p.id) === String(player.id));
+                  return (
+                    <button
+                      key={player.id}
+                      type="button"
+                      className={`chat-panel__contact${picked ? ' chat-panel__contact--picked' : ''}`}
+                      onClick={() => toggleGroupPick(player)}
+                    >
+                      <div className="chat-panel__contact-avatar" style={{ background: avatarColor(player.id) }}>
+                        {player.username?.[0]?.toUpperCase() || '?'}
+                      </div>
+                      <div className="chat-panel__contact-body">
+                        <div className="chat-panel__contact-name">{player.username}</div>
+                      </div>
+                      <span>{picked ? '✓' : '+'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary chat-panel__group-create-btn"
+                disabled={groupPick.length < 1}
+                onClick={createGroupChat}
+              >
+                {t('chat_create_group', { defaultValue: 'Groep aanmaken' })}
+              </button>
+            </div>
+          )}
+
+          {!creatingGroup && !selectedUser && !selectedGroup && (
             <div>
               {searchOpen && (
                 <input
@@ -408,23 +635,63 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
               )}
               <div className="chat-panel__contact-list">
                 {(convsLoading || searchLoading) && (
+                  <div className="chat-panel__empty-hint">Laden…</div>
+                )}
+                {!convsLoading && !searchLoading && !searchOpen && inboxItems.length === 0 && (
                   <div className="chat-panel__empty-hint">
-                    Laden…
+                    {t('chat_no_conversations', { defaultValue: 'Nog geen gesprekken — tik op 🔍 of 👥' })}
                   </div>
                 )}
-                {!convsLoading && !searchLoading && filteredPlayers.length === 0 && (
-                  <div className="chat-panel__empty-hint">
-                    {searchOpen
-                      ? (dmSearch.trim().length < 2
-                        ? t('chat_search_min_chars', { defaultValue: 'Typ minimaal 2 tekens…' })
-                        : t('chat_search_no_results', { defaultValue: 'Geen gebruikers gevonden' }))
-                      : t('chat_no_conversations', { defaultValue: 'Nog geen gesprekken — tik op 🔍 om iemand te zoeken' })}
-                  </div>
-                )}
-                {filteredPlayers.map((player) => {
-                  const key    = String(player.id);
+                {!searchOpen && inboxItems.map((item) => (
+                  <button
+                    key={`${item.kind}-${item.id}`}
+                    type="button"
+                    className="chat-panel__contact"
+                    onClick={() => {
+                      if (item.kind === 'group') {
+                        setSelectedGroup(groups.find((g) => String(g.id) === String(item.id)) || { id: item.id, name: item.name });
+                        setSelectedUser(null);
+                      } else {
+                        setSelectedUser(item.player);
+                        setSelectedGroup(null);
+                      }
+                      setSearchOpen(false);
+                      setDmSearch('');
+                    }}
+                  >
+                    <div
+                      className="chat-panel__contact-avatar"
+                      style={{
+                        background: item.kind === 'group' ? '#5c6bc0' : avatarColor(item.id),
+                        opacity: item.kind === 'dm' && item.player?.offline ? 0.55 : 1,
+                      }}
+                    >
+                      {item.kind === 'group' ? '👥' : item.name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div className="chat-panel__contact-body">
+                      <div className="chat-panel__contact-name">
+                        {item.name}
+                        {item.kind === 'dm' && !item.player?.offline && <span className="chat-panel__online-dot" />}
+                      </div>
+                      {item.preview ? (
+                        <div className="chat-panel__contact-preview">{item.preview}</div>
+                      ) : (
+                        <div className="chat-panel__contact-preview chat-panel__contact-preview--empty">
+                          {item.kind === 'group'
+                            ? t('chat_group_empty', { defaultValue: 'Groepschat' })
+                            : t('chat_start_conversation', { defaultValue: 'Stuur bericht' })}
+                        </div>
+                      )}
+                    </div>
+                    {item.unread > 0 && (
+                      <span className="chat-panel__contact-unread">{item.unread > 9 ? '9+' : item.unread}</span>
+                    )}
+                  </button>
+                ))}
+                {searchOpen && filteredPlayers.map((player) => {
+                  const key = String(player.id);
                   const unread = unreadDm[key] || 0;
-                  const last   = lastMsgFor(player.id);
+                  const last = lastMsgFor(player.id);
                   return (
                     <button
                       key={key}
@@ -432,14 +699,12 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                       className="chat-panel__contact"
                       onClick={() => {
                         setSelectedUser(player);
+                        setSelectedGroup(null);
                         setSearchOpen(false);
                         setDmSearch('');
                       }}
                     >
-                      <div
-                        className="chat-panel__contact-avatar"
-                        style={{ background: avatarColor(player.id), opacity: player.offline ? 0.55 : 1 }}
-                      >
+                      <div className="chat-panel__contact-avatar" style={{ background: avatarColor(player.id), opacity: player.offline ? 0.55 : 1 }}>
                         {player.username?.[0]?.toUpperCase() || '?'}
                       </div>
                       <div className="chat-panel__contact-body">
@@ -457,19 +722,69 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                           </div>
                         )}
                       </div>
-                      <span className="chat-panel__contact-chevron" aria-hidden>→</span>
-                      {unread > 0 && (
-                        <span className="chat-panel__contact-unread">
-                          {unread > 9 ? '9+' : unread}
-                        </span>
-                      )}
+                      {unread > 0 && <span className="chat-panel__contact-unread">{unread > 9 ? '9+' : unread}</span>}
                     </button>
                   );
                 })}
               </div>
             </div>
-          ) : (
-            /* DM conversation */
+          )}
+
+          {selectedGroup && !selectedUser && (
+            <>
+              <div className="chat-panel__thread-header">
+                <button type="button" className="chat-panel__back-btn" onClick={() => setSelectedGroup(null)}>←</button>
+                <span className="chat-panel__thread-title">👥 {selectedGroup.name}</span>
+                {onStartGroupCall && (
+                  <button
+                    type="button"
+                    className="chat-panel__call-btn"
+                    onClick={() => onStartGroupCall({ roomId: selectedGroup.id })}
+                    title={t('chat_group_call', { defaultValue: 'Groepsgesprek' })}
+                  >
+                    📹
+                  </button>
+                )}
+              </div>
+              <div className="chat-messages" style={{ flex: 1 }}>
+                {selectedGroupMessages.length === 0 && (
+                  <div className="chat-panel__empty-hint">{t('chat_group_start', { defaultValue: 'Stuur het eerste bericht in deze groep' })}</div>
+                )}
+                {selectedGroupMessages.map((msg, i) => {
+                  const isOwn = String(msg.from) === String(currentUserId);
+                  return (
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start', marginBottom: '0.35rem' }}>
+                      {!isOwn && <span style={{ fontSize: '0.68rem', color: '#888' }}>{msg.fromUsername}</span>}
+                      <div style={{
+                        background: isOwn ? '#4caf50' : 'var(--surface2, #f0f0f0)',
+                        color: isOwn ? '#fff' : 'inherit',
+                        padding: '0.35rem 0.65rem', borderRadius: '12px',
+                        maxWidth: '80%', fontSize: '0.85rem', wordBreak: 'break-word',
+                      }}>
+                        {msg.text}
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#bbb', marginTop: '0.15rem' }}>{formatTime(msg.timestamp)}</span>
+                    </div>
+                  );
+                })}
+                <div ref={groupBottomRef} />
+              </div>
+              <div className="chat-input-row" style={{ marginTop: '0.4rem' }}>
+                <input
+                  className="chat-input"
+                  type="text"
+                  placeholder={t('chat_group_placeholder', { defaultValue: 'Bericht aan groep…' })}
+                  value={groupInput}
+                  onChange={(e) => setGroupInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && sendGroupMessage()}
+                  maxLength={300}
+                />
+                <button className="btn btn-primary" onClick={sendGroupMessage} style={{ padding: '0.4rem 0.8rem' }}>➤</button>
+              </div>
+            </>
+          )}
+
+          {selectedUser && !selectedGroup && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <button

@@ -308,4 +308,65 @@ module.exports = function proximityHandler(socket, io) {
     if (candidate !== null && !isSmallObject(candidate, 4096)) return;
     io.to(to).emit('group-call:ice', { from: socket.id, candidate });
   });
+
+  // ── 5. Group chat rooms ───────────────────────────────────────────────────
+  if (!module.exports._groupChats) module.exports._groupChats = {};
+  const groupChats = module.exports._groupChats;
+
+  function joinGroupRoom(groupId) {
+    if (!groupId || typeof groupId !== 'string' || groupId.length > 80) return;
+    socket.join(`group-chat:${groupId}`);
+  }
+
+  socket.on('group-chat:register', ({ groupId, name, memberIds }) => {
+    if (!socket.userId) return;
+    if (!groupId || typeof groupId !== 'string' || groupId.length > 80) return;
+    if (!Array.isArray(memberIds) || memberIds.length < 2 || memberIds.length > 12) return;
+    const members = memberIds.map((id) => safeUserId(id)).filter(Boolean);
+    if (!members.includes(String(socket.userId))) members.push(String(socket.userId));
+    if (!groupChats[groupId]) {
+      groupChats[groupId] = { name: String(name || 'Groep').slice(0, 80), members: new Set(members), messages: [] };
+    } else {
+      members.forEach((id) => groupChats[groupId].members.add(id));
+    }
+    joinGroupRoom(groupId);
+    members.forEach((uid) => {
+      io.to(uid).emit('group-chat:registered', { groupId, name: groupChats[groupId].name, memberIds: [...groupChats[groupId].members] });
+    });
+  });
+
+  socket.on('group-chat:sync', ({ groupIds }) => {
+    if (!socket.userId || !Array.isArray(groupIds)) return;
+    groupIds.slice(0, 20).forEach((groupId) => {
+      if (typeof groupId !== 'string') return;
+      const chat = groupChats[groupId];
+      if (chat && chat.members.has(String(socket.userId))) {
+        joinGroupRoom(groupId);
+      }
+    });
+  });
+
+  socket.on('group-chat:message', ({ groupId, text }) => {
+    if (!socket.userId) return;
+    if (!dmLimiter()) return;
+    if (!groupId || typeof groupId !== 'string') return;
+    const chat = groupChats[groupId];
+    if (!chat || !chat.members.has(String(socket.userId))) return;
+    if (typeof text !== 'string') return;
+    const sanitized = xss(text.trim().slice(0, MAX_DM_LEN), XSS_OPTS);
+    if (!sanitized) return;
+    const timestamp = Date.now();
+    const payload = {
+      groupId,
+      from: socket.userId,
+      fromUsername: socket.username,
+      text: sanitized,
+      timestamp,
+    };
+    chat.messages.push(payload);
+    if (chat.messages.length > 100) chat.messages.shift();
+    chat.members.forEach((uid) => {
+      io.to(uid).emit('group-chat:receive', payload);
+    });
+  });
 };

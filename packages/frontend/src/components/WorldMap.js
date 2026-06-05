@@ -2158,9 +2158,39 @@ function WorldMap({
                     </div>
                     <div className="prox-header__text">
                       <div className="prox-name">{nearbyPlayer.username}</div>
-                      <div className="prox-range">📍 {t('worldMap.tiles_away', { count: Math.abs(pos.x - nearbyPlayer.x) + Math.abs(pos.y - nearbyPlayer.y) })}</div>
+                      {!isNearbyVirtual && (
+                        <div className="prox-quick-actions">
+                          <button
+                            type="button"
+                            className="prox-quick-actions__btn"
+                            onClick={() => onOpenDm?.({ id: nearbyPlayer.id, username: nearbyPlayer.username })}
+                            title={t('chat_send_message', { defaultValue: 'Bericht' })}
+                            aria-label={t('chat_send_message', { defaultValue: 'Bericht' })}
+                          >
+                            ✉️
+                          </button>
+                          <button
+                            type="button"
+                            className="prox-quick-actions__btn"
+                            onClick={() => onStartCall?.({ mode: 'outgoing', peerId: nearbyPlayer.id, peerUsername: nearbyPlayer.username, audioOnly: true })}
+                            title={t('chat_audio_call', { defaultValue: 'Bellen' })}
+                            aria-label={t('chat_audio_call', { defaultValue: 'Bellen' })}
+                          >
+                            📞
+                          </button>
+                          <button
+                            type="button"
+                            className="prox-quick-actions__btn"
+                            onClick={() => onStartCall?.({ mode: 'outgoing', peerId: nearbyPlayer.id, peerUsername: nearbyPlayer.username, audioOnly: false })}
+                            title={t('chat_video_call', { defaultValue: 'Video' })}
+                            aria-label={t('chat_video_call', { defaultValue: 'Video' })}
+                          >
+                            📹
+                          </button>
+                        </div>
+                      )}
                       {nearbyPlayer.virtual && nearbyNpcRole && (
-                        <div className="prox-range">🧭 Rol: {nearbyNpcRole.label}</div>
+                        <div className="prox-range">🧭 {nearbyNpcRole.label}</div>
                       )}
                     </div>
                   </div>
@@ -2169,49 +2199,15 @@ function WorldMap({
                 {proximitySubview === 'overview' && (
                   <div className="prox-overview">
                     {nearbyGardenPreview && (
-                      <>
-                        <div className="world-garden-stats prox-overview__stats">
-                          <div className="world-stat">
-                            <span>{nearbyGardenPreview.tilled ?? 0}</span>
-                            <small>{t('worldMap.stat_tilled')}</small>
-                          </div>
-                          <div className="world-stat">
-                            <span>{nearbyGardenPreview.planted ?? 0}</span>
-                            <small>{t('worldMap.stat_planted')}</small>
-                          </div>
-                          <div className="world-stat">
-                            <span style={{ color: '#4caf50' }}>{nearbyGardenPreview.ready ?? 0}</span>
-                            <small>{t('worldMap.stat_ready')}</small>
-                          </div>
-                        </div>
-                        {Array.isArray(nearbyGardenPreview.tiles) && nearbyGardenPreview.tiles.length > 0 && (
-                          <div className="mini-garden-grid prox-overview__grid">
-                            {nearbyGardenPreview.tiles.map((code, i) => (
-                              <div
-                                key={i}
-                                className="mini-plot prox-preview-tile"
-                                style={{ background: previewTileColor(code) }}
-                                title={previewTileEmoji(code) || undefined}
-                              >
-                                {previewTileEmoji(code) && (
-                                  <span className="mini-plant-emoji">{previewTileEmoji(code)}</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </>
+                      <div className="prox-stats-row">
+                        <span><strong>{nearbyGardenPreview.tilled ?? 0}</strong> {t('worldMap.stat_tilled')}</span>
+                        <span><strong>{nearbyGardenPreview.planted ?? 0}</strong> {t('worldMap.stat_planted')}</span>
+                        <span><strong>{nearbyGardenPreview.ready ?? 0}</strong> {t('worldMap.stat_ready')}</span>
+                      </div>
                     )}
 
                     {!isNearbyVirtual && (
                       <>
-                        <button
-                          type="button"
-                          className="btn btn-primary prox-overview__visit"
-                          onClick={() => openVisitFromPanel(nearGarden || nearbyPlayer)}
-                        >
-                          🏡 {t('worldMap.visit_garden')}
-                        </button>
                         <button
                           type="button"
                           className="btn btn-secondary prox-overview__help"
@@ -2220,41 +2216,23 @@ function WorldMap({
                         >
                           {helpDone ? t('worldMap.help_done') : t('worldMap.help_button')}
                         </button>
+                        <button
+                          type="button"
+                          className="btn btn-primary prox-overview__visit"
+                          onClick={() => openVisitFromPanel(nearGarden || nearbyPlayer)}
+                        >
+                          🏡 {t('worldMap.visit_garden')}
+                        </button>
                       </>
                     )}
 
-                    <div className="prox-action-grid">
+                    <div className="prox-action-grid prox-action-grid--compact">
                       {!isNearbyVirtual && (
                         <>
                           <button type="button" className="btn btn-secondary" onClick={openMarketplace}>
                             🏪 {t('marketplace')}
                           </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => onOpenDm?.({ id: nearbyPlayer.id, username: nearbyPlayer.username })}
-                          >
-                            ✉️ {t('chat_send_message', { defaultValue: 'Bericht' })}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => onStartCall?.({ mode: 'outgoing', peerId: nearbyPlayer.id, peerUsername: nearbyPlayer.username, audioOnly: false })}
-                          >
-                            📹 {t('chat_video_call', { defaultValue: 'Video' })}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => onStartCall?.({ mode: 'outgoing', peerId: nearbyPlayer.id, peerUsername: nearbyPlayer.username, audioOnly: true })}
-                          >
-                            📞 {t('chat_audio_call', { defaultValue: 'Bellen' })}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary"
-                            onClick={() => setProximitySubview('proposals')}
-                          >
+                          <button type="button" className="btn btn-secondary" onClick={() => setProximitySubview('proposals')}>
                             📋 {t('worldMap.proposals_title', { defaultValue: 'Voorstellen' })}
                           </button>
                         </>
