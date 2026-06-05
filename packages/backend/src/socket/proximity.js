@@ -310,12 +310,31 @@ module.exports = function proximityHandler(socket, io) {
   });
 
   // ── 5. Group chat rooms ───────────────────────────────────────────────────
+  const {
+    persistGroupRegister,
+    persistGroupMessage,
+    hydrateMemoryGroupChats,
+    listGroupsForUser,
+  } = require('../services/groupChatStore');
+
   if (!module.exports._groupChats) module.exports._groupChats = {};
   const groupChats = module.exports._groupChats;
+  if (!module.exports._groupChatsHydrated) {
+    module.exports._groupChatsHydrated = true;
+    hydrateMemoryGroupChats(groupChats).catch(() => {});
+  }
 
   function joinGroupRoom(groupId) {
     if (!groupId || typeof groupId !== 'string' || groupId.length > 80) return;
     socket.join(`group-chat:${groupId}`);
+  }
+
+  function ensureGroupInMemory(groupId, name, members) {
+    if (!groupChats[groupId]) {
+      groupChats[groupId] = { name, members: new Set(members), messages: [] };
+    } else {
+      members.forEach((id) => groupChats[groupId].members.add(String(id)));
+    }
   }
 
   socket.on('group-chat:register', ({ groupId, name, memberIds }) => {
@@ -324,25 +343,47 @@ module.exports = function proximityHandler(socket, io) {
     if (!Array.isArray(memberIds) || memberIds.length < 2 || memberIds.length > 12) return;
     const members = memberIds.map((id) => safeUserId(id)).filter(Boolean);
     if (!members.includes(String(socket.userId))) members.push(String(socket.userId));
-    if (!groupChats[groupId]) {
-      groupChats[groupId] = { name: String(name || 'Groep').slice(0, 80), members: new Set(members), messages: [] };
-    } else {
-      members.forEach((id) => groupChats[groupId].members.add(id));
-    }
+    const groupName = String(name || 'Groep').slice(0, 80);
+    ensureGroupInMemory(groupId, groupName, members);
     joinGroupRoom(groupId);
+    persistGroupRegister({
+      groupId,
+      name: groupName,
+      createdBy: socket.userId,
+      memberIds: members,
+    });
     members.forEach((uid) => {
-      io.to(uid).emit('group-chat:registered', { groupId, name: groupChats[groupId].name, memberIds: [...groupChats[groupId].members] });
+      io.to(uid).emit('group-chat:registered', {
+        groupId,
+        name: groupChats[groupId].name,
+        memberIds: [...groupChats[groupId].members],
+      });
     });
   });
 
   socket.on('group-chat:sync', ({ groupIds }) => {
-    if (!socket.userId || !Array.isArray(groupIds)) return;
-    groupIds.slice(0, 20).forEach((groupId) => {
-      if (typeof groupId !== 'string') return;
-      const chat = groupChats[groupId];
-      if (chat && chat.members.has(String(socket.userId))) {
-        joinGroupRoom(groupId);
-      }
+    if (!socket.userId) return;
+    const syncIds = Array.isArray(groupIds) ? groupIds.slice(0, 20) : [];
+    listGroupsForUser(socket.userId).then((serverGroups) => {
+      serverGroups.forEach((g) => {
+        ensureGroupInMemory(g.id, g.name, g.memberIds);
+        joinGroupRoom(g.id);
+      });
+      syncIds.forEach((groupId) => {
+        if (typeof groupId !== 'string') return;
+        const chat = groupChats[groupId];
+        if (chat && chat.members.has(String(socket.userId))) {
+          joinGroupRoom(groupId);
+        }
+      });
+    }).catch(() => {
+      syncIds.forEach((groupId) => {
+        if (typeof groupId !== 'string') return;
+        const chat = groupChats[groupId];
+        if (chat && chat.members.has(String(socket.userId))) {
+          joinGroupRoom(groupId);
+        }
+      });
     });
   });
 
@@ -365,6 +406,7 @@ module.exports = function proximityHandler(socket, io) {
     };
     chat.messages.push(payload);
     if (chat.messages.length > 100) chat.messages.shift();
+    persistGroupMessage({ groupId, fromUserId: socket.userId, text: sanitized, timestamp });
     chat.members.forEach((uid) => {
       io.to(uid).emit('group-chat:receive', payload);
     });

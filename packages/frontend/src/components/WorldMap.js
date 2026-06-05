@@ -23,6 +23,7 @@ import VillageInteriorView from './VillageInteriorView';
 import PlayerProposalsPanel from './PlayerProposalsPanel';
 import { DEFAULT_PLAYER_GARDEN_SLOTS, NPC_HOMES, resolveGardenSlots } from '../utils/gardenSlotRules';
 import { buildProtectedGardenTileSet } from '../utils/worldBaseTerrain';
+import WalkDpad, { shouldSuppressWalkMapClick } from './WalkDpad';
 
 // ─── Map constants ────────────────────────────────────────────────────────────
 const TILE   = 52;
@@ -1246,6 +1247,7 @@ function WorldMap({
   }, [pos, gardenMap, neighborPatchCoordMap, displayGardenOwnersById, isCurrentPlayer, worldPois, playerPositions, currentUserId]);
 
   const handleTileClick = useCallback((tileData) => {
+    if (shouldSuppressWalkMapClick()) return;
     const { mx, my, ownPlot, ownPatchIndex, gardenPlayer, structureDecor, tile, poi } = tileData;
     if (mx !== pos.x || my !== pos.y) hasUserMovedRef.current = true;
     const biomePlotIndex = biomeCoordToPlot[`${mx},${my}`];
@@ -2610,14 +2612,13 @@ function WorldMap({
 
         {!hideDpad && !activeInterior && typeof document !== 'undefined' &&
           createPortal(
-            <div className="walk-dpad walk-dpad--gameboy walk-dpad--world-float" role="group" aria-label={t('worldMap.header_hint')}>
-              <button type="button" className="walk-dpad-btn walk-dpad-btn--up" onContextMenu={(e) => e.preventDefault()} onClick={() => { setClickTarget(null); move(0, -1, 'up'); }}>↑</button>
-              <button type="button" className="walk-dpad-btn walk-dpad-btn--left" onContextMenu={(e) => e.preventDefault()} onClick={() => { setClickTarget(null); move(-1, 0, 'left'); }}>←</button>
-              <button type="button" className="walk-dpad-btn walk-dpad-btn--right" onContextMenu={(e) => e.preventDefault()} onClick={() => { setClickTarget(null); move(1, 0, 'right'); }}>→</button>
-              <button type="button" className="walk-dpad-btn walk-dpad-btn--down" onContextMenu={(e) => e.preventDefault()} onClick={() => { setClickTarget(null); move(0, 1, 'down'); }}>↓</button>
-              <button type="button" className="walk-dpad-btn walk-dpad-btn--center" onContextMenu={(e) => e.preventDefault()} onClick={handlePrimaryInteract}>E</button>
-            </div>,
-            document.body
+            <WalkDpad
+              ariaLabel={t('worldMap.header_hint')}
+              onClearTarget={() => setClickTarget(null)}
+              onMove={(dx, dy, dir) => move(dx, dy, dir)}
+              onInteract={handlePrimaryInteract}
+            />,
+            document.body,
           )}
 
         {activePoi && (

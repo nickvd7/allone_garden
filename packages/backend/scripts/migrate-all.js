@@ -14,6 +14,7 @@ const repoBackend = path.join(scriptsDir, '..');
 const STEPS = [
   'setup-db.js',
   'migrate-dm.js',
+  'migrate-group-chats.js',
   'migrate-gradendex.js',
   'migrate-world.js',
   'migrate-proposals.js',

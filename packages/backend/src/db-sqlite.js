@@ -189,6 +189,40 @@ function initSchema() {
   `);
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS group_chats (
+      id           TEXT PRIMARY KEY,
+      name         TEXT NOT NULL,
+      created_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at   DATETIME NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS group_chat_members (
+      group_id     TEXT NOT NULL REFERENCES group_chats(id) ON DELETE CASCADE,
+      user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      joined_at    DATETIME NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (group_id, user_id)
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS group_chat_messages (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id       TEXT NOT NULL REFERENCES group_chats(id) ON DELETE CASCADE,
+      from_user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message        TEXT NOT NULL,
+      created_at     DATETIME NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_group_chat_members_user
+    ON group_chat_members (user_id)
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_group_chat_messages_group
+    ON group_chat_messages (group_id, created_at)
+  `);
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS player_proposals (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       from_user_id  INTEGER NOT NULL,

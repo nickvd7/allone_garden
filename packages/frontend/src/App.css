@@ -5612,37 +5612,46 @@ body,
 }
 
 @media (max-width: 900px), (pointer: coarse) {
+  .world-map-embedded .walk-map-main {
+    padding-bottom: max(9rem, calc(env(safe-area-inset-bottom, 0px) + 8.5rem));
+    padding-left: max(0.35rem, env(safe-area-inset-left, 0px));
+  }
+
+  .walk-tile {
+    touch-action: manipulation;
+  }
+
   .walk-dpad.walk-dpad--gameboy {
     left: max(0.45rem, env(safe-area-inset-left, 0px));
     bottom: max(0.35rem, calc(env(safe-area-inset-bottom, 0px) + 0.2rem));
-    width: 116px;
-    height: 116px;
+    width: 148px;
+    height: 148px;
   }
 
   .walk-dpad.walk-dpad--gameboy.walk-dpad--world-float {
     right: auto;
     left: max(0.75rem, env(safe-area-inset-left, 0px));
     bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
-    width: 116px;
-    height: 116px;
+    width: 148px;
+    height: 148px;
   }
 
   .walk-dpad.walk-dpad--gameboy .walk-dpad-btn {
-    width: 34px;
-    height: 34px;
-    font-size: 0.95rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.05rem;
   }
 
-  .walk-dpad-btn--up { left: 41px; top: 3px; }
-  .walk-dpad-btn--left { left: 3px; top: 41px; }
-  .walk-dpad-btn--right { right: 3px; top: 41px; }
-  .walk-dpad-btn--down { left: 41px; bottom: 3px; }
+  .walk-dpad-btn--up { left: 52px; top: 4px; }
+  .walk-dpad-btn--left { left: 4px; top: 52px; }
+  .walk-dpad-btn--right { right: 4px; top: 52px; }
+  .walk-dpad-btn--down { left: 52px; bottom: 4px; }
   .walk-dpad-btn--center {
-    left: 41px;
-    top: 41px;
-    width: 34px;
-    height: 34px;
-    font-size: 0.75rem;
+    left: 52px;
+    top: 52px;
+    width: 44px;
+    height: 44px;
+    font-size: 0.8rem;
   }
 }
 

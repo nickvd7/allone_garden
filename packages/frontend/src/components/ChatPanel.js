@@ -2,19 +2,24 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next';
 import { api } from '../hooks/useApi';
 
-const GROUPS_STORAGE_KEY = 'garden_group_chats';
+const GROUPS_STORAGE_PREFIX = 'garden_group_chats_';
 
-function loadStoredGroups() {
+function groupsStorageKey(userId) {
+  return `${GROUPS_STORAGE_PREFIX}${userId || 'guest'}`;
+}
+
+function loadStoredGroups(userId) {
   try {
-    const raw = localStorage.getItem(GROUPS_STORAGE_KEY);
+    const raw = localStorage.getItem(groupsStorageKey(userId));
     return Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function saveStoredGroups(groups) {
-  localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(groups));
+function saveStoredGroups(userId, groups) {
+  if (!userId) return;
+  localStorage.setItem(groupsStorageKey(userId), JSON.stringify(groups));
 }
 
 function formatTime(date) {
@@ -58,7 +63,8 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   const [unreadGlobal,       setUnreadGlobal]       = useState(0);
   const [historyLoading,     setHistoryLoading]     = useState(false);
   const [convsLoading,       setConvsLoading]       = useState(false);
-  const [groups,             setGroups]             = useState(() => loadStoredGroups());
+  const [groups,             setGroups]             = useState([]);
+  const [groupsLoading,      setGroupsLoading]      = useState(false);
   const [selectedGroup,      setSelectedGroup]      = useState(null);
   const [groupHistory,       setGroupHistory]       = useState({});
   const [groupInput,         setGroupInput]         = useState('');
@@ -68,6 +74,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   const [unreadGroup,        setUnreadGroup]        = useState({});
   const groupBottomRef = useRef(null);
   const dmBottomRef = useRef(null);
+  const loadedGroupHistoriesRef = useRef(new Set());
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -96,9 +103,54 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   }, [selectedUser]);
 
   useEffect(() => {
-    if (!socket || !groups.length) return;
+    if (!currentUserId) {
+      setGroups([]);
+      return;
+    }
+    loadedGroupHistoriesRef.current.clear();
+    setGroupsLoading(true);
+    api.get('/api/group-chats')
+      .then((data) => {
+        const serverGroups = (data?.groups || []).map((g) => ({
+          id: g.id,
+          name: g.name,
+          memberIds: g.memberIds || [],
+          lastMessage: g.lastMessage || '',
+          lastAt: g.lastAt || Date.now(),
+        }));
+        const cached = loadStoredGroups(currentUserId);
+        const merged = new Map();
+        [...cached, ...serverGroups].forEach((g) => {
+          if (!g?.id) return;
+          const prev = merged.get(g.id);
+          merged.set(g.id, prev && (prev.lastAt || 0) > (g.lastAt || 0) ? prev : g);
+        });
+        const next = Array.from(merged.values()).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
+        setGroups(next);
+        saveStoredGroups(currentUserId, next);
+      })
+      .catch(() => {
+        setGroups(loadStoredGroups(currentUserId));
+      })
+      .finally(() => setGroupsLoading(false));
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!socket || !currentUserId || !groups.length) return;
+    groups.forEach((g) => {
+      if (!g?.id || !Array.isArray(g.memberIds) || g.memberIds.length < 2) return;
+      socket.emit('group-chat:register', {
+        groupId: g.id,
+        name: g.name || 'Groep',
+        memberIds: g.memberIds,
+      });
+    });
+  }, [socket, currentUserId, groups]);
+
+  useEffect(() => {
+    if (!socket || !currentUserId) return;
     socket.emit('group-chat:sync', { groupIds: groups.map((g) => g.id) });
-  }, [socket, groups]);
+  }, [socket, currentUserId, groups]);
 
   useEffect(() => {
     if (!socket) return;
@@ -115,7 +167,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
             ? { ...g, lastMessage: msg.text, lastAt: msg.timestamp }
             : g
         ));
-        saveStoredGroups(next);
+        saveStoredGroups(currentUserId, next);
         return next;
       });
       if (!isOpen || selectedGroup?.id !== key) {
@@ -126,7 +178,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       setGroups((prev) => {
         if (prev.some((g) => String(g.id) === String(groupId))) return prev;
         const next = [...prev, { id: groupId, name, memberIds, lastAt: Date.now() }];
-        saveStoredGroups(next);
+        saveStoredGroups(currentUserId, next);
         return next;
       });
     };
@@ -136,13 +188,22 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       socket.off('group-chat:receive', onGroupMsg);
       socket.off('group-chat:registered', onRegistered);
     };
-  }, [socket, isOpen, selectedGroup?.id]);
+  }, [socket, isOpen, selectedGroup?.id, currentUserId]);
 
   useEffect(() => {
-    if (!selectedGroup) return;
+    if (!selectedGroup || !currentUserId) return;
     const key = String(selectedGroup.id);
     setUnreadGroup((prev) => (prev[key] ? { ...prev, [key]: 0 } : prev));
-  }, [selectedGroup]);
+    if (loadedGroupHistoriesRef.current.has(key)) return;
+    loadedGroupHistoriesRef.current.add(key);
+    api.get(`/api/group-chats/${encodeURIComponent(selectedGroup.id)}/messages`)
+      .then((data) => {
+        const msgs = data?.messages || [];
+        if (!msgs.length) return;
+        setGroupHistory((prev) => ({ ...prev, [key]: msgs }));
+      })
+      .catch(() => {});
+  }, [selectedGroup, currentUserId]);
 
   // ── Fetch conversation list when DM tab opens ─────────────────────────────
   useEffect(() => {
@@ -414,7 +475,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     };
     const next = [...groups, group];
     setGroups(next);
-    saveStoredGroups(next);
+    saveStoredGroups(currentUserId, next);
     socket.emit('group-chat:register', { groupId, name, memberIds });
     setCreatingGroup(false);
     setGroupName('');
@@ -634,7 +695,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                 />
               )}
               <div className="chat-panel__contact-list">
-                {(convsLoading || searchLoading) && (
+                {(convsLoading || groupsLoading || searchLoading) && (
                   <div className="chat-panel__empty-hint">Laden…</div>
                 )}
                 {!convsLoading && !searchLoading && !searchOpen && inboxItems.length === 0 && (
