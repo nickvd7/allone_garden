@@ -1,7 +1,8 @@
 'use strict';
 
 /**
- * Regels voor openbare moestuin-slots: geen overlap met dok, dorps-POI's, biomes of NPC-huizen.
+ * Regels voor openbare moestuin-slots: geen overlap met dok, dorps-POI's, biomes,
+ * NPC-huizen of andere speler-tuinen. Elke tuin heeft 9 beloopbare tegels op de kaart.
  */
 
 const MAP_W = 32;
@@ -24,30 +25,54 @@ const NPC_HOMES = [
   { id: 'npc:ivy', x: 15, y: 16 },
 ];
 
-/** Standaard speler-moestuinplekken — geen dok/biome/kasteel/NPC overlap. */
+/** Standaard speler-moestuinplekken — geen overlap, volledige 3×3 onder het huis. */
 const DEFAULT_PLAYER_GARDEN_SLOTS = [
   { x: 3, y: 3 },
   { x: 28, y: 16 },
   { x: 3, y: 16 },
   { x: 28, y: 3 },
-  { x: 5, y: 9 },
+  { x: 9, y: 5 },
   { x: 26, y: 9 },
   { x: 11, y: 11 },
   { x: 20, y: 11 },
   { x: 6, y: 6 },
-  { x: 25, y: 6 },
-  { x: 11, y: 17 },
-  { x: 20, y: 17 },
+  { x: 22, y: 6 },
+  { x: 8, y: 12 },
+  { x: 17, y: 8 },
 ];
 
+function isOnMap(x, y) {
+  return x >= 0 && x < MAP_W && y >= 0 && y < MAP_H;
+}
+
 function gardenFootprint(cx, cy) {
-  const tiles = [`${cx},${cy}`];
+  const tiles = new Set();
+  if (!isOnMap(cx, cy)) return tiles;
+  tiles.add(`${cx},${cy}`);
   for (let i = 0; i < 9; i += 1) {
     const tx = cx - 1 + (i % 3);
     const ty = cy + 1 + Math.floor(i / 3);
-    tiles.push(`${tx},${ty}`);
+    if (isOnMap(tx, ty)) tiles.add(`${tx},${ty}`);
   }
   return tiles;
+}
+
+function countGardenPlots(cx, cy) {
+  let count = 0;
+  for (let i = 0; i < 9; i += 1) {
+    const tx = cx - 1 + (i % 3);
+    const ty = cy + 1 + Math.floor(i / 3);
+    if (isOnMap(tx, ty)) count += 1;
+  }
+  return count;
+}
+
+function footprintsOverlap(a, b) {
+  const fa = gardenFootprint(a.x, a.y);
+  for (const key of gardenFootprint(b.x, b.y)) {
+    if (fa.has(key)) return true;
+  }
+  return false;
 }
 
 function buildReservedCenters() {
@@ -83,27 +108,36 @@ function buildReservedCenters() {
 
 const RESERVED_TILES = buildReservedCenters();
 
-function isOnMap(x, y) {
-  return x >= 0 && x < MAP_W && y >= 0 && y < MAP_H;
-}
-
 function isValidGardenCenter(x, y) {
   if (!isOnMap(x, y)) return false;
-  const key = `${x},${y}`;
-  if (RESERVED_TILES.has(key)) return false;
-  return !gardenFootprint(x, y).some((tile) => RESERVED_TILES.has(tile));
+  if (countGardenPlots(x, y) !== 9) return false;
+  const footprint = gardenFootprint(x, y);
+  for (const key of footprint) {
+    if (RESERVED_TILES.has(key)) return false;
+  }
+  return true;
+}
+
+function filterNonOverlappingSlots(slots) {
+  const accepted = [];
+  for (const slot of slots) {
+    if (!slot || !Number.isInteger(slot.x) || !Number.isInteger(slot.y)) continue;
+    if (!isValidGardenCenter(slot.x, slot.y)) continue;
+    if (accepted.some((other) => footprintsOverlap(slot, other))) continue;
+    accepted.push({ x: slot.x, y: slot.y });
+  }
+  return accepted;
 }
 
 function filterValidGardenSlots(slots) {
   const list = Array.isArray(slots) && slots.length ? slots : DEFAULT_PLAYER_GARDEN_SLOTS;
-  const valid = list.filter((s) => isValidGardenCenter(s.x, s.y));
+  const valid = filterNonOverlappingSlots(list);
   return valid.length > 0 ? valid : DEFAULT_PLAYER_GARDEN_SLOTS;
 }
 
 function pickFallbackSlot(usedSlots) {
   const used = new Set(usedSlots);
-  for (const slot of DEFAULT_PLAYER_GARDEN_SLOTS) {
-    const idx = DEFAULT_PLAYER_GARDEN_SLOTS.indexOf(slot);
+  for (let idx = 0; idx < DEFAULT_PLAYER_GARDEN_SLOTS.length; idx += 1) {
     if (!used.has(idx)) return idx;
   }
   return 0;
@@ -114,7 +148,11 @@ module.exports = {
   MAP_H,
   NPC_HOMES,
   DEFAULT_PLAYER_GARDEN_SLOTS,
+  gardenFootprint,
+  countGardenPlots,
+  footprintsOverlap,
   isValidGardenCenter,
+  filterNonOverlappingSlots,
   filterValidGardenSlots,
   pickFallbackSlot,
 };

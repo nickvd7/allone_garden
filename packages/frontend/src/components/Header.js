@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { IconWorld, IconChat, IconBell, IconProfile, IconAdmin } from './HeaderIcons';
 
 const WEATHER_ICONS = {
   sunny: '☀️',
@@ -126,7 +127,7 @@ function Header({
             aria-pressed={worldMapOpen}
             data-tour="world"
           >
-            <span className="header-action-btn__icon" aria-hidden>🗺️</span>
+            <span className="header-action-btn__icon" aria-hidden><IconWorld /></span>
             <span className="header-action-btn__label">{t('header_world_short')}</span>
           </button>
         )}
@@ -139,7 +140,7 @@ function Header({
             title={t('header_menu_social')}
             aria-label={t('header_menu_social')}
           >
-            <span className="header-action-btn__icon" aria-hidden>💬</span>
+            <span className="header-action-btn__icon" aria-hidden><IconChat /></span>
             <span className="header-action-btn__label">{t('chat')}</span>
             {socialBadge > 0 && (
               <span className="header-action-btn__badge" aria-hidden>
@@ -159,7 +160,7 @@ function Header({
             aria-pressed={notificationsOpen}
             data-tour="notifications"
           >
-            <span className="header-action-btn__icon" aria-hidden>🔔</span>
+            <span className="header-action-btn__icon" aria-hidden><IconBell /></span>
             <span className="header-action-btn__label">{t('header_notifications_short')}</span>
             {notificationsBadge > 0 && (
               <span className="header-action-btn__badge" aria-label={t('header_notifications_badge', { count: notificationsBadge, defaultValue: `${notificationsBadge} new` })}>
@@ -183,7 +184,7 @@ function Header({
             }}
             title={username ? `${t('header_profile_title')} — ${username}` : t('header_profile_title')}
           >
-            <span className="header-action-btn__icon" aria-hidden>👤</span>
+            <span className="header-action-btn__icon" aria-hidden><IconProfile /></span>
             <span className="header-action-btn__label header-action-btn__label--profile">
               {t('header_profile_title')}
             </span>
@@ -232,7 +233,8 @@ function Header({
                   className="header-more-item"
                   onClick={() => { setProfileOpen(false); onOpenAdmin(); }}
                 >
-                  ⚙️ {t('header_menu_admin', { defaultValue: 'Admin' })}
+                  <span className="header-more-item__icon" aria-hidden><IconAdmin /></span>
+                  {t('header_menu_admin', { defaultValue: 'Admin' })}
                 </button>
               )}
               {onToggleDark && (

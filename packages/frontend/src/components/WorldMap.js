@@ -244,7 +244,6 @@ function WorldMap({
   onCollectMilk,
 }) {
   const [embeddedViewport, setEmbeddedViewport] = useState({ w: EMBEDDED_VIEW_W, h: EMBEDDED_VIEW_H });
-  const [embeddedMapFit, setEmbeddedMapFit] = useState({ scale: 1 });
   const [worldPois, setWorldPois] = useState(FALLBACK_WORLD_POIS);
   const [activePoi, setActivePoi] = useState(null);
   const [activeInterior, setActiveInterior] = useState(null);
@@ -948,12 +947,8 @@ function WorldMap({
 
       const tw = Math.min(mapW, Math.max(EMBEDDED_MIN_VIEW_W, Math.floor(w / TILE)));
       const th = Math.min(mapH, Math.max(EMBEDDED_MIN_VIEW_H, Math.floor(h / TILE)));
-      const mapPxW = tw * TILE;
-      const mapPxH = th * TILE;
-      const scale = Math.min(1, w / mapPxW, h / mapPxH);
 
       setEmbeddedViewport((prev) => ((prev.w === tw && prev.h === th) ? prev : { w: tw, h: th }));
-      setEmbeddedMapFit((prev) => (prev.scale === scale ? prev : { scale }));
     };
     measure();
 
@@ -1374,7 +1369,7 @@ function WorldMap({
   const atEdgeRight = camX >= maxCamX;
   const atEdgeTop = camY <= 0;
   const atEdgeBottom = camY >= maxCamY;
-  const mapFitScale = embedded ? embeddedMapFit.scale : 1;
+  const mapFitScale = 1;
 
   // ── Render tile grid ──────────────────────────────────────────────────────
   const tiles = useMemo(() => {

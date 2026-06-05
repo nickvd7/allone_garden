@@ -1,5 +1,5 @@
 /**
- * Spiegel van backend gardenSlotRules — vaste slots zonder dok/POI/NPC overlap.
+ * Spiegel van backend gardenSlotRules — vaste slots zonder overlap, volledige 3×3.
  */
 
 export const NPC_HOMES = [
@@ -13,12 +13,12 @@ export const DEFAULT_PLAYER_GARDEN_SLOTS = [
   { x: 28, y: 16 },
   { x: 3, y: 16 },
   { x: 28, y: 3 },
-  { x: 5, y: 9 },
+  { x: 9, y: 5 },
   { x: 26, y: 9 },
   { x: 11, y: 11 },
   { x: 20, y: 11 },
   { x: 6, y: 6 },
-  { x: 25, y: 6 },
-  { x: 11, y: 17 },
-  { x: 20, y: 17 },
+  { x: 22, y: 6 },
+  { x: 8, y: 12 },
+  { x: 17, y: 8 },
 ];
