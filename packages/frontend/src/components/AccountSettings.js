@@ -3,7 +3,8 @@
  *
  * Accessible from the header menu (logged-in users only).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import api, { RateLimitError } from '../hooks/useApi';
 import {
   clearGardenToken,
@@ -41,11 +42,46 @@ const AI_PROVIDERS = [
 ];
 
 export default function AccountSettings({ onClose, onDeleted }) {
+  const { t } = useTranslation();
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteConfirm,  setDeleteConfirm]  = useState(false);
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
   const [pwSuccess,      setPwSuccess]      = useState(false);
+  const [emailDailyDigestEnabled, setEmailDailyDigestEnabled] = useState(true);
+  const [emailWeeklyDigestEnabled, setEmailWeeklyDigestEnabled] = useState(true);
+  const [prefsLoading, setPrefsLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/api/account/preferences')
+      .then((data) => {
+        setEmailDailyDigestEnabled(data?.emailDailyDigestEnabled !== false);
+        setEmailWeeklyDigestEnabled(data?.emailWeeklyDigestEnabled !== false);
+      })
+      .catch(() => {})
+      .finally(() => setPrefsLoading(false));
+  }, []);
+
+  const patchPrefs = useCallback((patch) => {
+    api.patch('/api/account/preferences', patch).catch(() => {
+      setError(t('account_prefs_save_failed', { defaultValue: 'Kon voorkeur niet opslaan' }));
+      throw new Error('save failed');
+    });
+  }, [t]);
+
+  const handleDailyDigestToggle = useCallback((enabled) => {
+    setEmailDailyDigestEnabled(enabled);
+    patchPrefs({ emailDailyDigestEnabled: enabled }).catch(() => {
+      setEmailDailyDigestEnabled(!enabled);
+    });
+  }, [patchPrefs]);
+
+  const handleWeeklyDigestToggle = useCallback((enabled) => {
+    setEmailWeeklyDigestEnabled(enabled);
+    patchPrefs({ emailWeeklyDigestEnabled: enabled }).catch(() => {
+      setEmailWeeklyDigestEnabled(!enabled);
+    });
+  }, [patchPrefs]);
 
   const [currentPw, setCurrentPw] = useState('');
   const [newPw,     setNewPw]     = useState('');
@@ -159,7 +195,43 @@ export default function AccountSettings({ onClose, onDeleted }) {
   return (
     <div style={OVERLAY}>
       <div style={MODAL}>
-        <h2 style={{ marginTop: 0, marginBottom: '24px' }}>Account Settings</h2>
+        <h2 style={{ marginTop: 0, marginBottom: '24px' }}>{t('account_settings', { defaultValue: 'Account Settings' })}</h2>
+
+        {/* E-mailnotificaties */}
+        <div style={SECTION}>
+          <h3 style={{ marginTop: 0 }}>📬 {t('account_email_notifications', { defaultValue: 'E-mailnotificaties' })}</h3>
+          <p style={{ color: '#555', fontSize: '14px', margin: '0 0 12px' }}>
+            {t('account_email_notifications_help', {
+              defaultValue: 'Alleen mail als er iets te melden valt. Dagelijks: berichten, ruilvoorstellen, samenwerking en markt. Wekelijks: tuinoverzicht met je resultaten.',
+            })}
+          </p>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '10px', cursor: prefsLoading ? 'wait' : 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={emailDailyDigestEnabled}
+              disabled={prefsLoading}
+              onChange={(e) => handleDailyDigestToggle(e.target.checked)}
+              style={{ marginTop: '3px' }}
+            />
+            <span style={{ fontSize: '14px', lineHeight: 1.45 }}>
+              {t('account_email_daily_toggle', { defaultValue: 'Dagelijkse samenvatting (max. 1× per dag)' })}
+            </span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: prefsLoading ? 'wait' : 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={emailWeeklyDigestEnabled}
+              disabled={prefsLoading}
+              onChange={(e) => handleWeeklyDigestToggle(e.target.checked)}
+              style={{ marginTop: '3px' }}
+            />
+            <span style={{ fontSize: '14px', lineHeight: 1.45 }}>
+              {t('account_email_weekly_toggle', { defaultValue: 'Wekelijks tuinoverzicht' })}
+            </span>
+          </label>
+        </div>
+
+        <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '0 0 24px' }} />
 
         {/* AI API keys */}
         <div style={SECTION}>

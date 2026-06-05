@@ -3,11 +3,11 @@
  *
  * Covers:
  *  - Initial render (title, provider selector, API key field, identify button)
- *  - Provider switch reloads stored key from localStorage
+ *  - Provider switch reloads stored key from sessionStorage
  *  - Validation: button disabled without an image; error shown without key
  *  - Fetch success → result card with "Plant in garden" button
  *  - Fetch error → error message shown
- *  - "Save key" checkbox stores key to localStorage
+ *  - "Save key" checkbox stores key to sessionStorage
  *  - onClose / onPlantIdentified callbacks
  */
 import React from 'react';
@@ -80,15 +80,15 @@ describe('PlantRecognitionModal — initial render', () => {
 
 describe('PlantRecognitionModal — provider switch', () => {
   beforeEach(() => {
-    localStorage.setItem('garden_apikey_anthropic', 'sk-ant-test-key');
+    sessionStorage.setItem('garden_apikey_anthropic', 'sk-ant-test-key');
   });
   afterEach(() => {
-    localStorage.removeItem('garden_apikey_openai');
-    localStorage.removeItem('garden_apikey_anthropic');
-    localStorage.removeItem('garden_apikey_gemini');
+    sessionStorage.removeItem('garden_apikey_openai');
+    sessionStorage.removeItem('garden_apikey_anthropic');
+    sessionStorage.removeItem('garden_apikey_gemini');
   });
 
-  it('loads stored API key from localStorage when provider is changed', () => {
+  it('loads stored API key from sessionStorage when provider is changed', () => {
     renderModal();
     const select = screen.getByRole('combobox');
     fireEvent.change(select, { target: { value: 'anthropic' } });
@@ -245,11 +245,11 @@ describe('PlantRecognitionModal — fetch error', () => {
 
 describe('PlantRecognitionModal — save key checkbox', () => {
   afterEach(() => {
-    localStorage.removeItem('garden_apikey_openai');
+    sessionStorage.removeItem('garden_apikey_openai');
     jest.restoreAllMocks();
   });
 
-  it('saves the key to localStorage when checkbox is ticked and form is submitted', async () => {
+  it('saves the key to sessionStorage when checkbox is ticked and form is submitted', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok:   true,
       json: async () => ({ plant: 'Tomato', slug: 'tomato', confidence: 80 }),
@@ -276,7 +276,7 @@ describe('PlantRecognitionModal — save key checkbox', () => {
     fireEvent.click(await screen.findByRole('button', { name: /identify plant/i }));
 
     await waitFor(() => {
-      expect(localStorage.getItem('garden_apikey_openai')).toBe('sk-save-me');
+      expect(sessionStorage.getItem('garden_apikey_openai')).toBe('sk-save-me');
     });
 
     window.FileReader = originalFileReader;
@@ -307,7 +307,7 @@ describe('PlantRecognitionModal — save key checkbox', () => {
     fireEvent.click(await screen.findByRole('button', { name: /identify plant/i }));
 
     await screen.findByText(/Tomato/);
-    expect(localStorage.getItem('garden_apikey_openai')).toBeNull();
+    expect(sessionStorage.getItem('garden_apikey_openai')).toBeNull();
 
     window.FileReader = originalFileReader;
   });

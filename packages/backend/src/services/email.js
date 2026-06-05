@@ -17,6 +17,8 @@ const {
   accountCreated: tplAccountCreated,
   usernameReminder: tplUsernameReminder,
   passwordChanged: tplPasswordChanged,
+  activityDigest: tplActivityDigest,
+  weeklyDigest: tplWeeklyDigest,
   normalizeLang,
 } = require('./emailTemplates');
 
@@ -143,6 +145,46 @@ async function sendPasswordChanged(toEmail, username, lang = 'nl') {
   return sendMailSafe('password changed', toEmail, mail);
 }
 
+async function sendActivityDigest(toEmail, activity) {
+  const normalized = {
+    username: activity.username,
+    lang: normalizeLang(activity.lang),
+    dmCount: Math.max(0, Number(activity.dmCount) || 0),
+    groupCount: Math.max(0, Number(activity.groupCount) || 0),
+    pendingTradeProposals: Math.max(0, Number(activity.pendingTradeProposals) || 0),
+    pendingCollaborateProposals: Math.max(0, Number(activity.pendingCollaborateProposals) || 0),
+    tradesSold: Math.max(0, Number(activity.tradesSold) || 0),
+    tradesBought: Math.max(0, Number(activity.tradesBought) || 0),
+    wikiRevisions: Math.max(0, Number(activity.wikiRevisions) || 0),
+    wikiAdminPending: Math.max(0, Number(activity.wikiAdminPending) || 0),
+  };
+
+  const total = normalized.dmCount
+    + normalized.groupCount
+    + normalized.pendingTradeProposals
+    + normalized.pendingCollaborateProposals
+    + normalized.tradesSold
+    + normalized.tradesBought
+    + normalized.wikiRevisions
+    + normalized.wikiAdminPending;
+  if (total === 0) return false;
+
+  const mail = tplActivityDigest({
+    ...normalized,
+    appUrl: APP_URL(),
+  });
+  return sendMailSafe('activity digest', toEmail, mail);
+}
+
+async function sendWeeklyDigest(toEmail, summary) {
+  const mail = tplWeeklyDigest({
+    ...summary,
+    appUrl: APP_URL(),
+    lang: normalizeLang(summary.lang),
+  });
+  return sendMailSafe('weekly digest', toEmail, mail);
+}
+
 function isEmailConfigured() {
   return !!(process.env.SENDGRID_API_KEY || process.env.SMTP_HOST);
 }
@@ -153,6 +195,8 @@ module.exports = {
   sendAccountCreated,
   sendUsernameReminder,
   sendPasswordChanged,
+  sendActivityDigest,
+  sendWeeklyDigest,
   isEmailConfigured,
   normalizeLang,
 };

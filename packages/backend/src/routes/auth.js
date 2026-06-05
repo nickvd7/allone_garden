@@ -178,7 +178,7 @@ router.post('/login', authLimiter, validateLogin, async (req, res) => {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      await db.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+      await db.query('UPDATE users SET last_login = NOW(), last_active_at = NOW() WHERE id = $1', [user.id]);
       updateMemEntry(safeUser(user));
       auditLog('login', req, { userId: user.id });
       const token = makeToken(user);

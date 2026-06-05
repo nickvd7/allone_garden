@@ -51,6 +51,11 @@
   "header_menu_inventory": "Inventory",
   "account_settings": "Account settings",
   "profile_hide_movement": "Hide movement buttons",
+  "account_email_notifications": "Email notifications",
+  "account_email_notifications_help": "Only when there is something to report. Daily: messages, trade offers, collaboration and market activity. Weekly: garden summary with your results.",
+  "account_email_daily_toggle": "Daily summary (max once per day)",
+  "account_email_weekly_toggle": "Weekly garden overview",
+  "account_prefs_save_failed": "Could not save preference",
 
   "visit": "Visit",
   "help": "Help",

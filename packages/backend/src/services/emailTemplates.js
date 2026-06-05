@@ -205,6 +205,174 @@ function passwordChanged({ username, lang }) {
   return { subject: t.subject, text, html };
 }
 
+function activityDigest({
+  username,
+  dmCount,
+  groupCount,
+  pendingTradeProposals = 0,
+  pendingCollaborateProposals = 0,
+  tradesSold = 0,
+  tradesBought = 0,
+  wikiRevisions = 0,
+  wikiAdminPending = 0,
+  appUrl,
+  lang,
+}) {
+  const t = pick(lang, {
+    nl: {
+      subject: 'AllOne Garden — je hebt nieuwe meldingen 🌱',
+      title: 'Er wacht iets op je in de tuin',
+      hi: `Hoi ${username},`,
+      intro: 'Je bent een dag niet actief geweest. Dit is er gebeurd:',
+      dm: (n) => (n === 1 ? '1 nieuw direct bericht' : `${n} nieuwe directe berichten`),
+      group: (n) => (n === 1 ? '1 nieuw groepsbericht' : `${n} nieuwe groepsberichten`),
+      tradeProposal: (n) => (n === 1 ? '1 nieuw ruilvoorstel' : `${n} nieuwe ruilvoorstellen`),
+      collaborateProposal: (n) => (n === 1 ? '1 samenwerkverzoek' : `${n} samenwerkverzoeken`),
+      tradeSold: (n) => (n === 1 ? '1 keer iets verkocht op de markt' : `${n}× verkocht op de markt`),
+      tradeBought: (n) => (n === 1 ? '1 marktaankoop' : `${n} marktaankopen`),
+      wikiRevision: (n) => (n === 1 ? '1 wiki-voorstel wacht op aanpassing' : `${n} wiki-voorstellen wachten op aanpassing`),
+      wikiAdmin: (n) => (n === 1 ? '1 wiki-voorstel wacht op beoordeling (beheerder)' : `${n} wiki-voorstellen wachten op beoordeling (beheerder)`),
+      cta: 'Open AllOne Garden',
+      prefs: 'Dagelijkse mail uitzetten? Accountinstellingen → E-mailnotificaties.',
+      footer: 'AllOne Garden — community tuinspel',
+    },
+    en: {
+      subject: 'AllOne Garden — you have new notifications 🌱',
+      title: 'Something is waiting in the garden',
+      hi: `Hi ${username},`,
+      intro: 'You have been away for a day. Here is what happened:',
+      dm: (n) => (n === 1 ? '1 new direct message' : `${n} new direct messages`),
+      group: (n) => (n === 1 ? '1 new group message' : `${n} new group messages`),
+      tradeProposal: (n) => (n === 1 ? '1 new trade offer' : `${n} new trade offers`),
+      collaborateProposal: (n) => (n === 1 ? '1 collaboration request' : `${n} collaboration requests`),
+      tradeSold: (n) => (n === 1 ? '1 market sale' : `${n} market sales`),
+      tradeBought: (n) => (n === 1 ? '1 market purchase' : `${n} market purchases`),
+      wikiRevision: (n) => (n === 1 ? '1 wiki proposal needs revision' : `${n} wiki proposals need revision`),
+      wikiAdmin: (n) => (n === 1 ? '1 wiki proposal awaiting review (admin)' : `${n} wiki proposals awaiting review (admin)`),
+      cta: 'Open AllOne Garden',
+      prefs: 'Turn off daily emails in Account settings → Email notifications.',
+      footer: 'AllOne Garden — community gardening game',
+    },
+  });
+
+  const lines = [];
+  if (dmCount > 0) lines.push(`• ${t.dm(dmCount)}`);
+  if (groupCount > 0) lines.push(`• ${t.group(groupCount)}`);
+  if (pendingTradeProposals > 0) lines.push(`• ${t.tradeProposal(pendingTradeProposals)}`);
+  if (pendingCollaborateProposals > 0) lines.push(`• ${t.collaborateProposal(pendingCollaborateProposals)}`);
+  if (tradesSold > 0) lines.push(`• ${t.tradeSold(tradesSold)}`);
+  if (tradesBought > 0) lines.push(`• ${t.tradeBought(tradesBought)}`);
+  if (wikiRevisions > 0) lines.push(`• ${t.wikiRevision(wikiRevisions)}`);
+  if (wikiAdminPending > 0) lines.push(`• ${t.wikiAdmin(wikiAdminPending)}`);
+
+  const text = [
+    t.hi,
+    '',
+    t.intro,
+    ...lines,
+    '',
+    appUrl,
+    '',
+    t.prefs,
+    '',
+    `— ${t.footer}`,
+  ].join('\n');
+
+  const listHtml = lines.map((line) => `<li>${line.replace(/^•\s*/, '')}</li>`).join('');
+  const html = layout({
+    lang,
+    title: t.title,
+    bodyHtml: `<p>${t.hi}</p><p>${t.intro}</p><ul style="padding-left:1.2rem;">${listHtml}</ul>${cta(appUrl, t.cta)}<p style="font-size:0.85rem;color:#666;">${t.prefs}</p>`,
+    footer: t.footer,
+  });
+
+  return { subject: t.subject, text, html };
+}
+
+function weeklyDigest({
+  username,
+  level,
+  xp,
+  coins,
+  plantsGrown,
+  currentDay,
+  seasonKey,
+  dmCount,
+  groupCount,
+  pendingProposals,
+  appUrl,
+  lang,
+}) {
+  const seasonLabel = pick(lang, {
+    nl: {
+      spring: 'lente', summer: 'zomer', autumn: 'herfst', winter: 'winter',
+    },
+    en: {
+      spring: 'spring', summer: 'summer', autumn: 'autumn', winter: 'winter',
+    },
+  });
+  const season = seasonLabel[seasonKey] || seasonKey;
+
+  const t = pick(lang, {
+    nl: {
+      subject: 'AllOne Garden — jouw weekoverzicht 🌱',
+      title: 'Jouw tuin in cijfers',
+      hi: `Hoi ${username},`,
+      intro: 'Dit is je weekoverzicht — alleen als er iets te melden valt:',
+      stats: `Level ${level} · ${xp} XP · ${coins} munten · ${plantsGrown} planten geoogst`,
+      garden: `Tuindag ${currentDay} · ${season}`,
+      dm: (n) => (n === 1 ? '1 bericht ontvangen' : `${n} berichten ontvangen`),
+      group: (n) => (n === 1 ? '1 groepsbericht' : `${n} groepsberichten`),
+      proposals: (n) => (n === 1 ? '1 openstaand ruilvoorstel' : `${n} openstaande ruilvoorstellen`),
+      cta: 'Open AllOne Garden',
+      prefs: 'Wekelijkse mail uitzetten? Accountinstellingen → E-mailnotificaties.',
+      footer: 'AllOne Garden — community tuinspel',
+    },
+    en: {
+      subject: 'AllOne Garden — your weekly summary 🌱',
+      title: 'Your garden in numbers',
+      hi: `Hi ${username},`,
+      intro: 'Your weekly summary — only sent when there is something to share:',
+      stats: `Level ${level} · ${xp} XP · ${coins} coins · ${plantsGrown} plants harvested`,
+      garden: `Garden day ${currentDay} · ${season}`,
+      dm: (n) => (n === 1 ? '1 message received' : `${n} messages received`),
+      group: (n) => (n === 1 ? '1 group message' : `${n} group messages`),
+      proposals: (n) => (n === 1 ? '1 pending trade proposal' : `${n} pending trade proposals`),
+      cta: 'Open AllOne Garden',
+      prefs: 'Turn off under Account settings → Email notifications.',
+      footer: 'AllOne Garden — community gardening game',
+    },
+  });
+
+  const lines = [`• ${t.stats}`, `• ${t.garden}`];
+  if (dmCount > 0) lines.push(`• ${t.dm(dmCount)}`);
+  if (groupCount > 0) lines.push(`• ${t.group(groupCount)}`);
+  if (pendingProposals > 0) lines.push(`• ${t.proposals(pendingProposals)}`);
+
+  const text = [
+    t.hi,
+    '',
+    t.intro,
+    ...lines,
+    '',
+    appUrl,
+    '',
+    t.prefs,
+    '',
+    `— ${t.footer}`,
+  ].join('\n');
+
+  const listHtml = lines.map((line) => `<li>${line.replace(/^•\s*/, '')}</li>`).join('');
+  const html = layout({
+    lang,
+    title: t.title,
+    bodyHtml: `<p>${t.hi}</p><p>${t.intro}</p><ul style="padding-left:1.2rem;">${listHtml}</ul>${cta(appUrl, t.cta)}<p style="font-size:0.85rem;color:#666;">${t.prefs}</p>`,
+    footer: t.footer,
+  });
+
+  return { subject: t.subject, text, html };
+}
+
 module.exports = {
   normalizeLang,
   passwordReset,
@@ -212,4 +380,6 @@ module.exports = {
   accountCreated,
   usernameReminder,
   passwordChanged,
+  activityDigest,
+  weeklyDigest,
 };

@@ -251,6 +251,11 @@ if (require.main === module) {
     } catch (e) {
       console.warn('[push] scheduler:', e.message);
     }
+    try {
+      require('./digestScheduler').startDigestScheduler();
+    } catch (e) {
+      console.warn('[digest] scheduler:', e.message);
+    }
   });
 }
 

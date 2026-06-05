@@ -10,6 +10,8 @@ const { validateGardenAction, validateGardenSave } = require('../middleware/vali
 const contentStore = require('../state/contentStore');
 const { updateMemGardenDay } = require('./leaderboard');
 const { recordSeasonScoresOnGardenSave } = require('./leaderboardSeasonHistory');
+const { syncPlayerStats } = require('../lib/playerStats');
+const { touchLastActive } = require('../services/digestService');
 const worldRoutes = require('./world');
 const { loadInventory, addCrop, syncInventory } = require('../lib/inventory');
 
@@ -46,10 +48,11 @@ function defaultGarden() {
 
 router.get('/', requireAuth, async (req, res) => {
   const { userId } = req.user;
+  touchLastActive(userId).catch(() => {});
 
   if (db.isConnected()) {
     const result = await db.query(
-      'SELECT plots, current_day, weather, updated_at FROM gardens WHERE user_id = $1',
+      'SELECT plots, current_day, weather, structures, updated_at FROM gardens WHERE user_id = $1',
       [userId]
     );
 
@@ -60,7 +63,7 @@ router.get('/', requireAuth, async (req, res) => {
          VALUES ($1, $2, $3, $4)`,
         [userId, JSON.stringify(def.plots), def.currentDay, def.weather]
       );
-      return res.json({ ...def, inventory: {}, serverUpdatedAt: null });
+      return res.json({ ...def, inventory: {}, structures: {}, serverUpdatedAt: null });
     }
 
     const row = result.rows[0];
@@ -87,6 +90,7 @@ router.get('/', requireAuth, async (req, res) => {
         currentDay: newDay,
         weather: newWeather,
         inventory,
+        structures: row.structures || {},
         serverUpdatedAt: new Date().toISOString(),
         autoAdvanced: daysToAdvance,
       });
@@ -97,6 +101,7 @@ router.get('/', requireAuth, async (req, res) => {
       currentDay: row.current_day,
       weather: row.weather,
       inventory,
+      structures: row.structures || {},
       serverUpdatedAt,
     });
   }
@@ -112,7 +117,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAuth, validateGardenSave, async (req, res) => {
   const { userId } = req.user;
-  const { plots, currentDay, weather, ifUnmodifiedSince, inventory } = req.body;
+  const { plots, currentDay, weather, ifUnmodifiedSince, inventory, playerStats, structures } = req.body;
 
   if (!plots || !Array.isArray(plots)) {
     return res.status(400).json({ error: 'plots array required' });
@@ -121,7 +126,7 @@ router.post('/', requireAuth, validateGardenSave, async (req, res) => {
   if (db.isConnected()) {
     const newDay = currentDay || 1;
     const prev = await db.query(
-      'SELECT current_day, updated_at, plots, weather FROM gardens WHERE user_id = $1',
+      'SELECT current_day, updated_at, plots, weather, structures FROM gardens WHERE user_id = $1',
       [userId]
     );
     let oldDay = 1;
@@ -142,23 +147,34 @@ router.post('/', requireAuth, validateGardenSave, async (req, res) => {
             plots:      row.plots,
             currentDay: row.current_day,
             weather:    row.weather,
+            structures: row.structures || {},
           },
         });
       }
     }
 
+    const structuresJson = structures && typeof structures === 'object' && !Array.isArray(structures)
+      ? structures
+      : (prev.rows[0]?.structures || {});
+
     await db.query(
-      `INSERT INTO gardens (user_id, plots, current_day, weather, updated_at)
-       VALUES ($1, $2, $3, $4, NOW())
+      `INSERT INTO gardens (user_id, plots, current_day, weather, structures, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
        ON CONFLICT (user_id) DO UPDATE
          SET plots = EXCLUDED.plots,
              current_day = EXCLUDED.current_day,
              weather = EXCLUDED.weather,
+             structures = EXCLUDED.structures,
              updated_at = NOW()`,
-      [userId, JSON.stringify(plots), newDay, weather || 'sunny']
+      [userId, JSON.stringify(plots), newDay, weather || 'sunny', JSON.stringify(structuresJson)]
     );
 
     await recordSeasonScoresOnGardenSave(userId, oldDay, newDay);
+
+    if (playerStats) {
+      await syncPlayerStats(userId, playerStats, req.user.username);
+    }
+    await touchLastActive(userId);
 
     let syncedInventory = null;
     if (inventory && typeof inventory === 'object') {
@@ -181,8 +197,12 @@ router.post('/', requireAuth, validateGardenSave, async (req, res) => {
     currentDay: currentDay || 1,
     weather: weather || 'sunny',
     inventory: inventory || memGardens[userId]?.inventory || {},
+    structures: structures || memGardens[userId]?.structures || {},
   };
   updateMemGardenDay(userId, currentDay || 1);
+  if (playerStats) {
+    await syncPlayerStats(userId, playerStats, req.user.username);
+  }
   emitGardenPreviewUpdated(req, userId);
   res.json({ success: true });
 });
@@ -339,7 +359,8 @@ router.post('/nextday', requireAuth, async (req, res) => {
     return { ...plot, daysPlanted: growthDays, waterLevel: newWaterLevel, pest: hasPest };
   });
 
-  garden.currentDay = (garden.currentDay || 1) + 1;
+  const oldDay = garden.currentDay || 1;
+  garden.currentDay = oldDay + 1;
   garden.weather = nextWeather;
 
   if (db.isConnected()) {
@@ -349,6 +370,10 @@ router.post('/nextday', requireAuth, async (req, res) => {
        WHERE user_id = $4`,
       [JSON.stringify(garden.plots), garden.currentDay, nextWeather, userId]
     );
+    await recordSeasonScoresOnGardenSave(userId, oldDay, garden.currentDay);
+    await touchLastActive(userId);
+  } else {
+    updateMemGardenDay(userId, garden.currentDay);
   }
 
   let serverUpdatedAt = null;

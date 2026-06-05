@@ -300,6 +300,7 @@ function App() {
           currentDay: data.currentDay || prev.currentDay,
           weather:    data.weather    || prev.weather,
           inventory:  data.inventory ? { ...prev.inventory, ...data.inventory } : prev.inventory,
+          structures: data.structures ? { ...prev.structures, ...data.structures } : prev.structures,
           playerStats: {
             xp:          authUser.xp          || 0,
             coins:       authUser.coins        || 100,
@@ -311,6 +312,12 @@ function App() {
       .catch(() => {}); // backend garden not found — use defaults
   }, [authUser, backendUp, hasServerAuth]);
 
+  useEffect(() => {
+    if (!authUser?.language) return;
+    localStorage.setItem('garden_lang', authUser.language);
+    i18n.changeLanguage(authUser.language);
+  }, [authUser?.id, authUser?.language, i18n]);
+
   // ── Auto-save garden to backend (debounced, 3 s after last change) ────────────
   const saveGarden = useCallback((state) => {
     if (!backendUp) return;
@@ -319,6 +326,8 @@ function App() {
       currentDay: state.currentDay,
       weather:    state.weather,
       inventory:  state.inventory,
+      structures: state.structures,
+      playerStats: state.playerStats,
     };
     const since = localStorage.getItem(GARDEN_SERVER_UPDATED_KEY);
     if (since) payload.ifUnmodifiedSince = since;
@@ -344,6 +353,7 @@ function App() {
               plots: server.plots?.length ? server.plots : prev.plots,
               currentDay: server.currentDay ?? prev.currentDay,
               weather: server.weather ?? prev.weather,
+              structures: server.structures ? { ...prev.structures, ...server.structures } : prev.structures,
             }));
             return;
           }
@@ -623,8 +633,9 @@ function App() {
     setAuthUser(user);
     setAuthToken(token);
     if (user.id !== 0) setBackendUp(true);
-    const savedLang = localStorage.getItem('garden_lang');
-    if (savedLang) i18n.changeLanguage(savedLang);
+    const lang = user.language || localStorage.getItem('garden_lang') || 'nl';
+    localStorage.setItem('garden_lang', lang);
+    i18n.changeLanguage(lang);
     track('session_start', { level: user.level || 1 });
     setGameState((prev) => ({
       ...prev,
@@ -697,7 +708,10 @@ function App() {
   const handleLanguageChange = useCallback((lang) => {
     localStorage.setItem('garden_lang', lang);
     i18n.changeLanguage(lang);
-  }, [i18n]);
+    if (hasServerAuth) {
+      api.patch('/api/account/preferences', { preferredLanguage: lang }).catch(() => {});
+    }
+  }, [hasServerAuth, i18n]);
 
   const handleHideMovementToggle = useCallback((hide) => {
     setHideMovementControls(hide);

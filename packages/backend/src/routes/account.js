@@ -15,6 +15,24 @@ const { requireAuth }            = require('../middleware/auth');
 const { handleValidationErrors } = require('../middleware/validate');
 const { auditLog, accountLimiter } = require('../middleware/security');
 const { revokeUserTokens }       = require('../redis');
+const { normalizeLang }          = require('../services/emailTemplates');
+
+const SUPPORTED_LANGS = new Set(['nl', 'en', 'de', 'fr', 'es', 'pt', 'ru', 'it', 'pl', 'tr', 'ja', 'ko', 'zh', 'ar', 'hi', 'id', 'vi', 'uk', 'el']);
+
+function prefsFromRow(row) {
+  if (!row) return null;
+  return {
+    emailDailyDigestEnabled: row.emailDailyDigestEnabled !== false,
+    emailWeeklyDigestEnabled: row.emailWeeklyDigestEnabled !== false,
+    preferredLanguage: row.preferredLanguage || 'nl',
+  };
+}
+
+const DEFAULT_PREFS = {
+  emailDailyDigestEnabled: true,
+  emailWeeklyDigestEnabled: true,
+  preferredLanguage: 'nl',
+};
 
 const BCRYPT_ROUNDS = Math.max(10, Math.min(15, parseInt(process.env.BCRYPT_ROUNDS || '12', 10)));
 
@@ -172,6 +190,103 @@ router.delete('/', accountLimiter, requireAuth, validateDeleteAccount, async (re
     res.status(500).json({ error: 'Deletion failed' });
   } finally {
     client.release();
+  }
+});
+
+// ── GET /api/account/preferences ──────────────────────────────────────────────
+
+router.get('/preferences', requireAuth, async (req, res) => {
+  const { userId } = req.user;
+  if (!db.isConnected()) {
+    return res.json(DEFAULT_PREFS);
+  }
+  try {
+    const result = await db.query(
+      `SELECT
+         COALESCE(email_daily_digest_enabled, email_digest_enabled, TRUE) AS "emailDailyDigestEnabled",
+         COALESCE(email_weekly_digest_enabled, email_digest_enabled, TRUE) AS "emailWeeklyDigestEnabled",
+         preferred_language AS "preferredLanguage"
+       FROM users WHERE id = $1`,
+      [userId],
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'Account not found' });
+    return res.json(prefsFromRow(result.rows[0]));
+  } catch (err) {
+    console.error('[account] preferences read error:', err.message);
+    return res.status(500).json({ error: 'Could not load preferences' });
+  }
+});
+
+// ── PATCH /api/account/preferences ────────────────────────────────────────────
+
+router.patch('/preferences', accountLimiter, requireAuth, [
+  body('emailDailyDigestEnabled').optional().isBoolean().withMessage('emailDailyDigestEnabled must be boolean'),
+  body('emailWeeklyDigestEnabled').optional().isBoolean().withMessage('emailWeeklyDigestEnabled must be boolean'),
+  body('preferredLanguage').optional().isString().isLength({ min: 2, max: 10 }),
+  handleValidationErrors,
+], async (req, res) => {
+  const { userId } = req.user;
+  const {
+    emailDailyDigestEnabled,
+    emailWeeklyDigestEnabled,
+    preferredLanguage,
+  } = req.body;
+
+  if (
+    emailDailyDigestEnabled === undefined
+    && emailWeeklyDigestEnabled === undefined
+    && preferredLanguage === undefined
+  ) {
+    return res.status(400).json({ error: 'No preferences to update' });
+  }
+
+  if (!db.isConnected()) {
+    return res.status(503).json({ error: 'Database required for preferences' });
+  }
+
+  if (preferredLanguage !== undefined) {
+    const lang = normalizeLang(preferredLanguage);
+    if (!SUPPORTED_LANGS.has(lang)) {
+      return res.status(400).json({ error: 'Unsupported language' });
+    }
+  }
+
+  try {
+    const sets = [];
+    const values = [];
+    let idx = 1;
+
+    if (emailDailyDigestEnabled !== undefined) {
+      sets.push(`email_daily_digest_enabled = $${idx++}`);
+      values.push(!!emailDailyDigestEnabled);
+    }
+    if (emailWeeklyDigestEnabled !== undefined) {
+      sets.push(`email_weekly_digest_enabled = $${idx++}`);
+      values.push(!!emailWeeklyDigestEnabled);
+    }
+    if (preferredLanguage !== undefined) {
+      sets.push(`preferred_language = $${idx++}`);
+      values.push(normalizeLang(preferredLanguage));
+    }
+
+    values.push(userId);
+    await db.query(
+      `UPDATE users SET ${sets.join(', ')} WHERE id = $${idx}`,
+      values,
+    );
+
+    const result = await db.query(
+      `SELECT
+         COALESCE(email_daily_digest_enabled, email_digest_enabled, TRUE) AS "emailDailyDigestEnabled",
+         COALESCE(email_weekly_digest_enabled, email_digest_enabled, TRUE) AS "emailWeeklyDigestEnabled",
+         preferred_language AS "preferredLanguage"
+       FROM users WHERE id = $1`,
+      [userId],
+    );
+    return res.json(prefsFromRow(result.rows[0]));
+  } catch (err) {
+    console.error('[account] preferences update error:', err.message);
+    return res.status(500).json({ error: 'Could not save preferences' });
   }
 });
 

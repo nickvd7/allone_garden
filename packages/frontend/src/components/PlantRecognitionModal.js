@@ -4,7 +4,7 @@
  * User uploads or captures a photo → backend calls their chosen AI provider
  * (OpenAI / Anthropic / Gemini) → identified plant is offered for auto-planting.
  *
- * API keys are read from localStorage (stored by AccountSettings) and are
+ * API keys are read from sessionStorage (stored by AccountSettings) and are
  * NEVER persisted server-side.
  */
 import React, { useState, useRef } from 'react';
@@ -19,7 +19,7 @@ const PROVIDERS = [
 
 function getStoredKey(providerId) {
   const p = PROVIDERS.find((x) => x.id === providerId);
-  return p ? (localStorage.getItem(p.storageKey) || '') : '';
+  return p ? (sessionStorage.getItem(p.storageKey) || '') : '';
 }
 
 export default function PlantRecognitionModal({ onClose, onPlantIdentified, embedded = false }) {
@@ -60,7 +60,7 @@ export default function PlantRecognitionModal({ onClose, onPlantIdentified, embe
 
     if (saveKey) {
       const p = PROVIDERS.find((x) => x.id === provider);
-      if (p) localStorage.setItem(p.storageKey, apiKey.trim());
+      if (p) sessionStorage.setItem(p.storageKey, apiKey.trim());
     }
 
     setStatus('loading');
@@ -136,7 +136,7 @@ export default function PlantRecognitionModal({ onClose, onPlantIdentified, embe
                 checked={saveKey}
                 onChange={(e) => setSaveKey(e.target.checked)}
               />
-              {' '}Save key locally (localStorage only, never sent to our server except this request)
+              {' '}Save key for this session (sessionStorage only, never sent to our server except this request)
             </label>
           </div>
 

@@ -247,6 +247,8 @@ router.post('/quick-sell', requireAuth, tradeLimiter, async (req, res) => {
       const coinsResult = await client.query('SELECT coins FROM users WHERE id = $1', [userId]);
       await client.query('COMMIT');
       const inventory = await loadInventory(userId);
+      const { refreshMemEntryFromDb } = require('../lib/playerStats');
+      await refreshMemEntryFromDb(userId);
       return res.json({
         success: true,
         earned,

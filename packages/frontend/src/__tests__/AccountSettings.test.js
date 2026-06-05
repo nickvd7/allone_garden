@@ -12,19 +12,32 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AccountSettings from '../components/AccountSettings';
+import api from '../hooks/useApi';
 
-// Mock api
 jest.mock('../hooks/useApi', () => ({
   __esModule: true,
-  default: { delete: jest.fn() },
+  default: {
+    delete: jest.fn(),
+    get: jest.fn(),
+    patch: jest.fn(),
+  },
   RateLimitError: class RateLimitError extends Error {},
 }));
 
-// Mock fetch for PATCH /api/account/password and GET /api/account/export
 let localStore = {};
+let storageSpy;
+
 beforeEach(() => {
   localStore = { garden_token: 'test-token' };
-  jest.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => localStore[k] ?? null);
+  storageSpy = jest.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => localStore[k] ?? null);
+  api.get.mockResolvedValue({
+    emailDailyDigestEnabled: true,
+    emailWeeklyDigestEnabled: true,
+  });
+  api.patch.mockResolvedValue({
+    emailDailyDigestEnabled: true,
+    emailWeeklyDigestEnabled: true,
+  });
 
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
@@ -32,9 +45,20 @@ beforeEach(() => {
     blob: () => Promise.resolve(new Blob(['{}'], { type: 'application/json' })),
   });
 });
-afterEach(() => jest.restoreAllMocks());
+
+afterEach(() => {
+  storageSpy.mockRestore();
+  jest.clearAllMocks();
+});
 
 describe('AccountSettings — rendering', () => {
+  it('renders daily and weekly email toggles', async () => {
+    render(<AccountSettings onClose={() => {}} onDeleted={() => {}} />);
+    expect(await screen.findByRole('heading', { name: /E-mailnotificaties|Email notifications/i })).toBeInTheDocument();
+    expect(screen.getByText(/Dagelijkse samenvatting|Daily summary/i)).toBeInTheDocument();
+    expect(screen.getByText(/Wekelijks tuinoverzicht|Weekly garden overview/i)).toBeInTheDocument();
+  });
+
   it('renders Change password section', () => {
     render(<AccountSettings onClose={() => {}} onDeleted={() => {}} />);
     expect(screen.getByText(/Change password/i)).toBeInTheDocument();

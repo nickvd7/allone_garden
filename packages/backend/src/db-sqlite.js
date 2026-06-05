@@ -75,6 +75,30 @@ function initSchema() {
     // column already exists
   }
 
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN email_digest_enabled INTEGER NOT NULL DEFAULT 1`);
+  } catch {
+    /* exists */
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN email_daily_digest_enabled INTEGER NOT NULL DEFAULT 1`);
+  } catch {
+    /* exists */
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN email_weekly_digest_enabled INTEGER NOT NULL DEFAULT 1`);
+  } catch {
+    /* exists */
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN last_active_at DATETIME DEFAULT (datetime('now'))`);
+  } catch {
+    /* exists */
+  }
+
   // gardens — stores the full plot JSON per user
   db.exec(`
     CREATE TABLE IF NOT EXISTS gardens (
@@ -220,6 +244,19 @@ function initSchema() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_group_chat_messages_group
     ON group_chat_messages (group_id, created_at)
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notification_email_log (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      kind       TEXT NOT NULL DEFAULT 'digest',
+      sent_at    DATETIME NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_notification_email_log_user
+    ON notification_email_log (user_id, sent_at)
   `);
 
   db.exec(`

@@ -60,6 +60,11 @@
   "header_menu_inventory": "Inventaris",
   "account_settings": "Accountinstellingen",
   "profile_hide_movement": "Bewegingsknoppen verbergen",
+  "account_email_notifications": "E-mailnotificaties",
+  "account_email_notifications_help": "Alleen mail als er iets te melden valt. Dagelijks: berichten, ruilvoorstellen, samenwerking en markt. Wekelijks: tuinoverzicht met je resultaten.",
+  "account_email_daily_toggle": "Dagelijkse samenvatting (max. 1× per dag)",
+  "account_email_weekly_toggle": "Wekelijks tuinoverzicht",
+  "account_prefs_save_failed": "Kon voorkeur niet opslaan",
 
   "visit": "Bezoek",
   "help": "Help",

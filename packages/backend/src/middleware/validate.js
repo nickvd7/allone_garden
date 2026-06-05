@@ -134,6 +134,23 @@ const validateGardenSave = [
     .isISO8601()
     .withMessage('ifUnmodifiedSince must be a valid ISO-8601 date'),
 
+  body('playerStats')
+    .optional()
+    .custom((stats) => {
+      if (stats === null || stats === undefined) return true;
+      if (typeof stats !== 'object' || Array.isArray(stats)) {
+        throw new Error('playerStats must be an object');
+      }
+      ['xp', 'coins', 'plantsGrown'].forEach((key) => {
+        if (stats[key] === undefined) return;
+        const n = Number(stats[key]);
+        if (!Number.isFinite(n) || n < 0 || n > 10_000_000) {
+          throw new Error(`${key} must be a number between 0 and 10000000`);
+        }
+      });
+      return true;
+    }),
+
   handleValidationErrors,
 ];
 
