@@ -25,10 +25,14 @@ function AuthScreen({ onLogin, allowGuest = true }) {
     language: typeof localStorage !== 'undefined' ? (localStorage.getItem('garden_lang') || 'nl') : 'nl',
     token: '',
     newPassword: '',
+    setupSecret: '',
   });
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [setupSecretConfigured, setSetupSecretConfigured] = useState(true);
+  const [setupChecked, setSetupChecked] = useState(!API);
 
   const update = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -41,6 +45,23 @@ function AuthScreen({ onLogin, allowGuest = true }) {
     if (tok) { setForm((prev) => ({ ...prev, token: tok })); switchMode('reset'); }
   }, []);
 
+  useEffect(() => {
+    if (!API) return undefined;
+    let cancelled = false;
+    axios.get(`${API}/api/auth/setup-status`)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.data?.needsSetup) {
+          setNeedsSetup(true);
+          setMode('setup');
+        }
+        setSetupSecretConfigured(res.data?.setupSecretConfigured !== false);
+        setSetupChecked(true);
+      })
+      .catch(() => { if (!cancelled) setSetupChecked(true); });
+    return () => { cancelled = true; };
+  }, []);
+
   const applyLanguage = (code) => {
     localStorage.setItem('garden_lang', code);
     i18n.changeLanguage(code);
@@ -51,7 +72,7 @@ function AuthScreen({ onLogin, allowGuest = true }) {
     setError('');
     setSuccess('');
 
-    if (mode === 'register') {
+    if (mode === 'register' || mode === 'setup') {
       if (form.password !== form.passwordConfirm) {
         setError(t('auth.password_mismatch'));
         return;
@@ -62,23 +83,43 @@ function AuthScreen({ onLogin, allowGuest = true }) {
     setLoading(true);
 
     try {
-      if (mode === 'login' || mode === 'register') {
-        const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-        const body =
-          mode === 'login'
-            ? { username: form.username, password: form.password }
-            : { username: form.username, email: form.email, password: form.password };
+      if (mode === 'login' || mode === 'register' || mode === 'setup') {
+        const endpoint = mode === 'login'
+          ? '/api/auth/login'
+          : mode === 'setup'
+            ? '/api/auth/setup-admin'
+            : '/api/auth/register';
+        const body = mode === 'login'
+          ? { username: form.username, password: form.password }
+          : mode === 'setup'
+            ? {
+              username: form.username,
+              email: form.email,
+              password: form.password,
+              language: form.language,
+              setupSecret: form.setupSecret,
+            }
+            : {
+              username: form.username,
+              email: form.email,
+              password: form.password,
+              language: form.language,
+            };
 
         const { data } = await axios.post(`${API}${endpoint}`, body, {
           withCredentials: AUTH_HTTPONLY,
         });
         persistGardenToken(data.token);
-        if (mode === 'register') applyLanguage(form.language);
+        if (mode === 'register' || mode === 'setup') applyLanguage(form.language);
         onLogin(data.user, AUTH_HTTPONLY ? null : data.token);
 
       } else if (mode === 'forgot') {
         await axios.post(`${API}/api/auth/forgot-password`, { email: form.email });
         setSuccess(t('auth.forgot_success'));
+
+      } else if (mode === 'forgot-username') {
+        await axios.post(`${API}/api/auth/forgot-username`, { email: form.email });
+        setSuccess(t('auth.forgot_username_success'));
 
       } else if (mode === 'reset') {
         await axios.post(`${API}/api/auth/reset-password`, {
@@ -118,7 +159,20 @@ function AuthScreen({ onLogin, allowGuest = true }) {
         </button>
         <p className="auth-subtitle">{t('auth.tagline')}</p>
 
-        {(mode === 'login' || mode === 'register') && (
+        {mode === 'setup' && (
+          <h2 className="auth-mode-title">⚙️ {t('auth.setup_heading', { defaultValue: 'Admin-account aanmaken' })}</h2>
+        )}
+
+        {needsSetup && mode === 'setup' && (
+          <p className="auth-setup-note">{t('auth.setup_note', { defaultValue: 'Maak het eerste beheerdersaccount aan met je eigen e-mail en wachtwoord.' })}</p>
+        )}
+        {needsSetup && mode === 'setup' && !setupSecretConfigured && (
+          <p className="auth-alert auth-alert--error" role="alert">
+            {t('auth.setup_secret_missing', { defaultValue: 'De server heeft nog geen SETUP_ADMIN_SECRET in .env. Vraag de beheerder dit eerst te configureren.' })}
+          </p>
+        )}
+
+        {(mode === 'login' || mode === 'register') && !needsSetup && (
           <div className="auth-tabs" role="tablist" aria-labelledby="auth-main-title">
             <button
               type="button"
@@ -144,16 +198,19 @@ function AuthScreen({ onLogin, allowGuest = true }) {
         {mode === 'forgot' && (
           <h2 className="auth-mode-title">🔑 {t('auth.forgot_heading')}</h2>
         )}
+        {mode === 'forgot-username' && (
+          <h2 className="auth-mode-title">👤 {t('auth.forgot_username_heading')}</h2>
+        )}
         {mode === 'reset' && (
           <h2 className="auth-mode-title">🔐 {t('auth.new_password_heading')}</h2>
         )}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          {(mode === 'login' || mode === 'register') && (
+          {(mode === 'login' || mode === 'register' || mode === 'setup') && (
             <input
               className="auth-input"
               type="text"
-              placeholder={t('username')}
+              placeholder={mode === 'login' ? t('auth.username_or_email', { defaultValue: 'Gebruikersnaam of e-mail' }) : t('username')}
               value={form.username}
               onChange={update('username')}
               required
@@ -163,7 +220,7 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             />
           )}
 
-          {(mode === 'register' || mode === 'forgot') && (
+          {(mode === 'register' || mode === 'setup' || mode === 'forgot' || mode === 'forgot-username') && (
             <input
               className="auth-input"
               type="email"
@@ -175,7 +232,7 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             />
           )}
 
-          {(mode === 'login' || mode === 'register') && (
+          {(mode === 'login' || mode === 'register' || mode === 'setup') && (
             <input
               className="auth-input"
               type="password"
@@ -188,7 +245,19 @@ function AuthScreen({ onLogin, allowGuest = true }) {
             />
           )}
 
-          {mode === 'register' && (
+          {mode === 'setup' && (
+            <input
+              className="auth-input"
+              type="password"
+              placeholder={t('auth.setup_secret_placeholder')}
+              value={form.setupSecret}
+              onChange={update('setupSecret')}
+              required
+              autoComplete="off"
+            />
+          )}
+
+          {(mode === 'register' || mode === 'setup') && (
             <>
               <input
                 className="auth-input"
@@ -243,32 +312,47 @@ function AuthScreen({ onLogin, allowGuest = true }) {
           {error   && <div className="auth-alert auth-alert--error" role="alert">{error}</div>}
           {success && <div className="auth-alert auth-alert--success" role="status">{success}</div>}
 
-          <button className="auth-submit" type="submit" disabled={loading}>
+          <button
+            className="auth-submit"
+            type="submit"
+            disabled={loading || (mode === 'setup' && !setupSecretConfigured)}
+          >
             {loading ? '…' :
               mode === 'login'    ? t('auth.btn_login_submit') :
               mode === 'register' ? t('auth.btn_create_account') :
+              mode === 'setup'    ? t('auth.btn_setup_admin', { defaultValue: '⚙️ Admin aanmaken' }) :
               mode === 'forgot'   ? t('auth.btn_send_reset') :
+              mode === 'forgot-username' ? t('auth.btn_send_username') :
               t('auth.btn_save_password')}
           </button>
 
           {mode === 'login' && (
-            <button type="button" className="auth-link" onClick={() => switchMode('forgot')}>
-              {t('auth.forgot_link')}
-            </button>
+            <div className="auth-help-links">
+              <button type="button" className="auth-link" onClick={() => switchMode('forgot')}>
+                {t('auth.forgot_link')}
+              </button>
+              <button type="button" className="auth-link" onClick={() => switchMode('forgot-username')}>
+                {t('auth.forgot_username_link')}
+              </button>
+            </div>
           )}
 
-          {(mode === 'forgot' || mode === 'reset') && (
+          {(mode === 'forgot' || mode === 'forgot-username' || mode === 'reset') && (
             <button type="button" className="auth-link" onClick={() => switchMode('login')}>
               {t('auth.back_to_login')}
             </button>
           )}
         </form>
 
-        {allowGuest && (mode === 'login' || mode === 'register') && (
+        {!setupChecked && API && (
+          <div className="auth-alert" role="status">…</div>
+        )}
+
+        {allowGuest && (mode === 'login' || mode === 'register') && !needsSetup && (
           <div className="auth-divider">{t('auth.divider_or')}</div>
         )}
 
-        {allowGuest && (mode === 'login' || mode === 'register') && (
+        {allowGuest && (mode === 'login' || mode === 'register') && !needsSetup && (
           <>
             <button type="button" className="auth-btn-guest" onClick={handleGuest}>
               🌿 {t('play_as_guest')}

@@ -35,7 +35,8 @@ async function setupDatabase() {
         plants_grown  INTEGER  DEFAULT 0,
         server_id     VARCHAR(100),           -- which Pi node they belong to
         created_at    TIMESTAMP DEFAULT NOW(),
-        last_login    TIMESTAMP
+        last_login    TIMESTAMP,
+        preferred_language VARCHAR(10) DEFAULT 'nl'
       )
     `);
 

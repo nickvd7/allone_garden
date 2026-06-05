@@ -24,7 +24,6 @@ import { useCapacitorPreferencesMirror } from './hooks/useCapacitorPreferencesMi
 import AuthScreen from './components/AuthScreen';
 import Header from './components/Header';
 import ChatPanel from './components/ChatPanel';
-import PlayersPanel from './components/PlayersPanel';
 import TradeModal from './components/TradeModal';
 import PluginMarketplace from './components/PluginMarketplace';
 import AchievementsPanel from './components/AchievementsPanel';
@@ -587,26 +586,11 @@ function App() {
 
   useEffect(() => {
     if (!socket) return;
-    const onChatForBadge = (msg) => {
-      if (showSocialMenu) return;
-      if (msg?.username && msg.username === authUser?.username) return;
-      setSocialUnread((n) => n + 1);
-    };
-    socket.on('chat:message', onChatForBadge);
-    return () => socket.off('chat:message', onChatForBadge);
-  }, [socket, showSocialMenu, authUser]);
-
-  // ── DM toast — shown when social menu is closed ────────────────────────────
-  useEffect(() => {
-    if (!socket) return;
     const onDmToast = (msg) => {
-      if (showSocialMenu) return; // user can see it in the panel
+      if (showSocialMenu) return;
       if (!msg.from && msg.from !== 0) return;
-      const fromId = String(msg.from);
-      if (!fromId || fromId === 'null') return;
       const preview = msg.text?.slice(0, 60) + (msg.text?.length > 60 ? '…' : '');
       showNotification(`✉️ ${msg.fromUsername}: ${preview}`);
-      setSocialUnread((n) => n + 1);
     };
     socket.on('dm:receive', onDmToast);
     return () => socket.off('dm:receive', onDmToast);
@@ -723,7 +707,31 @@ function App() {
     setServerInfo(null);
     setBackendUp(false);
     setGameState(INITIAL_GAME);
+    setSocialUnread(0);
   };
+
+  // ── Auto-logout na 15 min inactiviteit ───────────────────────────────────
+  const handleLogoutRef = useRef(handleLogout);
+  handleLogoutRef.current = handleLogout;
+  useEffect(() => {
+    if (!authUser || authUser.id === 0) return undefined;
+    const idleMs = 15 * 60 * 1000;
+    let timer;
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        showNotification(t('session_idle_logout', { defaultValue: 'Je bent uitgelogd wegens inactiviteit.' }));
+        handleLogoutRef.current();
+      }, idleMs);
+    };
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel'];
+    events.forEach((ev) => window.addEventListener(ev, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((ev) => window.removeEventListener(ev, reset));
+    };
+  }, [authUser, showNotification, t]);
 
   const handleNextDay = useCallback(() => {
     debouncedSave.cancel();
@@ -1219,10 +1227,14 @@ function App() {
                 />
               </div>
             )}
-            {showSocialMenu && (
-              <div className="world-social-dropdown" data-tour="chat">
+            <div
+              className={`world-social-dropdown${showSocialMenu ? '' : ' world-social-dropdown--hidden'}`}
+              data-tour="chat"
+              aria-hidden={!showSocialMenu}
+            >
+              {showSocialMenu && (
                 <div className="world-social-dropdown__header">
-                  <strong>{t('header_menu_social', { defaultValue: 'Chat & Online Players' })}</strong>
+                  <strong>{t('header_menu_social', { defaultValue: 'Chat' })}</strong>
                   <button
                     type="button"
                     className="modal-close world-social-dropdown__close"
@@ -1233,22 +1245,19 @@ function App() {
                     ✕
                   </button>
                 </div>
-                <ChatPanel
-                  socket={socket}
-                  username={authUser.username}
-                  currentUserId={authUser.id}
-                  dmTarget={dmTarget}
-                  onDmTargetClear={() => setDmTarget(null)}
-                  onStartCall={(state) => setCallState(state)}
-                  dmOnly
-                />
-                <PlayersPanel
-                  socket={socket}
-                  currentUserId={authUser.id}
-                  onDm={handleStartDm}
-                />
-              </div>
-            )}
+              )}
+              <ChatPanel
+                socket={socket}
+                username={authUser.username}
+                currentUserId={authUser.id}
+                dmTarget={dmTarget}
+                onDmTargetClear={() => setDmTarget(null)}
+                onStartCall={(state) => setCallState(state)}
+                dmOnly
+                isOpen={showSocialMenu}
+                onUnreadChange={setSocialUnread}
+              />
+            </div>
           </div>
         </div>{/* /data-tour="garden" */}
       </div>

@@ -47,7 +47,7 @@
   "language": "Language",
   "community_goal_short": "Team goal",
   "header_world_status": "Game status",
-  "header_menu_social": "Chat & players",
+  "header_menu_social": "Chat",
   "header_menu_inventory": "Inventory",
   "account_settings": "Account settings",
   "profile_hide_movement": "Hide movement buttons",
@@ -95,6 +95,7 @@
   "install_instructions": "Place plugin folder in plugins/community/ on your server, then restart.",
 
   "logout": "Logout",
+  "session_idle_logout": "You were logged out after 15 minutes of inactivity.",
   "login": "Login",
   "register": "Register",
   "play_as_guest": "Play as Guest (offline)",
@@ -139,7 +140,18 @@
     "error_generic": "Something went wrong",
     "password_confirm": "Confirm password",
     "password_mismatch": "Passwords do not match",
-    "open_home": "Open homepage"
+    "open_home": "Open homepage",
+    "username_or_email": "Username or email",
+    "setup_heading": "Create admin account",
+    "setup_note": "Set up the first administrator with your own email and password.",
+    "btn_setup_admin": "⚙️ Create admin",
+    "setup_secret_placeholder": "Admin setup secret (from server .env)",
+    "setup_secret_missing": "The server has no SETUP_ADMIN_SECRET in .env yet. Configure it on the host before creating the first admin.",
+    "forgot_username_heading": "Forgot username",
+    "forgot_username_link": "Forgot username?",
+    "forgot_username_success": "If this address is registered, you will receive an email with your username. You can also sign in with your email address.",
+    "btn_send_username": "📧 Send username",
+    "reset_hint": "Open the link from your email, or paste the reset code below."
   },
   "home": {
     "nav": {
@@ -377,7 +389,8 @@
     "title": "🗺️ World Map",
     "header_hint": "← → ↑ ↓ move · E to visit",
     "hud_visit_hint": "🏡 {{name}} — press E to visit",
-    "hud_player_near": "💬 {{name}} is nearby!",
+    "hud_player_near": "👤 {{name}} — press E for actions",
+    "hud_player_actions": "👤 {{name}} — press E for actions",
     "legend_jump": "Jump to {{name}}'s garden",
     "you": "You",
     "online": "{{count}} online",

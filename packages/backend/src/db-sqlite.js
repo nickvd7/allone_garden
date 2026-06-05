@@ -64,9 +64,16 @@ function initSchema() {
       coins         INTEGER NOT NULL DEFAULT 100,
       plants_grown  INTEGER NOT NULL DEFAULT 0,
       last_login    DATETIME,
-      created_at    DATETIME NOT NULL DEFAULT (datetime('now'))
+      created_at    DATETIME NOT NULL DEFAULT (datetime('now')),
+      preferred_language TEXT DEFAULT 'nl'
     )
   `);
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN preferred_language TEXT DEFAULT 'nl'`);
+  } catch {
+    // column already exists
+  }
 
   // gardens — stores the full plot JSON per user
   db.exec(`

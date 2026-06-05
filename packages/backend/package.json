@@ -22,7 +22,9 @@
     "db:push": "node scripts/migrate-push-tables.js"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^9.4.3"
+    "@sendgrid/mail": "^8.1.4",
+    "better-sqlite3": "^9.4.3",
+    "nodemailer": "^6.9.16"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

@@ -11,7 +11,7 @@ function avatarColor(userId) {
   return `hsl(${hue},60%,45%)`;
 }
 
-function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall, dmOnly = false }) {
+function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear, onStartCall, dmOnly = false, isOpen = false, onUnreadChange }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState(dmOnly ? 'direct' : 'everyone'); // 'everyone' | 'direct'
 
@@ -37,6 +37,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   const [dmInput,            setDmInput]            = useState('');
   const [dmSearch,           setDmSearch]           = useState('');
   const [unreadDm,           setUnreadDm]           = useState({}); // { userId: count }
+  const [unreadGlobal,       setUnreadGlobal]       = useState(0);
   const [historyLoading,     setHistoryLoading]     = useState(false);
   const [convsLoading,       setConvsLoading]       = useState(false);
   const dmBottomRef = useRef(null);
@@ -45,10 +46,6 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    dmBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [dmHistory, selectedUser]);
 
   // ── dmTarget prop: switch to DM tab and pre-select user ───────────────────
   useEffect(() => {
@@ -108,7 +105,12 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   useEffect(() => {
     if (!socket) return;
 
-    const onMessage = (msg) => setMessages((prev) => [...prev, msg]);
+    const onMessage = (msg) => {
+      setMessages((prev) => [...prev, msg]);
+      if (!isOpen && msg?.username && msg.username !== username) {
+        setUnreadGlobal((n) => n + 1);
+      }
+    };
 
     const onTyping = ({ username: user, isTyping }) =>
       setTypingUsers((prev) =>
@@ -130,7 +132,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       socket.off('chat:typing',  onTyping);
       socket.off('chat:error',   onError);
     };
-  }, [socket]);
+  }, [socket, isOpen, username]);
 
   // ── Socket: online players ────────────────────────────────────────────────
   useEffect(() => {
@@ -166,7 +168,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
         [fromId]: [...(prev[fromId] || []), msg],
       }));
       setUnreadDm((prev) => {
-        if (tab === 'direct' && selectedUser && String(selectedUser.id) === fromId) return prev;
+        if (isOpen && tab === 'direct' && selectedUser && String(selectedUser.id) === fromId) return prev;
         return { ...prev, [fromId]: (prev[fromId] || 0) + 1 };
       });
     };
@@ -187,7 +189,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       socket.off('dm:receive', onDm);
       socket.off('dm:typing', onDmTyping);
     };
-  }, [socket, tab, selectedUser]);
+  }, [socket, tab, selectedUser, isOpen]);
 
   // ── Global chat: send ─────────────────────────────────────────────────────
   const sendMessage = () => {
@@ -233,6 +235,16 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const totalUnread = Object.values(unreadDm).reduce((s, n) => s + n, 0);
+  const badgeCount = isOpen ? 0 : totalUnread + unreadGlobal;
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setUnreadGlobal(0);
+  }, [isOpen]);
+
+  useEffect(() => {
+    onUnreadChange?.(badgeCount);
+  }, [badgeCount, onUnreadChange]);
 
   // Merge: online players + contacts from conversation history (even if offline)
   const historyContacts = conversations
@@ -250,6 +262,11 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
 
   const selectedKey       = selectedUser ? String(selectedUser.id) : null;
   const selectedDmMessages = selectedKey ? (dmHistory[selectedKey] || []) : [];
+
+  useEffect(() => {
+    if (!selectedKey) return;
+    dmBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [selectedKey, selectedDmMessages.length]);
 
   // Last-message snippet per user (from live history or conversations API)
   function lastMsgFor(userId) {
@@ -356,7 +373,7 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                 onChange={(e) => setDmSearch(e.target.value)}
                 style={{ marginBottom: '0.5rem', width: '100%', boxSizing: 'border-box' }}
               />
-              {filteredPlayers.length > 0 && (
+              {!selectedUser && filteredPlayers.length > 0 && !dmOnly && tab !== 'direct' && (
                 <div style={{ fontSize: '0.75rem', color: '#888', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border, #e0e0e0)', marginBottom: '0.25rem' }}>
                   {onlinePlayers.length} online · {filteredPlayers.length} zichtbaar
                 </div>

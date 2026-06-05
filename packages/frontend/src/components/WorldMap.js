@@ -412,10 +412,8 @@ function WorldMap({
 
   // Proximity chat
   const [nearbyPlayer, setNearbyPlayer] = useState(null);     // closest walking player within range
-  const [proximityPanelDismissed, setProximityPanelDismissed] = useState(false);
+  const [proximityPanelOpen, setProximityPanelOpen] = useState(false);
   const [helpGivenNotice, setHelpGivenNotice] = useState('');
-  const [dmHistory,    setDmHistory]    = useState({});        // { userId: [msg, ...] }
-  const [dmInput,      setDmInput]      = useState('');
   const [npcNotice, setNpcNotice] = useState('');
   const [npcPositions, setNpcPositions] = useState(() => VIRTUAL_NEIGHBORS.map((n, idx) => ({
     ...n,
@@ -425,9 +423,9 @@ function WorldMap({
   const [npcShopStock, setNpcShopStock] = useState(() => ({ ...NPC_SHOP }));
   const virtualNeighbors = npcPositions;
   const lastNpcRefreshDayRef = useRef(null);
-  const dmBottomRef = useRef(null);
 
   const viewportRef = useRef(null);
+  const gardenPanelRef = useRef(null);
   const spawnedAtOwnGardenRef = useRef(false);
   const hasUserMovedRef = useRef(false);
   const lockedOwnHomeRef = useRef(null);
@@ -499,27 +497,6 @@ function WorldMap({
     socket.on('garden:preview-updated', onPreviewUpdated);
     return () => socket.off('garden:preview-updated', onPreviewUpdated);
   }, [socket, scheduleProjectionRefresh]);
-
-  // ── Socket: incoming DMs ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (!socket) return;
-    const onDm = (msg) => {
-      if (!msg.from && msg.from !== 0) return;
-      const fromId = String(msg.from);
-      if (!fromId || fromId === 'null' || fromId === 'undefined') return;
-      setDmHistory(prev => ({
-        ...prev,
-        [fromId]: [...(prev[fromId] || []), msg],
-      }));
-    };
-    socket.on('dm:receive', onDm);
-    return () => socket.off('dm:receive', onDm);
-  }, [socket]);
-
-  // Auto-scroll DM chat
-  useEffect(() => {
-    dmBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [dmHistory, nearbyPlayer]);
 
   // ── Build garden map from server-authoritative occupants ──────────────────
   const renderOccupants = worldOccupants.length > 0
@@ -604,10 +581,12 @@ function WorldMap({
   }, [displayGardenOwners]);
   const gardenMap = useMemo(() => {
     const map = {};
-    displayGardenOwners.forEach((player) => {
-      if (Number.isInteger(player.x) && Number.isInteger(player.y)) {
-        map[`${player.x},${player.y}`] = player;
-      }
+    const sorted = [...displayGardenOwners].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    sorted.forEach((player) => {
+      if (!Number.isInteger(player.x) || !Number.isInteger(player.y)) return;
+      const key = `${player.x},${player.y}`;
+      if (map[key]) return;
+      map[key] = player;
     });
     return map;
   }, [displayGardenOwners]);
@@ -1159,8 +1138,14 @@ function WorldMap({
       applyToolOnOwnPlot(currentOwnPlotIndex);
       return;
     }
-    if (nearGarden && !isCurrentPlayer(nearGarden)) openVisit(nearGarden);
-  }, [activeInterior, nearPoi, enterInterior, currentOwnPlotIndex, applyToolOnOwnPlot, nearGarden, isCurrentPlayer, openVisit]);
+    if (nearGarden && !isCurrentPlayer(nearGarden)) {
+      openVisit(nearGarden);
+      return;
+    }
+    if (nearbyPlayer && !isCurrentPlayer(nearbyPlayer)) {
+      setProximityPanelOpen(true);
+    }
+  }, [activeInterior, nearPoi, enterInterior, currentOwnPlotIndex, applyToolOnOwnPlot, nearGarden, nearbyPlayer, isCurrentPlayer, openVisit]);
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1211,7 +1196,7 @@ function WorldMap({
           break;
         case 'Escape':
           if (visitedData) { setVisitedData(null); setHelpDone(false); }
-          else if (nearbyPlayer && !proximityPanelDismissed) setProximityPanelDismissed(true);
+          else if (proximityPanelOpen) setProximityPanelOpen(false);
           else if (!embedded) onClose?.();
           break;
         default: break;
@@ -1222,7 +1207,7 @@ function WorldMap({
     const isEditableActive = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || document.activeElement?.isContentEditable;
     if (!isEditableActive) viewportRef.current?.focus();
     return () => window.removeEventListener('keydown', onKey, { capture: true });
-  }, [visitedData, move, onClose, currentUserId, isCurrentPlayer, embedded, onUpdateGame, ownHome, pos.x, pos.y, nearbyPlayer, proximityPanelDismissed, handlePrimaryInteract, activeInterior, exitInterior]); // eslint-disable-line
+  }, [visitedData, move, onClose, embedded, onUpdateGame, ownHome, pos.x, pos.y, proximityPanelOpen, handlePrimaryInteract, activeInterior, exitInterior]); // eslint-disable-line
 
   // ── Proximity detection ───────────────────────────────────────────────────
   const WALKER_PROXIMITY = 2;
@@ -1257,28 +1242,6 @@ function WorldMap({
     setNearbyPlayer(canInteract ? { ...activeOwner } : closestWalker);
     setNearPoi(plazaPoi);
   }, [pos, gardenMap, neighborPatchCoordMap, displayGardenOwnersById, isCurrentPlayer, worldPois, playerPositions, virtualNeighbors, currentUserId]);
-
-  useEffect(() => {
-    if (!nearbyPlayer || nearbyPlayer.virtual || !currentUserId) return;
-    api.get(`/api/dm/history/${nearbyPlayer.id}`)
-      .then((data) => {
-        setDmHistory((prev) => ({
-          ...prev,
-          [String(nearbyPlayer.id)]: (data.messages || []).map((m) => ({
-            from: m.from,
-            fromUsername: m.fromUsername,
-            text: m.text,
-            timestamp: m.timestamp,
-          })),
-        }));
-      })
-      .catch(() => {});
-  }, [nearbyPlayer, currentUserId]);
-
-  const nearbyIdKey = nearbyPlayer?.id !== null && nearbyPlayer?.id !== undefined ? String(nearbyPlayer.id) : null;
-  useEffect(() => {
-    setProximityPanelDismissed(false);
-  }, [pos.x, pos.y, nearbyIdKey]);
 
   const handleTileClick = useCallback((tileData) => {
     const { mx, my, ownPlot, ownPatchIndex, gardenPlayer, structureDecor, tile, poi } = tileData;
@@ -1331,36 +1294,10 @@ function WorldMap({
     setHelpDone(true);
   }, [visitedData, helpDone, socket]);
 
-  // ── DM send ───────────────────────────────────────────────────────────────
-  const sendDm = useCallback(() => {
-    const text = dmInput.trim();
-    if (!text || !nearbyPlayer || !socket) return;
-    if (nearbyPlayer.virtual) {
-      const key = String(nearbyPlayer.id);
-      const mine = { from: currentUserId, fromUsername: t('leaderboard.you'), text, timestamp: Date.now() };
-      const npcReply = {
-        from: key,
-        fromUsername: nearbyPlayer.username,
-        text: `Ik hoorde je: "${text}". Zullen we ruilen of samenwerken?`,
-        timestamp: Date.now() + 1,
-      };
-      setDmHistory((prev) => ({ ...prev, [key]: [...(prev[key] || []), mine, npcReply] }));
-      setDmInput('');
-      return;
-    }
-    socket.emit('dm:send', { to: nearbyPlayer.id, text });
-    // Add own message to history immediately
-    setDmHistory(prev => ({
-      ...prev,
-      [nearbyPlayer.id]: [...(prev[nearbyPlayer.id] || []), {
-        from: currentUserId,
-        fromUsername: t('leaderboard.you'),
-        text,
-        timestamp: Date.now(),
-      }],
-    }));
-    setDmInput('');
-  }, [dmInput, nearbyPlayer, socket, currentUserId, t]);
+  const nearbyIdKey = nearbyPlayer?.id !== null && nearbyPlayer?.id !== undefined ? String(nearbyPlayer.id) : null;
+  useEffect(() => {
+    setProximityPanelOpen(false);
+  }, [nearbyIdKey]);
 
   const npcSellOne = useCallback(() => {
     if (!nearbyPlayer?.virtual || !onUpdateGame) return;
@@ -1694,10 +1631,8 @@ function WorldMap({
   // Right panel mode
   const isVirtualUser = (player) => !!(player?.virtual || String(player?.id || '').startsWith('npc:'));
   const isNearbyVirtual = isVirtualUser(nearbyPlayer);
-  const showNearbyChat  = !!nearbyPlayer && !proximityPanelDismissed;
+  const showNearbyPanel = proximityPanelOpen && !!nearbyPlayer;
   const showGardenVisit = !!visitedData || loadingVisit;
-  const isNearGardenVirtual = isVirtualUser(nearGarden);
-  const showGardenHint  = !showNearbyChat && !showGardenVisit && !!nearGarden && !isNearGardenVirtual;
   const structureAtPlayer = structureByCoord[`${pos.x},${pos.y}`];
   const isAtOwnStructure = !!structureAtPlayer && !!ownHome;
   const currentBiomeZone = biomeCoordToZone[`${pos.x},${pos.y}`] || null;
@@ -1712,14 +1647,18 @@ function WorldMap({
     [gameState?.inventory],
   );
   const showFloatingPanel = !suppressSidePanels && (
-    showNearbyChat || showGardenVisit || showOwnGardenPanel
-    || (showGardenHint && nearGarden && !isCurrentPlayer(nearGarden))
+    showNearbyPanel || showGardenVisit || showOwnGardenPanel
   );
   const ownGardenTargetPlot = (currentOwnPlotIndex !== null && currentOwnPlotIndex !== undefined)
     ? currentOwnPlotIndex
     : (currentBiomePlotIndex !== null ? currentBiomePlotIndex : homeDefaultPlotIndex);
   const ownGardenTools = QUICK_TOOLS;
   const getToolLabel = (tool) => t(`tool_${tool}`);
+
+  useEffect(() => {
+    if (!showGardenVisit || !gardenPanelRef.current) return;
+    gardenPanelRef.current.scrollTop = 0;
+  }, [showGardenVisit, visitedData?.player?.id, visitedData?.username]);
 
   useEffect(() => {
     if (!isAtOwnGarden && ownGardenPanelDismissed) setOwnGardenPanelDismissed(false);
@@ -1736,8 +1675,7 @@ function WorldMap({
     }
   }, [isAtOwnStructure, structureAtPlayer?.id]);
 
-  // DM history for current nearby player
-  const dmMessages = (nearbyPlayer && dmHistory[nearbyPlayer.id]) || [];
+  // Proximity panel helpers
   const nearbyNpcGarden = useMemo(() => {
     if (!nearbyPlayer?.virtual) return [];
     const npc = virtualNeighbors.find((n) => String(n.id) === String(nearbyPlayer.id));
@@ -2167,17 +2105,22 @@ function WorldMap({
             )}
 
             {/* HUD — bezoek / speler in de buurt */}
-            {((nearGarden && !nearbyPlayer && !isCurrentPlayer(nearGarden)) || (nearbyPlayer && !nearbyPlayer.virtual)) && (
+            {((nearGarden && !isCurrentPlayer(nearGarden)) || (nearbyPlayer && !isCurrentPlayer(nearbyPlayer))) && !proximityPanelOpen && !showGardenVisit && (
               <div className="walk-hud">
-                {nearGarden && !nearbyPlayer && !isCurrentPlayer(nearGarden) && (
-                  <span className="walk-interact-hint" onClick={() => openVisit(nearGarden)}>
+                {nearGarden && !isCurrentPlayer(nearGarden) && (
+                  <button type="button" className="walk-interact-hint" onClick={() => openVisit(nearGarden)}>
                     {t('worldMap.hud_visit_hint', { name: nearGarden.username })}
-                  </span>
+                  </button>
                 )}
-                {nearbyPlayer && (
-                  <span className="walk-interact-hint walk-interact-hint--player">
+                {nearbyPlayer && !isCurrentPlayer(nearbyPlayer) && !nearGarden && (
+                  <button type="button" className="walk-interact-hint walk-interact-hint--player" onClick={() => setProximityPanelOpen(true)}>
                     {t('worldMap.hud_player_near', { name: nearbyPlayer.username })}
-                  </span>
+                  </button>
+                )}
+                {nearbyPlayer && nearGarden && !isCurrentPlayer(nearGarden) && (
+                  <button type="button" className="walk-interact-hint walk-interact-hint--player" onClick={() => setProximityPanelOpen(true)}>
+                    {t('worldMap.hud_player_actions', { name: nearbyPlayer.username, defaultValue: '👤 {{name}} — druk E voor acties' })}
+                  </button>
                 )}
               </div>
             )}
@@ -2187,11 +2130,12 @@ function WorldMap({
 
           {/* ── Right panel ──────────────────────────────────────────── */}
           <div
-            className={`walk-garden-panel ${showFloatingPanel ? '' : 'walk-garden-panel--hidden'}${embedded && showNearbyChat ? ' walk-garden-panel--proximity' : ''}${showOwnGardenPanel ? ' walk-garden-panel--own' : ''}`}
+            ref={gardenPanelRef}
+            className={`walk-garden-panel ${showFloatingPanel ? '' : 'walk-garden-panel--hidden'}${embedded && showNearbyPanel ? ' walk-garden-panel--proximity' : ''}${showOwnGardenPanel ? ' walk-garden-panel--own' : ''}${showGardenVisit ? ' walk-garden-panel--visit' : ''}`}
           >
 
-            {/* A) Proximity chat + call (player nearby) */}
-            {showNearbyChat && !showOwnGardenPanel && (
+            {/* A) Proximity actions (opened via E / HUD) */}
+            {showNearbyPanel && !showOwnGardenPanel && (
               <div className="prox-panel">
                 <div className="prox-header">
                   <div className="prox-header__main">
@@ -2232,7 +2176,7 @@ function WorldMap({
                     <button
                       type="button"
                       className="btn btn-secondary prox-close-btn"
-                      onClick={() => setProximityPanelDismissed(true)}
+                      onClick={() => setProximityPanelOpen(false)}
                       aria-label={t('worldMap.close_panel')}
                       title={t('worldMap.close_panel')}
                     >
@@ -2252,6 +2196,16 @@ function WorldMap({
                 )}
                 {!isNearbyVirtual && (
                   <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
+                    {nearGarden && !isCurrentPlayer(nearGarden) && (
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.78rem', padding: '0.28rem 0.5rem' }}
+                        onClick={() => openVisit(nearGarden)}
+                      >
+                        🏡 {t('worldMap.visit_garden')}
+                      </button>
+                    )}
                     <button
                       className="btn btn-secondary"
                       style={{ fontSize: '0.78rem', padding: '0.28rem 0.5rem' }}
@@ -2334,40 +2288,6 @@ function WorldMap({
                     {helpGivenNotice}
                   </div>
                 )}
-
-                {!isNearbyVirtual && (
-                  <>
-                    {/* DM chat history */}
-                    <div className="prox-chat-messages">
-                      {dmMessages.length === 0 && (
-                        <div className="prox-chat-empty">{t('worldMap.dm_empty', { name: nearbyPlayer.username })}</div>
-                      )}
-                      {dmMessages.map((msg, i) => (
-                        <div key={i} className={`prox-msg${msg.from === currentUserId ? ' prox-msg--own' : ''}`}>
-                          <span className="prox-msg-author">{msg.fromUsername}</span>
-                          <span className="prox-msg-text">{msg.text}</span>
-                        </div>
-                      ))}
-                      <div ref={dmBottomRef} />
-                    </div>
-
-                    {/* Input */}
-                    <div className="prox-chat-input-row">
-                      <input
-                        className="chat-input"
-                        placeholder={t('worldMap.dm_placeholder')}
-                        value={dmInput}
-                        onChange={(e) => setDmInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && sendDm()}
-                        maxLength={300}
-                      />
-                      <button className="btn btn-primary" onClick={sendDm}
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-                        ➤
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
             )}
 
@@ -2439,7 +2359,7 @@ function WorldMap({
             )}
 
             {/* D) Own garden actions */}
-            {showOwnGardenPanel && !showNearbyChat && !showGardenVisit && (
+            {showOwnGardenPanel && !showNearbyPanel && !showGardenVisit && (
               <div className="walk-garden-view">
                 <button
                   type="button"
@@ -2569,17 +2489,7 @@ function WorldMap({
               </div>
             )}
 
-            {/* C) Garden hint */}
-            {showGardenHint && nearGarden && !isCurrentPlayer(nearGarden) && !showOwnGardenPanel && (
-              <div className="walk-garden-empty">
-                <div style={{fontSize:'2.4rem'}}>🏡</div>
-                <div style={{fontWeight:700}}>{t('worldMap.garden_of', { name: nearGarden.username })}</div>
-                <div>{t('worldMap.press_visit')}</div>
-                <button className="btn btn-primary" style={{marginTop:'0.75rem'}} onClick={() => openVisit(nearGarden)}>
-                  {t('worldMap.visit_garden')}
-                </button>
-              </div>
-            )}
+            {/* C) Garden hint — replaced by walk-hud bar */}
 
             {nearPoi && !showOwnGardenPanel && (
               <div className="walk-garden-empty">

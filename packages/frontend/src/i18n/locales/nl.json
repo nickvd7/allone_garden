@@ -47,7 +47,7 @@
   "language": "Taal",
   "community_goal_short": "Teamdoel",
   "header_world_status": "Spelstatus",
-  "header_menu_social": "Chat & spelers",
+  "header_menu_social": "Chat",
   "header_menu_inventory": "Inventaris",
   "account_settings": "Accountinstellingen",
   "profile_hide_movement": "Bewegingsknoppen verbergen",
@@ -95,6 +95,7 @@
   "install_instructions": "Plaats de plugin-map in plugins/community/ op je server en herstart.",
 
   "logout": "Uitloggen",
+  "session_idle_logout": "Je bent uitgelogd wegens 15 minuten inactiviteit.",
   "login": "Inloggen",
   "register": "Registreren",
   "play_as_guest": "Speel als Gast (offline)",
@@ -139,7 +140,18 @@
     "guest_note": "Geen account nodig om offline te spelen. Maak er een aan om voortgang op te slaan en andere tuinen te bezoeken.",
     "forgot_success": "Als dit adres bekend is, ontvang je een e-mail met een resetlink.",
     "reset_success": "Wachtwoord succesvol gewijzigd! Je kunt nu inloggen.",
-    "error_generic": "Er ging iets mis"
+    "error_generic": "Er ging iets mis",
+    "username_or_email": "Gebruikersnaam of e-mail",
+    "setup_heading": "Admin-account aanmaken",
+    "setup_note": "Maak het eerste beheerdersaccount aan met je eigen e-mail en wachtwoord.",
+    "btn_setup_admin": "⚙️ Admin aanmaken",
+    "setup_secret_placeholder": "Admin setup-geheim (uit server .env)",
+    "setup_secret_missing": "De server heeft nog geen SETUP_ADMIN_SECRET in .env. Zet dit eerst op de Pi/server voordat je de eerste admin aanmaakt.",
+    "forgot_username_heading": "Gebruikersnaam vergeten",
+    "forgot_username_link": "Gebruikersnaam vergeten?",
+    "forgot_username_success": "Als dit adres bekend is, ontvang je een e-mail met je gebruikersnaam. Je kunt ook inloggen met je e-mailadres.",
+    "btn_send_username": "📧 Stuur gebruikersnaam",
+    "reset_hint": "Open de link uit je e-mail, of plak de resetcode hieronder."
   },
   "home": {
     "nav": {
@@ -386,7 +398,8 @@
     "title": "🗺️ Wereldkaart",
     "header_hint": "← → ↑ ↓ bewegen · E bezoeken",
     "hud_visit_hint": "🏡 {{name}} — druk E om te bezoeken",
-    "hud_player_near": "💬 {{name}} is dichtbij!",
+    "hud_player_near": "👤 {{name}} — druk E voor acties",
+    "hud_player_actions": "👤 {{name}} — druk E voor acties",
     "legend_jump": "Spring naar {{name}}'s tuin",
     "you": "Jij",
     "online": "{{count}} online",

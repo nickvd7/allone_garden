@@ -93,6 +93,15 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(401);
   });
 
+  it('accepts email instead of username', async () => {
+    const res = await request(app).post('/api/auth/login').send({
+      username: credentials.email,
+      password: credentials.password,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('token');
+  });
+
   it('rejects non-existent user with same timing (no info leak)', async () => {
     const res = await request(app).post('/api/auth/login').send({
       username: 'ghostuser',
@@ -134,5 +143,27 @@ describe('GET /api/auth/me', () => {
       .get('/api/auth/me')
       .set('Authorization', 'Bearer tampered.jwt.token');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('GET /api/auth/setup-status', () => {
+  it('returns setup flags', async () => {
+    const res = await request(app).get('/api/auth/setup-status');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('needsSetup');
+    expect(res.body).toHaveProperty('requiresSetupSecret', true);
+    expect(res.body).toHaveProperty('setupSecretConfigured');
+    expect(res.body).toHaveProperty('hasDatabase');
+    expect(res.body).toHaveProperty('emailConfigured');
+  });
+});
+
+describe('POST /api/auth/forgot-username', () => {
+  it('returns success for unknown email (no enumeration)', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-username')
+      .send({ email: 'nobody@example.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
   });
 });

@@ -55,13 +55,16 @@ Copy `packages/backend/.env.example` to `.env` on the server and fill in.
 | `ADMIN_USERS` | Admin without DB level 99. |
 | `SERVER_NAME`, `SERVER_MOTD` | Server identity. |
 
-### Email (password reset)
+### Email (SendGrid aanbevolen)
 
 | Variable | Notes |
 |----------|--------|
-| `SMTP_HOST` | Empty = no mail; tokens in logs (dev/admin only). |
-| `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Per provider. |
-| `APP_URL` | Base URL for links in emails (fallback: `FRONTEND_URL`). |
+| `SENDGRID_API_KEY` | SendGrid API key (aanbevolen voor productie). |
+| `SENDGRID_FROM` | Geverifieerd afzenderadres (bijv. `noreply@jouwdomein.nl`). |
+| `SMTP_HOST` | Fallback zonder SendGrid; leeg = mail naar stdout/logs. |
+| `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Generieke SMTP (ook `smtp.sendgrid.net` mogelijk). |
+| `APP_URL` | Basis-URL voor links in e-mails (fallback: `FRONTEND_URL`). |
+| `SETUP_ADMIN_SECRET` | **Verplicht** voor eerste admin-setup. Lang willekeurig geheim (`openssl rand -hex 32`). Dezelfde waarde invullen op het setup-formulier bij eerste login. |
 
 ### Other
 

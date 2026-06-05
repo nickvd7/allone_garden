@@ -53,7 +53,7 @@ describe('AuthScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: /Forgot password/i }));
     // Forgot heading appears; email field present; username/password gone
     expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Username')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/Username or email/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('Password')).not.toBeInTheDocument();
   });
 
@@ -86,7 +86,7 @@ describe('AuthScreen', () => {
     });
 
     render(<AuthScreen onLogin={onLogin} />);
-    fireEvent.change(screen.getByPlaceholderText('Username'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByPlaceholderText(/Username or email/i), { target: { value: 'Alice' } });
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'secret123' } });
 
     // Submit button in login mode reads "🚪 Login" — distinct from the Login *tab* ('Login')
@@ -105,7 +105,7 @@ describe('AuthScreen', () => {
     });
 
     render(<AuthScreen onLogin={noop} />);
-    fireEvent.change(screen.getByPlaceholderText('Username'), { target: { value: 'Alice' } });
+    fireEvent.change(screen.getByPlaceholderText(/Username or email/i), { target: { value: 'Alice' } });
     fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'wrong' } });
     fireEvent.click(screen.getByRole('button', { name: /🚪/ }));
 
@@ -138,6 +138,17 @@ describe('AuthScreen', () => {
   });
 
   // ── Forgot-password form ─────────────────────────────────────────────────────
+
+  it('shows a success message after forgot-username is submitted', async () => {
+    axios.post.mockResolvedValueOnce({ data: {} });
+
+    render(<AuthScreen onLogin={noop} />);
+    fireEvent.click(screen.getByRole('button', { name: /Forgot username/i }));
+    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'alice@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /Send username/i }));
+
+    await screen.findByText(/If this address is registered/i);
+  });
 
   it('shows a success message after forgot-password is submitted', async () => {
     axios.post.mockResolvedValueOnce({ data: {} });

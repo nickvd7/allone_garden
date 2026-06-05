@@ -40,9 +40,18 @@ const MOCK_PLAYERS = {
   ],
 };
 
+const MOCK_USERS = {
+  users: [
+    { id: 1, username: 'Alice', email: 'alice@test.com', level: 5, preferred_language: 'nl', isAdmin: false },
+    { id: 2, username: 'Bob', email: 'bob@test.com', level: 3, preferred_language: 'en', isAdmin: false },
+  ],
+  total: 2,
+};
+
 beforeEach(() => {
   api.get.mockImplementation((url) => {
     if (url.includes('stats')) return Promise.resolve(MOCK_STATS);
+    if (url.includes('/users')) return Promise.resolve(MOCK_USERS);
     if (url.includes('players')) return Promise.resolve(MOCK_PLAYERS);
     if (url.includes('peers')) return Promise.resolve([]);
     if (url.includes('analytics')) return Promise.resolve({ rows: [], source: 'db' });
@@ -57,7 +66,7 @@ describe('AdminPanel — tabs', () => {
   it('renders core tab buttons including Push', async () => {
     render(<AdminPanel onClose={() => {}} />);
     await screen.findByText(/📊 Overview/i);
-    expect(screen.getByText(/👥 Players/i)).toBeInTheDocument();
+    expect(screen.getByText(/👥 Gebruikers/i)).toBeInTheDocument();
     expect(screen.getByText(/🔌 Plugins/i)).toBeInTheDocument();
     expect(screen.getByText(/🌍 Peers/i)).toBeInTheDocument();
     expect(screen.getByText(/🔔 Push/i)).toBeInTheDocument();
@@ -68,7 +77,8 @@ describe('AdminPanel — push tab', () => {
   it('shows push log rows when API returns logs', async () => {
     api.get.mockImplementation((url) => {
       if (url.includes('stats')) return Promise.resolve(MOCK_STATS);
-      if (url.includes('players')) return Promise.resolve(MOCK_PLAYERS);
+      if (url.includes('/users')) return Promise.resolve(MOCK_USERS);
+    if (url.includes('players')) return Promise.resolve(MOCK_PLAYERS);
       if (url.includes('peers')) return Promise.resolve([]);
       if (url.includes('analytics')) return Promise.resolve({ rows: [], source: 'db' });
       if (url.includes('push/logs')) {
@@ -115,10 +125,10 @@ describe('AdminPanel — overview', () => {
 });
 
 describe('AdminPanel — players tab', () => {
-  it('shows player usernames on Players tab', async () => {
+  it('shows player usernames on Gebruikers tab', async () => {
     render(<AdminPanel onClose={() => {}} />);
-    await screen.findByText(/👥 Players/i);
-    fireEvent.click(screen.getByText(/👥 Players/i));
+    await screen.findByText(/👥 Gebruikers/i);
+    fireEvent.click(screen.getByText(/👥 Gebruikers/i));
     await screen.findByText('Alice');
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });

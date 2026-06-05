@@ -185,6 +185,35 @@ function buildEmptyPreview() {
   return { tilled: 0, planted: 0, ready: 0, tiles: [] };
 }
 
+function dedupeSlotAssignments(rawAssignments, slots) {
+  if (!Array.isArray(slots) || slots.length === 0) return {};
+  const maxIdx = slots.length - 1;
+  const userIds = Object.keys(rawAssignments || {})
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0)
+    .sort((a, b) => a - b);
+  const result = {};
+  const used = new Set();
+
+  for (const userId of userIds) {
+    let slot = Number(rawAssignments[userId] ?? rawAssignments[String(userId)]);
+    if (!Number.isInteger(slot) || slot < 0 || slot > maxIdx || used.has(slot)) {
+      slot = null;
+      for (let i = 0; i < slots.length; i += 1) {
+        if (!used.has(i)) {
+          slot = i;
+          break;
+        }
+      }
+    }
+    if (slot === null) continue;
+    result[userId] = slot;
+    result[String(userId)] = slot;
+    used.add(slot);
+  }
+  return result;
+}
+
 async function ensureStableSlots(playerIds, slots) {
   if (!Array.isArray(slots) || slots.length === 0) return {};
   if (!Array.isArray(playerIds) || playerIds.length === 0) return {};
@@ -247,8 +276,13 @@ async function ensureStableSlots(playerIds, slots) {
   }
 
   for (const userId of uniqIds) {
-    if (Number.isInteger(assignments[userId]) && assignments[userId] >= 0 && assignments[userId] <= maxIdx) {
+    const existing = assignments[userId];
+    if (Number.isInteger(existing) && existing >= 0 && existing <= maxIdx && !used.has(existing)) {
+      used.add(existing);
       continue;
+    }
+    if (Number.isInteger(existing)) {
+      delete assignments[userId];
     }
 
     let assigned = null;
@@ -274,11 +308,18 @@ async function ensureStableSlots(playerIds, slots) {
     }
 
     if (!Number.isInteger(assigned)) {
-      assignments[userId] = userId % slots.length;
+      for (let idx = 0; idx < slots.length; idx += 1) {
+        if (!used.has(idx)) {
+          assignments[userId] = idx;
+          used.add(idx);
+          assigned = idx;
+          break;
+        }
+      }
     }
   }
 
-  return assignments;
+  return dedupeSlotAssignments(assignments, slots);
 }
 
 // ── GET /api/world/map ────────────────────────────────────────────────────────
@@ -367,6 +408,7 @@ router.get('/gardens', optionalAuth, async (req, res) => {
     for (const [key, val] of Object.entries(slotByUserId)) {
       slotByUserId[String(key)] = Number(val);
     }
+    slotByUserId = dedupeSlotAssignments(slotByUserId, slots);
 
     const occupants = uniquePlayers
       .map((p) => ({
@@ -408,14 +450,9 @@ router.get('/gardens', optionalAuth, async (req, res) => {
       }
     }
 
-    const slotShareCounts = {};
-    occupants.forEach((o) => {
-      slotShareCounts[o.slotId] = (slotShareCounts[o.slotId] || 0) + 1;
-    });
-
     const occupantsWithShare = occupants.map((o) => ({
       ...o,
-      sharedCount: slotShareCounts[o.slotId] || 1,
+      sharedCount: 1,
     }));
 
     const payload = {

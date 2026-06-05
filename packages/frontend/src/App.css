@@ -302,6 +302,20 @@ body,
   gap: 0.7rem;
 }
 
+.world-social-dropdown--hidden {
+  position: fixed;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
 .notifications-dropdown {
   position: absolute;
   top: 3rem;
@@ -2563,6 +2577,141 @@ body,
   max-width: 400px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   text-align: center;
+}
+
+.auth-setup-note {
+  font-size: 0.88rem;
+  color: var(--text-muted, #666);
+  margin: 0 0 var(--space-3);
+  line-height: 1.45;
+}
+
+.auth-help-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.admin-users__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.admin-users__search {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.admin-users__count {
+  font-size: 0.82rem;
+  color: #888;
+  margin-left: auto;
+}
+
+.admin-users__notice {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-users__error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-users__form {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+}
+
+.admin-users__form-grid {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.5rem 0;
+}
+
+.admin-users__form-grid input,
+.admin-users__form-grid select {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.admin-users__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+}
+
+.admin-users__form-actions {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.admin-users__table-wrap {
+  overflow-x: auto;
+}
+
+.admin-users__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.admin-users__table th,
+.admin-users__table td {
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.admin-users__table th {
+  font-size: 0.78rem;
+  color: #888;
+  font-weight: 600;
+}
+
+.admin-users__badge {
+  margin-left: 0.35rem;
+  background: #ff9800;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.admin-users__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.admin-users__danger {
+  color: #c62828 !important;
+}
+
+.btn--xs {
+  font-size: 0.72rem !important;
+  padding: 0.2rem 0.45rem !important;
 }
 
 .auth-title {
@@ -5187,6 +5336,21 @@ body,
   bottom: auto;
   width: min(292px, calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
   max-height: min(58vh, calc(100% - 1rem));
+}
+
+.world-map-embedded .walk-garden-panel--visit {
+  top: max(0.45rem, env(safe-area-inset-top, 0px));
+  right: max(0.5rem, env(safe-area-inset-right, 0px));
+  bottom: auto;
+  width: min(292px, calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  max-height: min(58vh, calc(100% - 1rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+}
+
+.walk-garden-panel--visit .walk-garden-view {
+  overflow: visible;
 }
 
 .walk-garden-empty {

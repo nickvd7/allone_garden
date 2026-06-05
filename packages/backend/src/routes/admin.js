@@ -4,10 +4,21 @@
  */
 const express      = require('express');
 const router       = express.Router();
+const bcrypt       = require('bcrypt');
+const { body, param } = require('express-validator');
 const db           = require('../db');
 const { requireAuth }  = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/admin');
+const { isAdminUser }  = require('../utils/adminRole');
 const { auditLog }     = require('../middleware/security');
+const { handleValidationErrors } = require('../middleware/validate');
+const { issueResetToken } = require('../services/passwordReset');
+const {
+  sendAccountCreated,
+  sendPasswordReset,
+  sendPasswordChanged,
+  normalizeLang,
+} = require('../services/email');
 const pluginLoader     = require('../plugins/loader');
 const worldMap         = require('../state/worldMap');
 const pluginConfig     = require('../state/pluginConfig');
@@ -71,17 +82,288 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
   });
 });
 
-// ── GET /api/admin/players — list registered players ─────────────────────────
+const BCRYPT_ROUNDS = Math.max(10, Math.min(15, parseInt(process.env.BCRYPT_ROUNDS || '12', 10)));
+
+function mapAdminUser(row) {
+  return {
+    id: row.id,
+    username: row.username,
+    email: row.email,
+    level: row.level,
+    xp: row.xp,
+    coins: row.coins,
+    plants_grown: row.plants_grown,
+    last_login: row.last_login,
+    created_at: row.created_at,
+    preferred_language: row.preferred_language || 'nl',
+    isAdmin: isAdminUser(row),
+  };
+}
+
+// ── GET /api/admin/players — list registered players (legacy alias) ───────────
 router.get('/players', requireAuth, requireAdmin, async (req, res) => {
   if (!db.isConnected()) {
     return res.json({ players: [], note: 'No database — in-memory mode' });
   }
+  const result = await db.query(
+    `SELECT id, username, email, level, xp, coins, plants_grown, last_login, created_at, preferred_language
+     FROM users ORDER BY last_login DESC NULLS LAST LIMIT 500`,
+  );
+  res.json({ players: result.rows.map(mapAdminUser) });
+});
+
+// ── GET /api/admin/users — searchable user list ───────────────────────────────
+router.get('/users', requireAuth, requireAdmin, async (req, res) => {
+  if (!db.isConnected()) {
+    return res.json({ users: [], total: 0, note: 'No database — in-memory mode' });
+  }
+
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '100', 10)));
+  const offset = Math.max(0, parseInt(req.query.offset || '0', 10));
+
+  const params = [];
+  let where = '';
+  if (q) {
+    params.push(`%${q}%`);
+    where = `WHERE LOWER(username) LIKE $1 OR LOWER(email) LIKE $1`;
+  }
+
+  const countSql = `SELECT COUNT(*)::int AS n FROM users ${where}`;
+  const listSql = `
+    SELECT id, username, email, level, xp, coins, plants_grown, last_login, created_at, preferred_language
+    FROM users ${where}
+    ORDER BY created_at DESC
+    LIMIT ${limit} OFFSET ${offset}`;
+
+  const [countRes, listRes] = await Promise.all([
+    db.query(countSql, params),
+    db.query(listSql, params),
+  ]);
+
+  res.json({
+    users: listRes.rows.map(mapAdminUser),
+    total: countRes.rows[0]?.n || 0,
+    limit,
+    offset,
+  });
+});
+
+const validateAdminCreateUser = [
+  body('username').trim().isLength({ min: 3, max: 30 }).matches(/^[a-zA-Z0-9_-]+$/),
+  body('email').trim().isEmail().normalizeEmail(),
+  body('password')
+    .isLength({ min: 8, max: 128 })
+    .matches(/[A-Z]/).withMessage('Password must contain an uppercase letter')
+    .matches(/[0-9]/).withMessage('Password must contain a number'),
+  body('level').optional().isInt({ min: 1, max: 99 }),
+  body('language').optional().isString().isLength({ max: 10 }),
+  body('sendWelcomeEmail').optional().isBoolean(),
+  handleValidationErrors,
+];
+
+// ── POST /api/admin/users — create user ───────────────────────────────────────
+router.post('/users', requireAuth, requireAdmin, validateAdminCreateUser, async (req, res) => {
+  if (!db.isConnected()) {
+    return res.status(503).json({ error: 'Database required' });
+  }
+
+  const {
+    username,
+    email,
+    password,
+    level = 1,
+    language = 'nl',
+    sendWelcomeEmail = true,
+  } = req.body;
+  const preferredLanguage = normalizeLang(language);
+  const userLevel = Math.min(99, Math.max(1, parseInt(level, 10) || 1));
+
+  const existing = await db.query(
+    'SELECT id FROM users WHERE email = $1 OR username = $2',
+    [email, username],
+  );
+  if (existing.rows.length > 0) {
+    return res.status(409).json({ error: 'Username or email already taken' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const result = await db.query(
+    `INSERT INTO users (username, email, password_hash, level, preferred_language)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, username, email, level, xp, coins, plants_grown, last_login, created_at, preferred_language`,
+    [username, email, passwordHash, userLevel, preferredLanguage],
+  );
+  const user = result.rows[0];
+
+  if (sendWelcomeEmail) {
+    const token = await issueResetToken(user.id);
+    await sendAccountCreated(email, username, token, {
+      createdByAdmin: true,
+      lang: preferredLanguage,
+    });
+  }
+
+  auditLog('admin_user_create', req, { targetUserId: user.id, username });
+  res.status(201).json({ user: mapAdminUser(user) });
+});
+
+const validateAdminUpdateUser = [
+  param('id').isInt({ min: 1 }),
+  body('username').optional().trim().isLength({ min: 3, max: 30 }).matches(/^[a-zA-Z0-9_-]+$/),
+  body('email').optional().trim().isEmail().normalizeEmail(),
+  body('level').optional().isInt({ min: 1, max: 99 }),
+  body('language').optional().isString().isLength({ max: 10 }),
+  body('coins').optional().isInt({ min: 0 }),
+  body('xp').optional().isInt({ min: 0 }),
+  handleValidationErrors,
+];
+
+// ── PATCH /api/admin/users/:id — update user ────────────────────────────────
+router.patch('/users/:id', requireAuth, requireAdmin, validateAdminUpdateUser, async (req, res) => {
+  if (!db.isConnected()) {
+    return res.status(503).json({ error: 'Database required' });
+  }
+
+  const userId = parseInt(req.params.id, 10);
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  const allowed = {
+    username: 'username',
+    email: 'email',
+    level: 'level',
+    language: 'preferred_language',
+    coins: 'coins',
+    xp: 'xp',
+  };
+
+  for (const [key, col] of Object.entries(allowed)) {
+    if (req.body[key] === undefined) continue;
+    let val = req.body[key];
+    if (key === 'level') val = Math.min(99, Math.max(1, parseInt(val, 10)));
+    if (key === 'language') val = normalizeLang(val);
+    fields.push(`${col} = $${idx}`);
+    values.push(val);
+    idx += 1;
+  }
+
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No fields to update' });
+  }
+
+  if (req.body.username) {
+    const clash = await db.query(
+      'SELECT id FROM users WHERE username = $1 AND id <> $2',
+      [req.body.username, userId],
+    );
+    if (clash.rows.length > 0) {
+      return res.status(409).json({ error: 'Username already taken' });
+    }
+  }
+  if (req.body.email) {
+    const clash = await db.query(
+      'SELECT id FROM users WHERE email = $1 AND id <> $2',
+      [req.body.email, userId],
+    );
+    if (clash.rows.length > 0) {
+      return res.status(409).json({ error: 'Email already taken' });
+    }
+  }
+
+  values.push(userId);
+  const result = await db.query(
+    `UPDATE users SET ${fields.join(', ')}
+     WHERE id = $${idx}
+     RETURNING id, username, email, level, xp, coins, plants_grown, last_login, created_at, preferred_language`,
+    values,
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
+
+  auditLog('admin_user_update', req, { targetUserId: userId });
+  res.json({ user: mapAdminUser(result.rows[0]) });
+});
+
+// ── DELETE /api/admin/users/:id — delete user ───────────────────────────────
+router.delete('/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  if (!db.isConnected()) {
+    return res.status(503).json({ error: 'Database required' });
+  }
+
+  const userId = parseInt(req.params.id, 10);
+  if (userId === req.user.userId) {
+    return res.status(400).json({ error: 'You cannot delete your own account here' });
+  }
+
+  const result = await db.query('DELETE FROM users WHERE id = $1 RETURNING id, username', [userId]);
+  if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
+
+  auditLog('admin_user_delete', req, { targetUserId: userId, username: result.rows[0].username });
+  res.json({ success: true });
+});
+
+// ── POST /api/admin/users/:id/send-reset — e-mail wachtwoordreset ───────────
+router.post('/users/:id/send-reset', requireAuth, requireAdmin, async (req, res) => {
+  if (!db.isConnected()) {
+    return res.status(503).json({ error: 'Database required' });
+  }
+
+  const userId = parseInt(req.params.id, 10);
+  const result = await db.query(
+    'SELECT id, username, email, preferred_language FROM users WHERE id = $1',
+    [userId],
+  );
+  if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
+
+  const user = result.rows[0];
+  const token = await issueResetToken(user.id);
+  const sent = await sendPasswordReset(
+    user.email,
+    user.username,
+    token,
+    user.preferred_language || 'nl',
+  );
+
+  auditLog('admin_user_reset_email', req, { targetUserId: userId });
+  res.json({ success: true, emailSent: sent });
+});
+
+// ── POST /api/admin/users/:id/set-password — stel wachtwoord in + notificatie ─
+const validateSetPassword = [
+  param('id').isInt({ min: 1 }),
+  body('newPassword')
+    .isLength({ min: 8, max: 128 })
+    .matches(/[A-Z]/).withMessage('Password must contain an uppercase letter')
+    .matches(/[0-9]/).withMessage('Password must contain a number'),
+  body('notifyUser').optional().isBoolean(),
+  handleValidationErrors,
+];
+
+router.post('/users/:id/set-password', requireAuth, requireAdmin, validateSetPassword, async (req, res) => {
+  if (!db.isConnected()) {
+    return res.status(503).json({ error: 'Database required' });
+  }
+
+  const userId = parseInt(req.params.id, 10);
+  const { newPassword, notifyUser = true } = req.body;
 
   const result = await db.query(
-    `SELECT id, username, email, level, xp, coins, plants_grown, last_login, created_at
-     FROM users ORDER BY last_login DESC NULLS LAST LIMIT 100`
+    'SELECT id, username, email, preferred_language FROM users WHERE id = $1',
+    [userId],
   );
-  res.json({ players: result.rows });
+  if (!result.rows[0]) return res.status(404).json({ error: 'User not found' });
+
+  const user = result.rows[0];
+  const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, userId]);
+
+  if (notifyUser) {
+    await sendPasswordChanged(user.email, user.username, user.preferred_language || 'nl');
+  }
+
+  auditLog('admin_user_set_password', req, { targetUserId: userId });
+  res.json({ success: true });
 });
 
 // ── GET /api/admin/plugins — list loaded plugins ──────────────────────────────

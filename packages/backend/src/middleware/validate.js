@@ -45,7 +45,7 @@ const validateRegister = [
 ];
 
 const validateLogin = [
-  body('username').trim().isLength({ min: 1 }).withMessage('Username is required'),
+  body('username').trim().isLength({ min: 1 }).withMessage('Username or email is required'),
   body('password').notEmpty().withMessage('Password is required'),
   handleValidationErrors,
 ];

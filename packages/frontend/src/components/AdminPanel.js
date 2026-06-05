@@ -4,6 +4,7 @@ import WorldBuilder      from './WorldBuilder';
 import PluginConfigurator from './PluginConfigurator';
 import ContentCreator     from './ContentCreator';
 import ProposalsPanel     from './ProposalsPanel';
+import AdminUsersPanel    from './AdminUsersPanel';
 
 function StatCard({ label, value, sub, color = '#4caf50' }) {
   return (
@@ -126,7 +127,7 @@ function AdminPanel({ onClose, embedded = false }) {
             >
               {{
                 overview:   '📊 Overview',
-                players:    '👥 Players',
+                players:    '👥 Gebruikers',
                 plugins:    '🔌 Plugins',
                 peers:      '🌍 Peers',
                 world:      '🗺️ World Builder',
@@ -188,39 +189,8 @@ function AdminPanel({ onClose, embedded = false }) {
             </>
           )}
 
-          {/* ── Players ───────────────────────────────────────────────────── */}
-          {tab === 'players' && (
-            <div style={{ overflowX: 'auto' }}>
-              {players.length === 0 ? (
-                <div style={styles.empty}>No players found</div>
-              ) : (
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      {['ID', 'Username', 'Level', 'XP', 'Coins', 'Plants', 'Last login'].map((h) => (
-                        <th key={h} style={styles.th}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {players.map((p) => (
-                      <tr key={p.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                        <td style={styles.td}>{p.id}</td>
-                        <td style={{ ...styles.td, fontWeight: '600', color: '#2e7d32' }}>{p.username}</td>
-                        <td style={styles.td}>⭐ {p.level}</td>
-                        <td style={styles.td}>{p.xp}</td>
-                        <td style={styles.td}>🪙 {p.coins}</td>
-                        <td style={styles.td}>🌿 {p.plants_grown}</td>
-                        <td style={{ ...styles.td, fontSize: '0.8rem', color: '#aaa' }}>
-                          {p.last_login ? new Date(p.last_login).toLocaleDateString() : 'Never'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
+          {/* ── Gebruikersbeheer ──────────────────────────────────────────── */}
+          {tab === 'players' && <AdminUsersPanel />}
 
           {/* ── Plugins ───────────────────────────────────────────────────── */}
           {tab === 'plugins' && stats && (

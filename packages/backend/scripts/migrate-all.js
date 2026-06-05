@@ -19,6 +19,7 @@ const STEPS = [
   'migrate-proposals.js',
   'migrate-leaderboard-season-history.js',
   'migrate-push-tables.js',
+  'migrate-user-language.js',
 ];
 
 function runStep(script) {

@@ -10,11 +10,7 @@
  * requireAuth must run first (sets req.user).
  */
 const db = require('../db');
-
-const ADMIN_USERS = (process.env.ADMIN_USERS || '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
+const { ADMIN_USERS, isAdminUser } = require('../utils/adminRole');
 
 async function requireAdmin(req, res, next) {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
@@ -44,4 +40,4 @@ async function requireAdmin(req, res, next) {
   res.status(403).json({ error: 'Admin access required' });
 }
 
-module.exports = { requireAdmin };
+module.exports = { requireAdmin, isAdminUser };
