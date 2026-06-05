@@ -1,5 +1,6 @@
 const {
   DEFAULT_PLAYER_GARDEN_SLOTS,
+  NPC_HOMES,
   MAP_W,
   MAP_H,
   countGardenPlots,
@@ -8,12 +9,23 @@ const {
   filterValidGardenSlots,
   isValidGardenCenter,
 } = require('../src/utils/gardenSlotRules');
+const { isGardenSuitableCenter } = require('../src/utils/worldBaseTerrain');
 
 describe('gardenSlotRules', () => {
-  it('default slots each have 9 on-map plots', () => {
+  it('default slots each have 9 on-map plots on grass', () => {
     DEFAULT_PLAYER_GARDEN_SLOTS.forEach((slot) => {
       expect(countGardenPlots(slot.x, slot.y)).toBe(9);
+      expect(isGardenSuitableCenter(slot.x, slot.y)).toBe(true);
       expect(isValidGardenCenter(slot.x, slot.y)).toBe(true);
+    });
+  });
+
+  it('NPC homes have 9 grass plots and do not overlap player slots', () => {
+    NPC_HOMES.forEach((npc) => {
+      expect(isGardenSuitableCenter(npc.x, npc.y)).toBe(true);
+      DEFAULT_PLAYER_GARDEN_SLOTS.forEach((slot) => {
+        expect(footprintsOverlap(npc, slot)).toBe(false);
+      });
     });
   });
 
@@ -30,10 +42,15 @@ describe('gardenSlotRules', () => {
     expect(countGardenPlots(11, 17)).toBe(6);
   });
 
+  it('rejects slots on water or mountains', () => {
+    expect(isValidGardenCenter(25, 15)).toBe(false);
+    expect(isValidGardenCenter(26, 9)).toBe(false);
+  });
+
   it('filterNonOverlappingSlots drops overlapping custom slots', () => {
     const filtered = filterNonOverlappingSlots([
-      { x: 6, y: 6 },
-      { x: 5, y: 9 },
+      { x: 2, y: 4 },
+      { x: 2, y: 4 },
     ]);
     expect(filtered.length).toBe(1);
   });

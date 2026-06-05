@@ -22,6 +22,7 @@ import WorldPoiModal from './WorldPoiModal';
 import VillageInteriorView from './VillageInteriorView';
 import PlayerProposalsPanel from './PlayerProposalsPanel';
 import { DEFAULT_PLAYER_GARDEN_SLOTS, NPC_HOMES } from '../utils/gardenSlotRules';
+import { buildProtectedGardenTileSet } from '../utils/worldBaseTerrain';
 
 // ─── Map constants ────────────────────────────────────────────────────────────
 const TILE   = 52;
@@ -81,6 +82,11 @@ applyCastleVillage(BASE_MAP, { W, T, V, P, G });
 
 const GARDEN_SLOTS = DEFAULT_PLAYER_GARDEN_SLOTS;
 
+const PROTECTED_GARDEN_TILES = buildProtectedGardenTileSet([
+  ...GARDEN_SLOTS,
+  ...NPC_HOMES.map(({ x, y }) => ({ x, y })),
+]);
+
 const START_X = 11;
 const START_Y = 7;
 
@@ -119,6 +125,7 @@ const CASTLE_ENTRANCE = CASTLE_DRAWBRIDGE;
 const WORLD_HUB = { x: Math.floor(MAP_W / 2), y: Math.floor(MAP_H / 2) };
 const roadTile = (x, y) => {
   if (x < 0 || y < 0 || x >= MAP_W || y >= MAP_H) return;
+  if (PROTECTED_GARDEN_TILES.has(`${x},${y}`)) return;
   if (BASE_MAP[y][x] === W) return;
   if (BASE_MAP[y][x] === V) return;
   BASE_MAP[y][x] = P;
@@ -615,6 +622,19 @@ function WorldMap({
     });
     return map;
   }, [renderOccupantsWithSelf]);
+
+  const gardenPlotCoordMap = useMemo(() => {
+    const map = {};
+    displayGardenOwners.forEach((player) => {
+      if (!Number.isInteger(player?.x) || !Number.isInteger(player?.y)) return;
+      for (let i = 0; i < 9; i += 1) {
+        const tx = player.x - 1 + (i % 3);
+        const ty = player.y + 1 + Math.floor(i / 3);
+        map[`${tx},${ty}`] = player;
+      }
+    });
+    return map;
+  }, [displayGardenOwners]);
   const ownHome = useMemo(() => (
     lockedOwnHomeRef.current || (myOccupant && Number.isInteger(myOccupant.x) && Number.isInteger(myOccupant.y)
       ? { x: myOccupant.x, y: myOccupant.y }
@@ -850,9 +870,9 @@ function WorldMap({
     if (poiAt(worldPois, x, y)) {
       return isCastleVillageTile(x, y) ? V : P;
     }
-    if (gardenMap[`${x},${y}`]) return 4;
+    if (gardenMap[`${x},${y}`] || gardenPlotCoordMap[`${x},${y}`]) return 4;
     return serverMap[y]?.[x] ?? G;
-  }, [gardenMap, serverMap, mapW, mapH, worldPois]);
+  }, [gardenMap, gardenPlotCoordMap, serverMap, mapW, mapH, worldPois]);
   const isPassable = useCallback((x, y) => {
     const t = getTile(x, y);
     return t !== W && t !== T && t !== M;
@@ -1963,7 +1983,7 @@ function WorldMap({
                       </div>
                     )}
                     {/* Terrain decor */}
-                    {!poi && TILE_DECOR[tile] && (
+                    {!poi && TILE_DECOR[tile] && !gardenPlotCoordMap[`${mx},${my}`] && !gardenPlayer && (
                       <span className={`tile-decor${tile === W || tile === T || tile === M ? ' tile-decor--animated' : ''}`}>
                         {TILE_DECOR[tile]}
                       </span>
@@ -2452,7 +2472,7 @@ function WorldMap({
                     <button
                       key={tool}
                       type="button"
-                      className={`btn btn-secondary walk-own-tool-btn ${gameState.selectedTool === tool ? 'world-action-item--active' : ''}`}
+                      className={`btn btn-secondary walk-own-tool-btn ${gameState?.selectedTool === tool ? 'world-action-item--active' : ''}`}
                       onClick={() => {
                         onUpdateGame((prev) => ({ ...prev, selectedTool: tool }));
                         applyToolOnOwnPlot(ownGardenTargetPlot, tool);

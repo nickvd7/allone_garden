@@ -1,12 +1,17 @@
 'use strict';
 
 /**
- * Regels voor openbare moestuin-slots: geen overlap met dok, dorps-POI's, biomes,
- * NPC-huizen of andere speler-tuinen. Elke tuin heeft 9 beloopbare tegels op de kaart.
+ * Regels voor openbare moestuin-slots: geen overlap, volledige 3×3 op gras
+ * (geen water, bergen, bomen, paden of andere speler-/NPC-tuinen).
  */
 
-const MAP_W = 32;
-const MAP_H = 20;
+const {
+  MAP_W,
+  MAP_H,
+  gardenFootprint,
+  countGardenPlots,
+  isGardenSuitableCenter,
+} = require('./worldBaseTerrain');
 
 const DOCK_COORDS = [{ x: 7, y: 4 }, { x: 8, y: 4 }, { x: 9, y: 4 }];
 const DESERT_COORDS = [{ x: 24, y: 2 }, { x: 25, y: 2 }, { x: 24, y: 3 }];
@@ -18,54 +23,28 @@ const VILLAGE_POIS = [
   { x: 12, y: 2 }, { x: 14, y: 2 }, { x: 16, y: 2 }, { x: 18, y: 1 }, { x: 20, y: 1 },
 ];
 
-/** Vaste NPC-thuislocaties (niet in speler-slots). */
+/** Vaste NPC-thuislocaties op volledig gras, verspreid over de kaart. */
 const NPC_HOMES = [
-  { id: 'npc:mila', x: 4, y: 12 },
-  { id: 'npc:bo', x: 25, y: 15 },
-  { id: 'npc:ivy', x: 15, y: 16 },
+  { id: 'npc:mila', x: 2, y: 11 },
+  { id: 'npc:bo', x: 27, y: 11 },
+  { id: 'npc:ivy', x: 14, y: 11 },
 ];
 
-/** Standaard speler-moestuinplekken — geen overlap, volledige 3×3 onder het huis. */
+/** Standaard speler-moestuinplekken — volledig gras, geen overlap met NPC's of elkaar. */
 const DEFAULT_PLAYER_GARDEN_SLOTS = [
-  { x: 3, y: 3 },
-  { x: 28, y: 16 },
-  { x: 3, y: 16 },
-  { x: 28, y: 3 },
-  { x: 9, y: 5 },
-  { x: 26, y: 9 },
+  { x: 2, y: 4 },
+  { x: 5, y: 5 },
+  { x: 8, y: 5 },
+  { x: 11, y: 5 },
+  { x: 14, y: 5 },
   { x: 11, y: 11 },
-  { x: 20, y: 11 },
-  { x: 6, y: 6 },
-  { x: 22, y: 6 },
-  { x: 8, y: 12 },
-  { x: 17, y: 8 },
+  { x: 5, y: 11 },
+  { x: 8, y: 11 },
+  { x: 18, y: 11 },
+  { x: 24, y: 11 },
+  { x: 21, y: 14 },
+  { x: 8, y: 15 },
 ];
-
-function isOnMap(x, y) {
-  return x >= 0 && x < MAP_W && y >= 0 && y < MAP_H;
-}
-
-function gardenFootprint(cx, cy) {
-  const tiles = new Set();
-  if (!isOnMap(cx, cy)) return tiles;
-  tiles.add(`${cx},${cy}`);
-  for (let i = 0; i < 9; i += 1) {
-    const tx = cx - 1 + (i % 3);
-    const ty = cy + 1 + Math.floor(i / 3);
-    if (isOnMap(tx, ty)) tiles.add(`${tx},${ty}`);
-  }
-  return tiles;
-}
-
-function countGardenPlots(cx, cy) {
-  let count = 0;
-  for (let i = 0; i < 9; i += 1) {
-    const tx = cx - 1 + (i % 3);
-    const ty = cy + 1 + Math.floor(i / 3);
-    if (isOnMap(tx, ty)) count += 1;
-  }
-  return count;
-}
 
 function footprintsOverlap(a, b) {
   const fa = gardenFootprint(a.x, a.y);
@@ -109,10 +88,8 @@ function buildReservedCenters() {
 const RESERVED_TILES = buildReservedCenters();
 
 function isValidGardenCenter(x, y) {
-  if (!isOnMap(x, y)) return false;
-  if (countGardenPlots(x, y) !== 9) return false;
-  const footprint = gardenFootprint(x, y);
-  for (const key of footprint) {
+  if (!isGardenSuitableCenter(x, y)) return false;
+  for (const key of gardenFootprint(x, y)) {
     if (RESERVED_TILES.has(key)) return false;
   }
   return true;
