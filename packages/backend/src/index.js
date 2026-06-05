@@ -211,6 +211,9 @@ if (process.env.P2P_ENABLED === 'true') {
 let npcTickTimer = null;
 function startNpcWorldTick() {
   if (npcTickTimer || process.env.NODE_ENV === 'test') return;
+  // Standaard uit: bots lopen niet rond en sturen geen socket-updates.
+  // Zet NPC_SIMULATION=true om tuin-simulatie + voorstellen weer aan te zetten.
+  if (process.env.NPC_SIMULATION !== 'true') return;
   npcTickTimer = setInterval(() => {
     const onlineIds = onlinePlayers.getAll().map((p) => p.userId);
     npcWorld.tickNpcs(onlineIds);

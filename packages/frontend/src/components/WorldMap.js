@@ -300,6 +300,38 @@ function WorldMap({
   const pollTimerRef = useRef(null);
   const refreshInFlightRef = useRef(false);
   const lastRefreshRef = useRef(0);
+  const stableGardenByUserRef = useRef(new Map());
+  const hasGardenProjectionRef = useRef(false);
+
+  const mergeOccupantsFromApi = useCallback((occupants) => {
+    if (!Array.isArray(occupants) || occupants.length === 0) return null;
+    const next = new Map(stableGardenByUserRef.current);
+    occupants.forEach((o) => {
+      if (!o?.userId || !Number.isInteger(o.x) || !Number.isInteger(o.y)) return;
+      const key = String(o.userId);
+      const existing = next.get(key);
+      if (existing && Number.isInteger(existing.x) && Number.isInteger(existing.y)) {
+        next.set(key, {
+          ...existing,
+          username: o.username || existing.username,
+          slotId: Number.isInteger(o.slotId) ? o.slotId : existing.slotId,
+          sharedCount: o.sharedCount || existing.sharedCount || 1,
+        });
+        return;
+      }
+      next.set(key, {
+        id: o.userId,
+        username: o.username,
+        slotId: o.slotId,
+        x: o.x,
+        y: o.y,
+        sharedCount: o.sharedCount || 1,
+      });
+    });
+    stableGardenByUserRef.current = next;
+    hasGardenProjectionRef.current = true;
+    return Array.from(next.values());
+  }, []);
 
   const refreshWorldProjection = useCallback(async () => {
     refreshInFlightRef.current = true;
@@ -307,21 +339,11 @@ function WorldMap({
       const data = await api.get('/api/world/gardens');
       if (data && Array.isArray(data.map)) setServerMap(data.map);
       if (Array.isArray(data?.gardenSlots) && data.gardenSlots.length > 0) setServerSlots(data.gardenSlots);
-      if (Array.isArray(data?.occupants)) {
-        setWorldOccupants(
-          data.occupants.map((o) => ({
-            id: o.userId,
-            username: o.username,
-            slotId: o.slotId,
-            x: o.x,
-            y: o.y,
-            sharedCount: o.sharedCount || 1,
-          }))
-        );
-      } else {
-        setWorldOccupants([]);
+      const merged = mergeOccupantsFromApi(data?.occupants);
+      if (merged) setWorldOccupants(merged);
+      if (data?.gardenPreviewByUserId) {
+        setGardenPreviews((prev) => ({ ...prev, ...data.gardenPreviewByUserId }));
       }
-      setGardenPreviews(data?.gardenPreviewByUserId || {});
       lastRefreshRef.current = Date.now();
       refreshInFlightRef.current = false;
       return;
@@ -339,7 +361,7 @@ function WorldMap({
     } finally {
       refreshInFlightRef.current = false;
     }
-  }, []);
+  }, [mergeOccupantsFromApi]);
 
   useEffect(() => {
     api.get('/api/world/pois')
@@ -360,7 +382,7 @@ function WorldMap({
     refreshTimerRef.current = setTimeout(() => {
       const now = Date.now();
       if (refreshInFlightRef.current) return;
-      if (now - lastRefreshRef.current < 700) return;
+      if (now - lastRefreshRef.current < 2000) return;
       refreshWorldProjection();
     }, delayMs);
   }, [refreshWorldProjection]);
@@ -381,7 +403,7 @@ function WorldMap({
   useEffect(() => {
     pollTimerRef.current = setInterval(() => {
       scheduleProjectionRefresh(0);
-    }, 10000);
+    }, 30000);
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       pollTimerRef.current = null;
@@ -415,13 +437,11 @@ function WorldMap({
   const [proximityPanelOpen, setProximityPanelOpen] = useState(false);
   const [helpGivenNotice, setHelpGivenNotice] = useState('');
   const [npcNotice, setNpcNotice] = useState('');
-  const [npcPositions, setNpcPositions] = useState(() => VIRTUAL_NEIGHBORS.map((n, idx) => ({
-    ...n,
-    virtual: true,
-    patrolStep: idx % 9,
-  })));
   const [npcShopStock, setNpcShopStock] = useState(() => ({ ...NPC_SHOP }));
-  const virtualNeighbors = npcPositions;
+  // NPC's blijven op vaste thuislocatie (geen patrol / geen lopende bots op de kaart).
+  const staticNpcHomes = useMemo(() => (
+    VIRTUAL_NEIGHBORS.map((n) => ({ ...n, virtual: true, x: n.x, y: n.y }))
+  ), []);
   const lastNpcRefreshDayRef = useRef(null);
 
   const viewportRef = useRef(null);
@@ -434,17 +454,13 @@ function WorldMap({
     if (!socket) return;
     const onList    = (list)   => {
       setPlayers(list.filter((p) => !isCurrentPlayer({ id: p.id, username: p.username })));
-      scheduleProjectionRefresh(50);
     };
     const onJoined  = (player) => {
       setPlayers(prev => [...prev.filter(p => p.id !== player.id), player]);
-      scheduleProjectionRefresh(150);
     };
     const onLeft    = ({ id }) => {
       setPlayers(prev => prev.filter(p => p.id !== id));
       setPlayerPositions(prev => { const n = {...prev}; delete n[id]; return n; });
-      setWorldOccupants(prev => prev.filter(o => String(o.id) !== String(id)));
-      scheduleProjectionRefresh(150);
     };
     socket.on('players:list',  onList);
     socket.on('player:joined', onJoined);
@@ -454,7 +470,7 @@ function WorldMap({
       socket.off('player:joined', onJoined);
       socket.off('player:left',   onLeft);
     };
-  }, [socket, currentUserId, scheduleProjectionRefresh, isCurrentPlayer]);
+  }, [socket, currentUserId, isCurrentPlayer]);
 
   // ── Socket: live positions of other walking players ───────────────────────
   useEffect(() => {
@@ -474,17 +490,14 @@ function WorldMap({
         return next;
       });
     };
-    const onNpcWorld = (data) => { if (data?.npcs) setServerNpcState(data); };
     socket.on('world:player-moved', onMoved);
     socket.on('world:player-offline', onOffline);
     socket.on('world:positions-snapshot', onSnapshot);
-    socket.on('npc:world-updated', onNpcWorld);
     socket.emit('world:request-positions');
     return () => {
       socket.off('world:player-moved', onMoved);
       socket.off('world:player-offline', onOffline);
       socket.off('world:positions-snapshot', onSnapshot);
-      socket.off('npc:world-updated', onNpcWorld);
     };
   }, [socket, currentUserId]);
 
@@ -499,11 +512,21 @@ function WorldMap({
   }, [socket, scheduleProjectionRefresh]);
 
   // ── Build garden map from server-authoritative occupants ──────────────────
-  const renderOccupants = worldOccupants.length > 0
-    ? worldOccupants
-    : players
+  const renderOccupants = useMemo(() => {
+    if (worldOccupants.length > 0) return worldOccupants;
+    const stable = Array.from(stableGardenByUserRef.current.values());
+    if (stable.length > 0) return stable;
+    if (hasGardenProjectionRef.current) return [];
+    return players
       .slice(0, serverSlots.length)
-      .map((p, idx) => ({ id: p.id, username: p.username, slotId: idx, x: serverSlots[idx]?.x, y: serverSlots[idx]?.y }));
+      .map((p, idx) => ({
+        id: p.id,
+        username: p.username,
+        slotId: idx,
+        x: serverSlots[idx]?.x,
+        y: serverSlots[idx]?.y,
+      }));
+  }, [worldOccupants, players, serverSlots]);
   const fallbackOwnHome = useMemo(() => {
     if (!serverSlots.length) return null;
     const seed = `${currentUserId ?? ''}:${currentUsername ?? ''}`;
@@ -558,12 +581,18 @@ function WorldMap({
   ), []);
   const virtualGardenPreviews = useMemo(() => {
     const previews = {};
-    virtualNeighbors.forEach((n) => {
-      if (n.preview) previews[String(n.id)] = n.preview;
-      else previews[String(n.id)] = npcGardenToPreview(NPC_GARDENS[n.id] || []);
+    if (serverNpcState?.npcs?.length) {
+      serverNpcState.npcs.forEach((n) => {
+        if (n.preview) previews[String(n.id)] = n.preview;
+      });
+    }
+    staticNpcHomes.forEach((n) => {
+      if (!previews[String(n.id)]) {
+        previews[String(n.id)] = npcGardenToPreview(NPC_GARDENS[n.id] || []);
+      }
     });
     return previews;
-  }, [virtualNeighbors]);
+  }, [serverNpcState, staticNpcHomes]);
   const displayGardenOwners = useMemo(() => {
     const map = {};
     [...renderOccupantsWithSelf, ...staticVirtualGardenOwners].forEach((player) => {
@@ -892,23 +921,6 @@ function WorldMap({
   }, [broadcastPos, isPassable]);
 
   useEffect(() => {
-    if (!serverNpcState?.npcs?.length) return;
-    setNpcPositions(serverNpcState.npcs.map((n, idx) => ({
-      id: n.id,
-      username: n.username,
-      x: n.x,
-      y: n.y,
-      role: n.role,
-      virtual: true,
-      patrolStep: idx,
-      preview: n.preview,
-      serverPlots: n.plots,
-      lastAction: n.lastAction,
-      mood: n.mood,
-    })));
-  }, [serverNpcState]);
-
-  useEffect(() => {
     const day = Number(gameState?.currentDay || 1);
     if (lastNpcRefreshDayRef.current === day) return;
     lastNpcRefreshDayRef.current = day;
@@ -1229,19 +1241,11 @@ function WorldMap({
         closestWalker = { id: uid, username: p.username, x: p.x, y: p.y, virtual: false };
       }
     });
-    virtualNeighbors.forEach((n) => {
-      const d = Math.abs(n.x - pos.x) + Math.abs(n.y - pos.y);
-      if (d <= WALKER_PROXIMITY && d < closestDist) {
-        closestDist = d;
-        closestWalker = { ...n };
-      }
-    });
-
     const plazaPoi = poiNear(worldPois, pos.x, pos.y, 2);
     setNearGarden(canInteract ? activeOwner : null);
     setNearbyPlayer(canInteract ? { ...activeOwner } : closestWalker);
     setNearPoi(plazaPoi);
-  }, [pos, gardenMap, neighborPatchCoordMap, displayGardenOwnersById, isCurrentPlayer, worldPois, playerPositions, virtualNeighbors, currentUserId]);
+  }, [pos, gardenMap, neighborPatchCoordMap, displayGardenOwnersById, isCurrentPlayer, worldPois, playerPositions, currentUserId]);
 
   const handleTileClick = useCallback((tileData) => {
     const { mx, my, ownPlot, ownPatchIndex, gardenPlayer, structureDecor, tile, poi } = tileData;
@@ -1480,12 +1484,8 @@ function WorldMap({
     const liveWalkers = Object.entries(playerPositions)
       .filter(([, p]) => Number.isInteger(p?.x) && Number.isInteger(p?.y))
       .map(([uid, p]) => ({ uid: String(uid), username: p.username, x: p.x, y: p.y, virtual: false }));
-    const npcWalkers = virtualNeighbors
-      .filter((n) => Number.isInteger(n?.x) && Number.isInteger(n?.y))
-      .map((n) => ({ uid: String(n.id), username: n.username, x: n.x, y: n.y, virtual: true }));
-
     const walkersById = {};
-    [...fallbackOccupants, ...liveWalkers, ...npcWalkers].forEach((walker) => {
+    [...fallbackOccupants, ...liveWalkers].forEach((walker) => {
       walkersById[walker.uid] = walker;
     });
 
@@ -1505,7 +1505,7 @@ function WorldMap({
         stack,
       };
     });
-  }, [otherPlayers, playerPositions, virtualNeighbors, camX, camY, viewW, viewH]);
+  }, [otherPlayers, playerPositions, camX, camY, viewW, viewH]);
 
   const pixiWalkers = useMemo(() => (
     usePixiLayer
@@ -1543,18 +1543,8 @@ function WorldMap({
         virtual: false,
       };
     });
-    virtualNeighbors.forEach((n) => {
-      map[String(n.id)] = {
-        id: n.id,
-        username: n.username,
-        x: n.x,
-        y: n.y,
-        virtual: true,
-        online: true,
-      };
-    });
     return Object.values(map).filter((p) => Number.isInteger(p.x) && Number.isInteger(p.y));
-  }, [otherPlayers, playerPositions, virtualNeighbors, currentUserId]);
+  }, [otherPlayers, playerPositions, currentUserId]);
 
   const overviewTerrainCells = useMemo(() => {
     const cells = [];
@@ -1678,9 +1668,9 @@ function WorldMap({
   // Proximity panel helpers
   const nearbyNpcGarden = useMemo(() => {
     if (!nearbyPlayer?.virtual) return [];
-    const npc = virtualNeighbors.find((n) => String(n.id) === String(nearbyPlayer.id));
-    return npc?.serverPlots || NPC_GARDENS[nearbyPlayer.id] || [];
-  }, [nearbyPlayer, virtualNeighbors]);
+    const npcPlots = serverNpcState?.npcs?.find((n) => String(n.id) === String(nearbyPlayer.id))?.plots;
+    return npcPlots || NPC_GARDENS[nearbyPlayer.id] || [];
+  }, [nearbyPlayer, serverNpcState]);
   const nearbyNpcShop = nearbyPlayer?.virtual ? (npcShopStock[nearbyPlayer.id] || {}) : {};
   const nearbyNpcRole = nearbyPlayer?.virtual ? (NPC_ROLE_META[nearbyPlayer.role] || NPC_ROLE_META.trader) : null;
 

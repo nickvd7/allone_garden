@@ -74,10 +74,9 @@ function gardenPreview(plots) {
 function tickNpcs(onlineUserIds = []) {
   state.tick += 1;
   Object.values(state.npcs).forEach((npc, idx) => {
-    npc.patrolIndex = (npc.patrolIndex + 1) % npc.patrol.length;
-    const pt = npc.patrol[npc.patrolIndex];
-    npc.x = pt.x;
-    npc.y = pt.y;
+    // NPC's blijven op hun thuislocatie — geen patrol over de kaart.
+    npc.x = npc.home.x;
+    npc.y = npc.home.y;
 
     npc.plots = npc.plots.map((p, pi) => {
       if (!p.planted) return p;
