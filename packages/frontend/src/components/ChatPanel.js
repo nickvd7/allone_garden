@@ -36,6 +36,9 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
   const [selectedUser,       setSelectedUser]       = useState(null);
   const [dmInput,            setDmInput]            = useState('');
   const [dmSearch,           setDmSearch]           = useState('');
+  const [searchOpen,         setSearchOpen]         = useState(false);
+  const [searchResults,      setSearchResults]      = useState([]);
+  const [searchLoading,      setSearchLoading]      = useState(false);
   const [unreadDm,           setUnreadDm]           = useState({}); // { userId: count }
   const [unreadGlobal,       setUnreadGlobal]       = useState(0);
   const [historyLoading,     setHistoryLoading]     = useState(false);
@@ -246,19 +249,31 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
     onUnreadChange?.(badgeCount);
   }, [badgeCount, onUnreadChange]);
 
-  // Merge: online players + contacts from conversation history (even if offline)
-  const historyContacts = conversations
-    .filter((c) => !onlinePlayers.some((p) => String(p.id) === String(c.contact_id)))
-    .map((c) => ({ id: c.contact_id, username: c.contact_username, offline: true }));
+  const conversationContacts = conversations.map((c) => ({
+    id: c.contact_id,
+    username: c.contact_username,
+    offline: !onlinePlayers.some((p) => String(p.id) === String(c.contact_id)),
+  }));
 
-  const playerPool = [
-    ...onlinePlayers,
-    ...historyContacts,
-  ];
+  useEffect(() => {
+    if (!searchOpen || dmSearch.trim().length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      setSearchLoading(true);
+      api.get(`/api/dm/search?q=${encodeURIComponent(dmSearch.trim())}`)
+        .then((data) => setSearchResults(data.users || []))
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [dmSearch, searchOpen]);
 
-  const filteredPlayers = dmSearch.trim()
-    ? playerPool.filter((p) => p.username?.toLowerCase().includes(dmSearch.trim().toLowerCase()))
-    : playerPool;
+  const filteredPlayers = searchOpen
+    ? searchResults
+    : conversationContacts;
 
   const selectedKey       = selectedUser ? String(selectedUser.id) : null;
   const selectedDmMessages = selectedKey ? (dmHistory[selectedKey] || []) : [];
@@ -305,12 +320,29 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
         </div>
       )}
 
-      {dmOnly && (
-        <div className="chat-panel__dm-heading">
-          <strong>✉️ {t('chat_direct_messages', { defaultValue: 'Direct messages' })}</strong>
-          {totalUnread > 0 && (
-            <span className="chat-panel__tab-badge">{totalUnread > 9 ? '9+' : totalUnread}</span>
-          )}
+      {(dmOnly || tab === 'direct') && !selectedUser && (
+        <div className="chat-panel__list-header">
+          <strong>✉️ {t('chat_conversations', { defaultValue: 'Gesprekken' })}</strong>
+          <div className="chat-panel__list-header-actions">
+            {totalUnread > 0 && (
+              <span className="chat-panel__tab-badge">{totalUnread > 9 ? '9+' : totalUnread}</span>
+            )}
+            <button
+              type="button"
+              className={`chat-panel__search-btn${searchOpen ? ' chat-panel__search-btn--active' : ''}`}
+              onClick={() => {
+                setSearchOpen((open) => {
+                  const next = !open;
+                  if (!next) setDmSearch('');
+                  return next;
+                });
+              }}
+              aria-label={t('chat_search_players', { defaultValue: 'Search by name…' })}
+              title={t('chat_search_players', { defaultValue: 'Search by name…' })}
+            >
+              🔍
+            </button>
+          </div>
         </div>
       )}
 
@@ -363,30 +395,30 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
       {(dmOnly || tab === 'direct') && (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {!selectedUser ? (
-            /* Player list / search */
             <div>
-              <input
-                className="chat-input"
-                type="text"
-                placeholder={t('chat_search_players', { defaultValue: 'Search by name…' })}
-                value={dmSearch}
-                onChange={(e) => setDmSearch(e.target.value)}
-                style={{ marginBottom: '0.5rem', width: '100%', boxSizing: 'border-box' }}
-              />
-              {!selectedUser && filteredPlayers.length > 0 && !dmOnly && tab !== 'direct' && (
-                <div style={{ fontSize: '0.75rem', color: '#888', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border, #e0e0e0)', marginBottom: '0.25rem' }}>
-                  {onlinePlayers.length} online · {filteredPlayers.length} zichtbaar
-                </div>
+              {searchOpen && (
+                <input
+                  className="chat-input chat-panel__search-input"
+                  type="text"
+                  placeholder={t('chat_search_players', { defaultValue: 'Search by name…' })}
+                  value={dmSearch}
+                  onChange={(e) => setDmSearch(e.target.value)}
+                  autoFocus
+                />
               )}
-              <div style={{ maxHeight: 300, overflowY: 'auto' }}>
-                {convsLoading && (
-                  <div style={{ fontSize: '0.8rem', color: '#aaa', textAlign: 'center', padding: '0.5rem' }}>
+              <div className="chat-panel__contact-list">
+                {(convsLoading || searchLoading) && (
+                  <div className="chat-panel__empty-hint">
                     Laden…
                   </div>
                 )}
-                {!convsLoading && filteredPlayers.length === 0 && (
-                  <div style={{ fontSize: '0.82rem', color: '#aaa', textAlign: 'center', padding: '1rem 0' }}>
-                    {onlinePlayers.length === 0 ? 'Geen andere spelers online' : 'Geen spelers gevonden'}
+                {!convsLoading && !searchLoading && filteredPlayers.length === 0 && (
+                  <div className="chat-panel__empty-hint">
+                    {searchOpen
+                      ? (dmSearch.trim().length < 2
+                        ? t('chat_search_min_chars', { defaultValue: 'Typ minimaal 2 tekens…' })
+                        : t('chat_search_no_results', { defaultValue: 'Geen gebruikers gevonden' }))
+                      : t('chat_no_conversations', { defaultValue: 'Nog geen gesprekken — tik op 🔍 om iemand te zoeken' })}
                   </div>
                 )}
                 {filteredPlayers.map((player) => {
@@ -397,48 +429,37 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setSelectedUser(player)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '0.6rem',
-                        width: '100%', padding: '0.5rem 0.4rem', border: 'none',
-                        background: 'var(--hover, rgba(76,175,80,0.04))',
-                        cursor: 'pointer', borderRadius: '6px', textAlign: 'left',
-                        transition: 'background 0.15s',
+                      className="chat-panel__contact"
+                      onClick={() => {
+                        setSelectedUser(player);
+                        setSearchOpen(false);
+                        setDmSearch('');
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--hover, rgba(0,0,0,0.08))'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--hover, rgba(76,175,80,0.04))'; }}
                     >
-                      <div style={{
-                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                        background: avatarColor(player.id), color: '#fff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 700, fontSize: '0.9rem',
-                        opacity: player.offline ? 0.5 : 1,
-                      }}>
+                      <div
+                        className="chat-panel__contact-avatar"
+                        style={{ background: avatarColor(player.id), opacity: player.offline ? 0.55 : 1 }}
+                      >
                         {player.username?.[0]?.toUpperCase() || '?'}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <div className="chat-panel__contact-body">
+                        <div className="chat-panel__contact-name">
                           {player.username}
-                          {!player.offline && (
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4caf50', display: 'inline-block' }} />
-                          )}
+                          {!player.offline && <span className="chat-panel__online-dot" />}
                         </div>
                         {last ? (
-                          <div style={{ fontSize: '0.75rem', color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>
+                          <div className="chat-panel__contact-preview">
                             {String(last.from) === String(currentUserId) ? 'Jij: ' : ''}{last.text}
                           </div>
                         ) : (
-                          <div style={{ fontSize: '0.72rem', color: '#bbb', fontStyle: 'italic' }}>Stuur bericht</div>
+                          <div className="chat-panel__contact-preview chat-panel__contact-preview--empty">
+                            {t('chat_start_conversation', { defaultValue: 'Stuur bericht' })}
+                          </div>
                         )}
                       </div>
-                      <span style={{ color: '#aaa', fontSize: '0.8rem', flexShrink: 0 }}>→</span>
+                      <span className="chat-panel__contact-chevron" aria-hidden>→</span>
                       {unread > 0 && (
-                        <span style={{
-                          background: '#e53935', color: '#fff',
-                          borderRadius: '9px', fontSize: '0.68rem', fontWeight: 700,
-                          padding: '0 5px', lineHeight: '16px', minWidth: 16, textAlign: 'center',
-                        }}>
+                        <span className="chat-panel__contact-unread">
                           {unread > 9 ? '9+' : unread}
                         </span>
                       )}
@@ -475,10 +496,10 @@ function ChatPanel({ socket, username, currentUserId, dmTarget, onDmTargetClear,
                     {t('chat_offline_stored', { defaultValue: 'Offline — bericht blijft bewaard' })}
                   </span>
                 )}
-                {!selectedUser.offline && onStartCall && (
+                {onStartCall && (
                   <>
-                    <button type="button" onClick={() => onStartCall({ mode: 'outgoing', peerId: selectedUser.id, peerUsername: selectedUser.username, audioOnly: false })} title="Videogesprek" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.15rem 0.3rem' }}>📹</button>
-                    <button type="button" onClick={() => onStartCall({ mode: 'outgoing', peerId: selectedUser.id, peerUsername: selectedUser.username, audioOnly: true })} title="Audiogesprek" style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', padding: '0.15rem 0.3rem' }}>📞</button>
+                    <button type="button" className="chat-panel__call-btn" onClick={() => onStartCall({ mode: 'outgoing', peerId: selectedUser.id, peerUsername: selectedUser.username, audioOnly: false })} title="Videogesprek">📹</button>
+                    <button type="button" className="chat-panel__call-btn" onClick={() => onStartCall({ mode: 'outgoing', peerId: selectedUser.id, peerUsername: selectedUser.username, audioOnly: true })} title="Audiogesprek">📞</button>
                   </>
                 )}
               </div>

@@ -123,30 +123,55 @@ export default function PlayerProposalsPanel({
 
       {targetUser && !String(targetUser).startsWith('npc:') && (
         <div className="player-proposal-compose">
-          <select value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value }))}>
+          <select
+            className="player-proposal-compose__select"
+            value={form.kind}
+            onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value }))}
+          >
             <option value="trade">{t('worldMap.proposal_kind_trade', { defaultValue: 'Ruil' })}</option>
             <option value="collaborate">{t('worldMap.proposal_kind_collab', { defaultValue: 'Samenwerken' })}</option>
           </select>
           {form.kind === 'trade' && (
             <div className="player-proposal-compose__trade">
-              <input type="number" min={1} value={form.offerQty} onChange={(e) => setForm((f) => ({ ...f, offerQty: Number(e.target.value) || 1 }))} />
-              <select value={form.offerCrop} onChange={(e) => setForm((f) => ({ ...f, offerCrop: e.target.value }))}>
+              <input
+                className="player-proposal-compose__input"
+                type="number"
+                min={1}
+                value={form.offerQty}
+                onChange={(e) => setForm((f) => ({ ...f, offerQty: Number(e.target.value) || 1 }))}
+              />
+              <select
+                className="player-proposal-compose__select"
+                value={form.offerCrop}
+                onChange={(e) => setForm((f) => ({ ...f, offerCrop: e.target.value }))}
+              >
                 {['tomato', 'carrot', 'lettuce', 'corn', 'potato'].map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
-              <span>↔</span>
-              <input type="number" min={1} value={form.requestQty} onChange={(e) => setForm((f) => ({ ...f, requestQty: Number(e.target.value) || 1 }))} />
-              <select value={form.requestCrop} onChange={(e) => setForm((f) => ({ ...f, requestCrop: e.target.value }))}>
+              <span className="player-proposal-compose__swap">↔</span>
+              <input
+                className="player-proposal-compose__input"
+                type="number"
+                min={1}
+                value={form.requestQty}
+                onChange={(e) => setForm((f) => ({ ...f, requestQty: Number(e.target.value) || 1 }))}
+              />
+              <select
+                className="player-proposal-compose__select"
+                value={form.requestCrop}
+                onChange={(e) => setForm((f) => ({ ...f, requestCrop: e.target.value }))}
+              >
                 {['tomato', 'carrot', 'lettuce', 'corn', 'potato'].map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           )}
           <input
+            className="player-proposal-compose__input player-proposal-compose__message"
             type="text"
             placeholder={targetUsername ? `Bericht voor ${targetUsername}` : 'Bericht'}
             value={form.message}
             onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
           />
-          <button type="button" className="btn btn-secondary btn-sm" onClick={sendProposal}>
+          <button type="button" className="btn btn-primary player-proposal-compose__submit" onClick={sendProposal}>
             {t('worldMap.proposal_send', { defaultValue: 'Voorstel sturen' })}
           </button>
         </div>

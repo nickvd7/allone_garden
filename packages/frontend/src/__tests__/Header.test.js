@@ -32,7 +32,7 @@ describe('Header', () => {
   it('opens social menu when chat button clicked', () => {
     const onOpenSocialMenu = jest.fn();
     render(<Header {...defaultProps} onOpenSocialMenu={onOpenSocialMenu} />);
-    fireEvent.click(screen.getByTitle(/Chat & players/i));
+    fireEvent.click(screen.getByLabelText(/^Chat$/i));
     expect(onOpenSocialMenu).toHaveBeenCalledTimes(1);
   });
 
@@ -57,6 +57,20 @@ describe('Header', () => {
     fireEvent.click(screen.getByText(/📅 Day 3/));
     expect(screen.getByText(/spring/i)).toBeInTheDocument();
     expect(screen.getByText(/2 online/i)).toBeInTheDocument();
+  });
+
+  it('shows admin menu item when isAdmin', () => {
+    const onOpenAdmin = jest.fn();
+    render(
+      <Header
+        {...defaultProps}
+        isAdmin
+        onOpenAdmin={onOpenAdmin}
+      />,
+    );
+    fireEvent.click(screen.getByTitle(/Profile — Alice/i));
+    fireEvent.click(screen.getByRole('menuitem', { name: /Admin/i }));
+    expect(onOpenAdmin).toHaveBeenCalledTimes(1);
   });
 
   it('shows notifications badge on bell, not profile', () => {

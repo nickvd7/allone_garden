@@ -26,6 +26,8 @@ function Header({
   onNextDay,
   onOpenHelp,
   onOpenGradendex,
+  onOpenAdmin,
+  isAdmin = false,
   onOpenNotifications,
   notificationsBadge = 0,
   notificationsOpen = false,
@@ -221,6 +223,16 @@ function Header({
                   onClick={() => { setProfileOpen(false); onOpenPlugins(); }}
                 >
                   🔌 {t('header_menu_plugins')}
+                </button>
+              )}
+              {isAdmin && onOpenAdmin && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-more-item"
+                  onClick={() => { setProfileOpen(false); onOpenAdmin(); }}
+                >
+                  ⚙️ {t('header_menu_admin', { defaultValue: 'Admin' })}
                 </button>
               )}
               {onToggleDark && (

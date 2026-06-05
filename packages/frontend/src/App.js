@@ -1114,6 +1114,8 @@ function App() {
           setShowProfile(false);
           setShowGradendex(true);
         }}
+        isAdmin={!!authUser.isAdmin}
+        onOpenAdmin={authUser.isAdmin ? () => { window.location.href = '/admin'; } : undefined}
         socialBadge={socialUnread}
         onNextDay={handleNextDay}
         worldSummary={{
@@ -1175,6 +1177,7 @@ function App() {
               gameState={gameState}
               onUpdateGame={setGameState}
               onStartCall={(state) => setCallState(state)}
+              onOpenDm={handleStartDm}
               onOpenMarketplace={() => setShowTrade(true)}
               onWorldHudChange={setWorldHud}
               hideDpad={hideMovementControls}
@@ -1349,6 +1352,15 @@ function App() {
               >
                 ⚙️ {t('account_settings', { defaultValue: 'Account settings' })}
               </button>
+              {authUser.isAdmin && (
+                <button
+                  type="button"
+                  className="btn btn-secondary profile-modal__action"
+                  onClick={() => { setShowProfile(false); window.location.href = '/admin'; }}
+                >
+                  🛠️ {t('header_menu_admin', { defaultValue: 'Admin' })}
+                </button>
+              )}
               <label className="profile-modal__toggle">
                 <input
                   type="checkbox"

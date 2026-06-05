@@ -103,4 +103,36 @@ router.get('/history/:userId', requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/dm/search?q= — zoek gebruikers op username (ook offline) ─────────
+router.get('/search', requireAuth, async (req, res) => {
+  const myId = req.user.userId;
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (q.length < 2) {
+    return res.json({ users: [] });
+  }
+  if (!db.isConnected()) {
+    return res.json({ users: [] });
+  }
+  try {
+    const result = await db.query(
+      `SELECT id, username
+       FROM users
+       WHERE id <> $1 AND LOWER(username) LIKE $2
+       ORDER BY username ASC
+       LIMIT 20`,
+      [myId, `%${q}%`],
+    );
+    res.json({
+      users: (result?.rows || []).map((row) => ({
+        id: row.id,
+        username: row.username,
+        offline: true,
+      })),
+    });
+  } catch (err) {
+    console.error('[dm] search error:', err.message);
+    res.json({ users: [] });
+  }
+});
+
 module.exports = router;
