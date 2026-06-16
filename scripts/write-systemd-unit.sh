@@ -20,6 +20,11 @@ NODE_BIN="$(command -v node)"
 [[ -f "${BACKEND_DIR}/src/index.js" ]] || { echo "Geen backend in ${BACKEND_DIR}"; exit 1; }
 [[ -f "$ENV_FILE" ]] || { echo "Geen .env: ${ENV_FILE}"; exit 1; }
 
+# Blast-radius bij overload: backend mag Pi niet volledig opeten (thuisnetwerk blijft bruikbaar)
+MEMORY_MAX="${GARDEN_MEMORY_MAX:-768M}"
+CPU_QUOTA="${GARDEN_CPU_QUOTA:-75%}"
+TASKS_MAX="${GARDEN_TASKS_MAX:-120}"
+
 cat > /etc/systemd/system/allone-garden.service <<EOF
 [Unit]
 Description=AllOne Garden Server
@@ -37,6 +42,10 @@ EnvironmentFile=${ENV_FILE}
 ExecStart=${NODE_BIN} src/index.js
 Restart=always
 RestartSec=5
+MemoryMax=${MEMORY_MAX}
+CPUQuota=${CPU_QUOTA}
+TasksMax=${TASKS_MAX}
+OOMPolicy=stop
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=allone-garden

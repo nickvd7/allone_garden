@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Herstel nginx vhost: default_server + LAN-IP, root = echte install-map.
+# Herstel nginx vhost + hardened limits (vervangt oude fix-nginx-vhost flow).
 #   sudo bash scripts/fix-nginx-vhost.sh [install-dir]
 set -euo pipefail
 
@@ -20,75 +20,6 @@ fi
 [[ -n "$INSTALL_DIR" && -d "${INSTALL_DIR}/packages/frontend/build" ]] \
   || { echo "Geen geldige install-dir met frontend build: ${INSTALL_DIR:-?}"; exit 1; }
 
-BACKEND_PORT=5000
-[[ -f "${INSTALL_DIR}/packages/backend/.env" ]] \
-  && grep -q '^PORT=' "${INSTALL_DIR}/packages/backend/.env" \
-  && BACKEND_PORT="$(grep '^PORT=' "${INSTALL_DIR}/packages/backend/.env" | cut -d= -f2-)"
-
-PI_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
-DOMAIN="${GARDEN_DOMAIN:-allone.garden}"
-CERT_DOMAINS="${DOMAIN} www.${DOMAIN} api.${DOMAIN}"
-
-info() { echo "[nginx-fix] $*"; }
-
-info "Install: ${INSTALL_DIR}"
-info "Build:   ${INSTALL_DIR}/packages/frontend/build"
-info "IP:      ${PI_IP:-<none>}"
-
-chmod -R a+rX "${INSTALL_DIR}/packages/frontend/build"
-
-cat > /etc/nginx/sites-available/allone-garden <<EOF
-# AllOne Garden — gegenereerd door fix-nginx-vhost.sh
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name ${CERT_DOMAINS} _ ${PI_IP};
-
-    root ${INSTALL_DIR}/packages/frontend/build;
-    index index.html;
-
-    location /api/ {
-        proxy_pass http://127.0.0.1:${BACKEND_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
-    }
-
-    location /socket.io/ {
-        proxy_pass http://127.0.0.1:${BACKEND_PORT};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_read_timeout 86400;
-    }
-
-    location = /install.sh {
-        alias ${INSTALL_DIR}/install.sh;
-        default_type text/x-shellscript;
-        add_header Content-Disposition 'attachment; filename="install.sh"';
-    }
-
-    location / {
-        try_files \$uri /index.html;
-    }
-}
-EOF
-
-ln -sf /etc/nginx/sites-available/allone-garden /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
-nginx -t
-systemctl restart nginx
-info "OK — nginx (HTTP) herstart. Test: curl -sS http://127.0.0.1/api/health"
-curl -fsS "http://127.0.0.1/api/health" && echo "" || warn "curl zonder Host faalt nog — probeer in browser via http://${PI_IP}/"
-
-# Deze vhost is HTTP-only; herstel het 443-blok als er een certificaat is.
 SCRIPT_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -x "${SCRIPT_SELF_DIR}/setup-ssl.sh" ]]; then
-  GARDEN_DOMAIN="${GARDEN_DOMAIN:-${DOMAIN}}" bash "${SCRIPT_SELF_DIR}/setup-ssl.sh" || warn "SSL niet (her)toegepast — zie hierboven"
-fi
+GARDEN_DOMAIN="${GARDEN_DOMAIN:-allone.garden}" \
+  bash "${SCRIPT_SELF_DIR}/apply-nginx-hardening.sh" "$INSTALL_DIR"

@@ -42,6 +42,13 @@ wire_into_nginx() {
   if certbot install --nginx --cert-name "$DOMAIN" --redirect 2>&1 | tail -5; then
     mkdir -p /etc/letsencrypt/renewal-hooks/deploy
     printf '#!/bin/sh\nsystemctl reload nginx\n' > /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+    for _d in /opt/allone-garden "$HOME/coding/allone_garden"; do
+      if [[ -x "${_d}/scripts/ensure-nginx-ssl-hardening.sh" ]]; then
+        printf '[ -x "%s/scripts/ensure-nginx-ssl-hardening.sh" ] && bash "%s/scripts/ensure-nginx-ssl-hardening.sh"\n' "$_d" "$_d" \
+          >> /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+        break
+      fi
+    done
     chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
     systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
     success "HTTPS actief voor ${DOMAIN}"
