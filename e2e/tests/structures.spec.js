@@ -6,8 +6,10 @@ test.describe('Garden Structures', () => {
   test.beforeEach(async ({ page }) => {
     const user = uniqueUser();
     await register(page, user);
-    await page.getByRole('button', { name: /Structures/i }).click();
-    await expect(page.getByRole('heading', { name: /Structures/i })).toBeVisible({ timeout: 10_000 });
+    // Structures moved into the own-garden panel behind the "🔨 Build" section tab.
+    await openOwnGardenPanel(page);
+    await page.getByRole('button', { name: /Build/i }).click();
+    await expect(page.locator('.structures-panel')).toBeVisible({ timeout: 10_000 });
   });
 
   test('structures modal lists well and greenhouse', async ({ page }) => {
@@ -24,8 +26,6 @@ test.describe('Garden Structures', () => {
   });
 
   test('spray pests tool exists in world garden tools when panel open', async ({ page }) => {
-    await page.keyboard.press('Escape');
-    await openOwnGardenPanel(page);
-    await expect(page.getByRole('button', { name: /Spray/i })).toBeVisible();
+    await expect(page.locator('.walk-own-tools-grid').getByRole('button', { name: /Spray/i })).toBeVisible();
   });
 });

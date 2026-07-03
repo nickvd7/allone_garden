@@ -33,33 +33,37 @@ test.describe('Garden (world map)', () => {
 
   test('can till a plot from world panel', async ({ page }) => {
     await openOwnGardenPanel(page);
-    await page.getByRole('button', { name: /Till/i }).click();
-    const targetPlot = page.locator('.world-own-plot:not(.world-own-plot--neighbor)').first();
-    await targetPlot.click({ force: true });
-    await expect(targetPlot).toHaveClass(/world-own-plot--tilled/, { timeout: 5_000 });
+    // Clicking the Till tool applies it to the plot the player stands on (the
+    // active own-plot), which then gains the tilled class.
+    await page.locator('.walk-own-tools-grid').getByRole('button', { name: /Till/i }).click();
+    await expect(page.locator('.world-own-plot--active').first())
+      .toHaveClass(/world-own-plot--tilled/, { timeout: 5_000 });
   });
 
   test('can advance to next day', async ({ page }) => {
-    const dayLine = page.locator('.mobile-world-mini-hud__line').filter({ hasText: /Day \d+/ });
-    await expect(dayLine).toBeVisible();
-    const before = await dayLine.textContent();
+    const dayChip = page.locator('.header-day-chip__main');
+    await expect(dayChip).toBeVisible();
+    const before = await dayChip.textContent();
 
     await page.getByRole('button', { name: /Next day/i }).click();
-    await page.waitForTimeout(500);
 
-    const after = await dayLine.textContent();
-    expect(after).not.toBe(before);
+    await expect(async () => {
+      expect(await dayChip.textContent()).not.toBe(before);
+    }).toPass({ timeout: 5_000 });
   });
 
   test('world garden panel shows core tools', async ({ page }) => {
     await openOwnGardenPanel(page);
+    const tools = page.locator('.walk-own-tools-grid');
     for (const tool of ['Till', 'Plant', 'Water', 'Harvest']) {
-      await expect(page.getByRole('button', { name: new RegExp(tool, 'i') })).toBeVisible();
+      await expect(tools.getByRole('button', { name: new RegExp(tool, 'i') })).toBeVisible();
     }
   });
 
   test('mini HUD shows day and XP', async ({ page }) => {
-    await expect(page.locator('.mobile-world-mini-hud__line').filter({ hasText: /Day \d+/ })).toBeVisible();
-    await expect(page.locator('.mobile-world-mini-hud__line').filter({ hasText: /XP/ })).toBeVisible();
+    // Day is always visible on the header day chip; XP lives in the status popover.
+    await expect(page.locator('.header-day-chip__main')).toContainText(/Day \d+/);
+    await page.locator('.header-day-chip').click();
+    await expect(page.locator('.header-status-popover')).toContainText(/XP/i);
   });
 });

@@ -17,11 +17,13 @@ test.describe('Smoke — game shell', () => {
     await expect(page.getByRole('menuitem', { name: /Plugins/i })).toBeVisible();
   });
 
-  test('registered user: Online players heading shows count', async ({ page }) => {
+  test('registered user: online count shows in world status popover', async ({ page }) => {
     const user = uniqueUser();
     await register(page, user);
-    await page.getByRole('button', { name: /Chat/i }).click();
-    await expect(page.getByRole('heading', { level: 3, name: /Online players/i })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 3, name: /Online players/i })).toContainText(/\(\d+\)/);
+    // Online player count moved into the header world-status popover ("👥 N online").
+    await page.locator('.header-day-chip').click();
+    const popover = page.locator('.header-status-popover');
+    await expect(popover).toBeVisible();
+    await expect(popover).toContainText(/\d+\s*online/i);
   });
 });
