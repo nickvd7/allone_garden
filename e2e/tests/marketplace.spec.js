@@ -15,31 +15,34 @@ test.beforeEach(async ({ page }) => {
   await login(page, user);
 });
 
-async function openTradeFromInventoryFab(page) {
-  await page.keyboard.press('Escape');
-  const closeWorldPanel = page.getByRole('button', { name: /^Close panel$/i });
-  if (await closeWorldPanel.isVisible().catch(() => false)) {
-    await closeWorldPanel.click();
-  }
-  await page.getByRole('button', { name: /Open inventory/i }).click({ force: true });
-  await expect(page.locator('.inventory-sidebar').getByRole('heading', { name: /inventory/i })).toBeVisible({
-    timeout: 15_000,
-  });
-  await page
-    .locator('.inventory-sidebar')
-    .getByRole('button', { name: /Marketplace/i })
-    .click({ force: true });
+// The trade marketplace is a location-based feature: open the world overview map,
+// teleport to the Market POI, enter the market stall, step up to the shop counter
+// (which reveals the shop panel) and open the player marketplace from there.
+async function openTradeModal(page) {
+  await page.getByRole('button', { name: /World Map/i }).click();
+  await expect(page.locator('.walk-overview-map')).toBeVisible({ timeout: 15_000 });
+  await page.locator('.walk-overview-markers').getByTitle('Market', { exact: true }).click();
+
+  const enterBtn = page.locator('.walk-enter-banner__btn');
+  await expect(enterBtn).toBeVisible({ timeout: 15_000 });
+  await enterBtn.click();
+
+  // Walk up to the counter with the interior D-pad; the shop panel auto-opens there.
+  const dpadUp = page.locator('.village-interior-dpad .walk-dpad-btn--up');
+  await expect(dpadUp).toBeVisible({ timeout: 15_000 });
+  for (let i = 0; i < 3; i += 1) await dpadUp.click();
+
+  const openMarketBtn = page.getByRole('button', { name: /Open marketplace/i });
+  await expect(openMarketBtn).toBeVisible({ timeout: 15_000 });
+  await openMarketBtn.click();
   await expect(page.getByText('🔄 Marketplace')).toBeVisible({ timeout: 15_000 });
 }
 
 // ── Trade marketplace ─────────────────────────────────────────────────────────
 
-// TODO(maintainer): the "Open inventory" FAB + inventory-sidebar → Marketplace flow this
-// suite drives no longer exists; the trade marketplace now opens via the in-world Market
-// POI (walk to 🏪 and interact). Quarantined until a stable, non-flaky entry point exists.
-test.describe.skip('Trade marketplace', () => {
+test.describe('Trade marketplace', () => {
   test('opens and closes trade modal', async ({ page }) => {
-    await openTradeFromInventoryFab(page);
+    await openTradeModal(page);
     await page
       .getByText('🔄 Marketplace')
       .locator('xpath=following-sibling::button')
@@ -48,8 +51,8 @@ test.describe.skip('Trade marketplace', () => {
   });
 
   test('trade modal shows market listings section', async ({ page }) => {
-    await openTradeFromInventoryFab(page);
-    await expect(page.getByText(/market|listing|Browse|browse/i).first()).toBeVisible();
+    await openTradeModal(page);
+    await expect(page.getByRole('button', { name: /Browse/i })).toBeVisible();
   });
 });
 
