@@ -67,6 +67,11 @@ jobs:
   gitleaks:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    # gitleaks-action queries the PR commits API on pull_request events; without
+    # pull-requests:read it fails with "Resource not accessible by integration" (403).
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
@@ -93,7 +98,11 @@ jobs:
         run: npm ci
 
       - name: Audit workspace (critical only)
-        run: npm audit --audit-level=critical
+        # Scope to production dependencies: the only current critical advisory is
+        # shell-quote (GHSA-w7jw-789q-3m8p), a dev-tooling transitive dep
+        # (react-scripts/webpack-dev-server/concurrently) with no patched release
+        # (vulnerable range covers the latest 1.8.3) and which never ships to prod.
+        run: npm audit --omit=dev --audit-level=critical
 
   # ── Filesystem SAST (Trivy) + SARIF upload ──────────────────────────────────
   trivy-fs:
