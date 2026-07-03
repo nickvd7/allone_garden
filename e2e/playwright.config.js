@@ -48,6 +48,19 @@ module.exports = defineConfig({
     headless: true,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    // The app defaults to Dutch ('nl') in production builds (see
+    // packages/frontend/src/i18n/config.js). E2E specs assert on English UI
+    // strings, so seed localStorage with garden_lang=en for the frontend origin
+    // before any page script runs. Mirrors the app's NODE_ENV==='test' → 'en' rule.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: frontendOrigin,
+          localStorage: [{ name: 'garden_lang', value: 'en' }],
+        },
+      ],
+    },
   },
 
   projects: [

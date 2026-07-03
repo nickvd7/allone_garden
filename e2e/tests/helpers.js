@@ -40,7 +40,9 @@ export async function register(page, user) {
   await page.getByRole('tab', { name: 'Register' }).click();
   await page.getByPlaceholder('Username').fill(user.username);
   await page.getByPlaceholder('Email').fill(user.email);
-  await page.getByPlaceholder('Password').fill(user.password);
+  // Register mode has both "Password" and "Confirm password" fields.
+  await page.getByPlaceholder('Password', { exact: true }).fill(user.password);
+  await page.getByPlaceholder('Confirm password').fill(user.password);
   await page.getByRole('button', { name: /Create account/i }).click();
   // Wait until the main game header is visible
   await page.waitForSelector('.header', { timeout: 15_000 });
@@ -83,14 +85,15 @@ export async function logout(page) {
   await expect(page.locator('#auth-main-title')).toBeVisible({ timeout: 15_000 });
 }
 
-/** Registered username appears in the profile dropdown (not on a top-level header button). */
+/** The logged-in username is shown as the heading of the Profile modal (👤 <username>). */
 export async function assertLoggedInAs(page, username) {
   const { expect } = require('@playwright/test');
   await page.locator('#header-profile-btn').click();
-  await expect(page.getByRole('menuitem', { name: new RegExp(username, 'i') })).toBeVisible({
+  await page.getByRole('menuitem', { name: /Profile/i }).click();
+  await expect(page.getByRole('heading', { name: new RegExp(username, 'i') })).toBeVisible({
     timeout: 10_000,
   });
-  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /Close profile/i }).click();
 }
 
 /**
@@ -113,7 +116,8 @@ export async function guestOrRegister(page) {
     await page.getByRole('tab', { name: 'Register' }).click();
     await page.getByPlaceholder('Username').fill(user.username);
     await page.getByPlaceholder('Email').fill(user.email);
-    await page.getByPlaceholder('Password').fill(user.password);
+    await page.getByPlaceholder('Password', { exact: true }).fill(user.password);
+    await page.getByPlaceholder('Confirm password').fill(user.password);
     await page.getByRole('button', { name: /Create account/i }).click();
   }
   await page.waitForSelector('.header', { timeout: 15_000 });

@@ -27,7 +27,8 @@ test.describe('Authentication', () => {
     await page.getByRole('tab', { name: 'Register' }).click();
     await page.getByPlaceholder('Username').fill(user.username);
     await page.getByPlaceholder('Email').fill('other_' + user.email);
-    await page.getByPlaceholder('Password').fill(user.password);
+    await page.getByPlaceholder('Password', { exact: true }).fill(user.password);
+    await page.getByPlaceholder('Confirm password').fill(user.password);
     await page.getByRole('button', { name: /Create account/i }).click();
     await expect(page.getByText(/already taken/i)).toBeVisible();
   });
