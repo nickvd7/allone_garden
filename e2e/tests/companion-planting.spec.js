@@ -23,35 +23,39 @@ test.describe('Companion planting (world map)', () => {
     await login(page, user);
   });
 
+  // Only the player's own 3×3 garden plots — biome plots also use .world-own-plot
+  // (with --biome) and neighbour gardens use --neighbor, so exclude both.
   function ownMiniPlots(page) {
-    return page.locator('.world-own-plot:not(.world-own-plot--neighbor)');
+    return page.locator(
+      '.world-own-plot:not(.world-own-plot--neighbor):not(.world-own-plot--biome)'
+    );
   }
 
-  // TODO(maintainer): rewrite for the redesigned world-map garden. The mini-grid now
-  // renders more than the 9 own plots (own + biome plots share .world-own-plot) and
-  // tilling/planting adjacent plots depends on character position, making this flow
-  // flaky. Quarantined until the companion-planting UX has a stable e2e entry point.
-  test.skip('tomaat en wortel op aangrenzende vakken + emoji’s (content: goede combinatie)', async ({ page }) => {
+  test('tomaat en wortel op aangrenzende vakken + emoji’s (content: goede combinatie)', async ({ page }) => {
     await openOwnGardenPanel(page);
     const plots = ownMiniPlots(page);
     await expect(plots).toHaveCount(9);
+    const tools = page.locator('.walk-own-tools-grid');
 
+    // Clicking an own-plot tile applies the currently selected tool to that exact
+    // plot (position-independent), so we can till/plant two specific plots.
+    await tools.getByRole('button', { name: /Till/i }).click();
     await plots.nth(0).click({ force: true });
     await plots.nth(1).click({ force: true });
     await expect(plots.nth(0)).toHaveClass(/world-own-plot--tilled/, { timeout: 5_000 });
     await expect(plots.nth(1)).toHaveClass(/world-own-plot--tilled/);
 
-    const panel = page.locator('.walk-garden-view');
-    // Standaard selectedSeed = tomato; default target plot index = 1
-    await panel.getByRole('button', { name: /Plant/i }).click();
+    // Plant tomato on plot 0.
+    await tools.getByRole('button', { name: /Plant/i }).click();
     await expect(page.locator('#own-garden-seed-select')).toBeVisible({ timeout: 5_000 });
-    await expect(plots.nth(1)).toHaveClass(/world-own-plot--planted/, { timeout: 5_000 });
-
-    await page.locator('#own-garden-seed-select').selectOption('carrot');
+    await page.locator('#own-garden-seed-select').selectOption('tomato');
     await plots.nth(0).click({ force: true });
+    await expect(plots.nth(0)).toHaveClass(/world-own-plot--planted/, { timeout: 5_000 });
 
-    await expect(plots.nth(0)).toHaveClass(/world-own-plot--planted/);
-    await expect(plots.nth(1)).toHaveClass(/world-own-plot--planted/);
+    // Plant carrot on the adjacent plot 1.
+    await page.locator('#own-garden-seed-select').selectOption('carrot');
+    await plots.nth(1).click({ force: true });
+    await expect(plots.nth(1)).toHaveClass(/world-own-plot--planted/, { timeout: 5_000 });
 
     await expect(plots.nth(0).locator('.world-own-plot-emoji')).not.toBeEmpty();
     await expect(plots.nth(1).locator('.world-own-plot-emoji')).not.toBeEmpty();
