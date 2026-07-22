@@ -162,7 +162,8 @@ ok "Snapshot klaar"
 # ── Deploy ────────────────────────────────────────────────────────────────────
 info "Deploy starten…"
 set +e
-GARDEN_DEPLOY_DIR="$PROD" bash "${SOURCE_DIR}/deploy.sh"
+DEPLOY_GIT_PULL="${DEPLOY_GIT_PULL:-1}" \
+  GARDEN_DEPLOY_DIR="$PROD" bash "${SOURCE_DIR}/deploy.sh"
 DEPLOY_RC=$?
 set -e
 

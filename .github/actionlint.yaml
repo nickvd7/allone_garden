@@ -1,0 +1,7 @@
+# actionlint config — allow custom self-hosted runner labels
+self-hosted-runner:
+  labels:
+    - allone-pi
+    - linux
+    - ARM64
+    - arm64

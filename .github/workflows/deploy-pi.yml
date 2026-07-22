@@ -21,11 +21,18 @@ jobs:
     # Register the Pi runner with this label (see INSTALL.md).
     runs-on: [self-hosted, linux, allone-pi]
     timeout-minutes: 45
+    permissions:
+      contents: read
 
     steps:
       - name: Deploy (pull + health-check + auto-rollback)
         # Working copy lives on the Pi next to production; do not use actions/checkout
-        # as the deploy source — deploy.sh pulls this clone and rsyncs to /opt.
+        # as the deploy source — we update the local clone, then rsync to /opt.
+        env:
+          # Prefer Actions token so HTTPS clones work without interactive login
+          # (SSH deploy key remains optional for manual git pull on the Pi).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           SOURCE_DIR="${GARDEN_SOURCE_DIR:-$HOME/coding/allone_garden}"
@@ -35,7 +42,16 @@ jobs:
             exit 1
           fi
           cd "$SOURCE_DIR"
-          # Ensure we can see the commit that triggered this workflow before deploy pulls.
-          git fetch origin main
-          sudo --preserve-env=GARDEN_SOURCE_DIR,GARDEN_DEPLOY_DIR,GARDEN_HEALTH_URLS,GARDEN_LAST_GOOD_FILE \
+
+          REPO_SLUG="${GITHUB_REPOSITORY:-nickvd7/allone_garden}"
+          # Fetch without rewriting stored remotes (avoids leaving a token in .git/config).
+          git fetch --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPO_SLUG}.git" \
+            "+refs/heads/main:refs/remotes/origin/main"
+          git checkout -B main origin/main
+          git reset --hard "${TARGET_SHA}"
+
+          # deploy.sh would git-pull again; skip that — we already synced to TARGET_SHA.
+          sudo --preserve-env=GARDEN_SOURCE_DIR,GARDEN_DEPLOY_DIR,GARDEN_HEALTH_URLS,GARDEN_LAST_GOOD_FILE,DEPLOY_GIT_PULL \
+            DEPLOY_GIT_PULL=0 \
             bash scripts/deploy-with-rollback.sh
