@@ -36,7 +36,7 @@ die()     { echo -e "${RED}[ERR]${RESET}  $*" >&2; exit 1; }
 # ── Config ─────────────────────────────────────────────────────────────────────
 INSTALL_DIR="${GARDEN_DIR:-/opt/allone-garden}"
 SERVICE_USER="${GARDEN_USER:-garden}"
-DOMAIN="${GARDEN_DOMAIN:-}"
+DOMAIN="${GARDEN_DOMAIN:-allone.garden}"
 BACKEND_PORT=5000
 ENV_FILE="${INSTALL_DIR}/packages/backend/.env"
 BACKUP_DIR="/var/backups/allone-garden"

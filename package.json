@@ -3,8 +3,16 @@
     "version": "1.0.0",
     "description": "Open-source multiplayer gardening game",
     "author": "Garden Paradise Community",
-    "license": "MIT",
+    "license": "SEE LICENSE IN LICENSE",
     "private": true,
+    "homepage": "https://allone.garden",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/nickvd7/allone_garden.git"
+    },
+    "bugs": {
+      "url": "https://github.com/nickvd7/allone_garden/issues"
+    },
     "workspaces": [
       "packages/*"
     ],

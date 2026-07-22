@@ -42,6 +42,15 @@ install_if_needed "packages/frontend"
 if [[ ! -f "packages/backend/.env" ]]; then
   echo -e "${YELLOW}[setup]${RESET} Creating .env from example…"
   cp packages/backend/.env.example packages/backend/.env
+  # Replace placeholder JWT with a random value (dev-friendly; still rotate for production)
+  _jwt="$(openssl rand -base64 48 2>/dev/null | tr -dc 'a-zA-Z0-9' | head -c 48 || true)"
+  if [[ -z "$_jwt" ]]; then
+    _jwt="$(node -e "process.stdout.write(require('crypto').randomBytes(48).toString('hex'))")"
+  fi
+  if command -v sed &>/dev/null; then
+    sed -i.bak "s/^JWT_SECRET=.*/JWT_SECRET=${_jwt}/" packages/backend/.env && rm -f packages/backend/.env.bak
+  fi
+  echo "  ✅  Generated a random JWT_SECRET for local development."
   echo "  ⚠️  Review packages/backend/.env before production use."
 fi
 

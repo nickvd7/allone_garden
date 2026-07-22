@@ -21,5 +21,12 @@ fi
   || { echo "Geen geldige install-dir met frontend build: ${INSTALL_DIR:-?}"; exit 1; }
 
 SCRIPT_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GARDEN_DOMAIN="${GARDEN_DOMAIN:-allone.garden}" \
+# Prefer explicit env, then APP_URL from production .env (no hardcoded upstream domain).
+if [[ -z "${GARDEN_DOMAIN:-}" && -f "${INSTALL_DIR}/packages/backend/.env" ]]; then
+  _app_url="$(grep -E '^APP_URL=' "${INSTALL_DIR}/packages/backend/.env" 2>/dev/null | cut -d= -f2- | tr -d '\r' || true)"
+  if [[ "$_app_url" =~ ^https?://([^/]+) ]]; then
+    GARDEN_DOMAIN="${BASH_REMATCH[1]}"
+  fi
+fi
+GARDEN_DOMAIN="${GARDEN_DOMAIN:-}" \
   bash "${SCRIPT_SELF_DIR}/apply-nginx-hardening.sh" "$INSTALL_DIR"

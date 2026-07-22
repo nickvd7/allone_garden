@@ -12,11 +12,15 @@
 #   curl -fsSL https://get.allonegarden.org/install.sh | bash
 #   -- or locally --
 #   sudo bash install.sh
+#   sudo GARDEN_DOMAIN=garden.example.com GARDEN_EMAIL=you@example.com bash install.sh
 #
-# The domain is fixed to allone.garden (with www. and api. covered by the cert).
+# Domain is optional (LAN/HTTP if unset). Official main server uses
+# install-mainserver-pi.sh (defaults GARDEN_DOMAIN=allone.garden).
 #
 # Environment variables:
+#   GARDEN_DOMAIN=garden.example.com   — public hostname for HTTPS (optional)
 #   GARDEN_EMAIL=you@example.com       — email for Let's Encrypt notifications
+#   GARDEN_ADMIN_USERS=alice           — game username(s) with admin access
 #   GARDEN_DIR=/opt/allone-garden
 #   GARDEN_USER=garden
 #   FRESH_INSTALL=1                  — nieuwe .env (backup van oude); gebruik install-fresh.sh
@@ -68,9 +72,14 @@ SERVICE_USER="${GARDEN_USER:-garden}"
 REPO_URL="https://github.com/nickvd7/allone_garden.git"
 NODE_MAJOR=20
 POSTGRES_DB="allone_garden"
-# Domain is fixed. The certificate covers the apex plus www. and api. subdomains.
-DOMAIN="allone.garden"
-CERT_DOMAINS=("allone.garden" "www.allone.garden" "api.allone.garden")
+# Public domain for HTTPS (optional). Community self-hosts leave this empty for LAN/HTTP.
+# Official main server: GARDEN_DOMAIN=allone.garden (or use install-mainserver-pi.sh).
+DOMAIN="${GARDEN_DOMAIN:-}"
+if [[ -n "$DOMAIN" ]]; then
+  CERT_DOMAINS=("$DOMAIN" "www.${DOMAIN}" "api.${DOMAIN}")
+else
+  CERT_DOMAINS=()
+fi
 EMAIL="${GARDEN_EMAIL:-}"
 POSTGRES_USER="garden"
 REDIS_PORT=6379
@@ -147,12 +156,28 @@ PI_IP="$(detect_primary_ip)"
 [[ -z "$PI_IP" ]] && PI_IP="127.0.0.1"
 
 # ── Interactive configuration ─────────────────────────────────────────────────
-# The domain is fixed (allone.garden + www. + api.). The only thing we may ask
-# for is the Let's Encrypt contact email. When piped (curl | bash) the prompt is
-# skipped — set GARDEN_EMAIL beforehand, otherwise we fall back to admin@DOMAIN.
-if [[ -t 0 && -z "$EMAIL" ]]; then
+# Optional public domain for Let's Encrypt. Official upstream uses allone.garden
+# via GARDEN_DOMAIN / install-mainserver-pi.sh. Self-hosters typically leave empty.
+if [[ -t 0 && -z "$DOMAIN" ]]; then
   echo ""
   echo -e "${BOLD}  ── Configuration ──────────────────────────────────────────────────${RESET}"
+  echo ""
+  echo -e "  Public domain for HTTPS (optional). Leave empty for LAN / HTTP only."
+  echo -e "  Official main server uses: allone.garden"
+  echo ""
+  read -rp "  Domain [none]: " _INPUT_DOMAIN
+  DOMAIN="${_INPUT_DOMAIN:-}"
+  if [[ -n "$DOMAIN" ]]; then
+    CERT_DOMAINS=("$DOMAIN" "www.${DOMAIN}" "api.${DOMAIN}")
+  fi
+  echo ""
+fi
+
+if [[ -n "$DOMAIN" && ! "$DOMAIN" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ ]]; then
+  error "GARDEN_DOMAIN '${DOMAIN}' does not look like a valid hostname"
+fi
+
+if [[ -t 0 && -z "$EMAIL" && -n "$DOMAIN" ]]; then
   echo ""
   _DEFAULT_EMAIL="admin@${DOMAIN}"
   echo -e "  Email address for Let's Encrypt certificate notifications."
@@ -163,21 +188,27 @@ if [[ -t 0 && -z "$EMAIL" ]]; then
   echo ""
 fi
 
-# Non-interactive (curl | bash) without GARDEN_EMAIL → use a sensible default.
-[[ -z "$EMAIL" ]] && EMAIL="admin@${DOMAIN}"
+# Non-interactive without GARDEN_EMAIL → only needed when a domain is set.
+[[ -z "$EMAIL" && -n "$DOMAIN" ]] && EMAIL="admin@${DOMAIN}"
 
-# ── Validate email ─────────────────────────────────────────────────────────────
-if [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
-  error "Email '${EMAIL}' does not look like a valid address"
+# ── Validate email (only when we will request certificates) ───────────────────
+if [[ -n "$DOMAIN" ]]; then
+  if [[ ! "$EMAIL" =~ ^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$ ]]; then
+    error "Email '${EMAIL}' does not look like a valid address"
+  fi
 fi
 
 # ── Summary before install starts ─────────────────────────────────────────────
 echo -e "${BOLD}  ── Install summary ────────────────────────────────────────────────${RESET}"
 echo -e "  Install dir:  ${INSTALL_DIR}"
 echo -e "  Service user: ${SERVICE_USER}"
-echo -e "  Domain:       ${DOMAIN}  (HTTPS via Let's Encrypt)"
-echo -e "  Cert covers:  $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
-echo -e "  Email:        ${EMAIL}"
+if [[ -n "$DOMAIN" ]]; then
+  echo -e "  Domain:       ${DOMAIN}  (HTTPS via Let's Encrypt)"
+  echo -e "  Cert covers:  $(IFS=', '; echo "${CERT_DOMAINS[*]}")"
+  echo -e "  Email:        ${EMAIL}"
+else
+  echo -e "  Domain:       (none — HTTP / LAN only)"
+fi
 echo ""
 
 # ── System update ─────────────────────────────────────────────────────────────
@@ -332,8 +363,15 @@ if [[ ! -f "$ENV_FILE" ]]; then
     APP_URL_VALUE="http://${PI_IP}"
   fi
 
-  # Game usernames with admin access (comma-separated). Override: GARDEN_ADMIN_USERS=a,b
-  ADMIN_USERS_VALUE="${GARDEN_ADMIN_USERS:-admin}"
+  # Game usernames with admin access (comma-separated). Override: GARDEN_ADMIN_USERS=alice
+  # No insecure default — empty ADMIN_USERS fails production security-check until set.
+  ADMIN_USERS_VALUE="${GARDEN_ADMIN_USERS:-}"
+  if [[ -z "$ADMIN_USERS_VALUE" && -t 0 ]]; then
+    read -rp "  Admin game username (gets admin after register) [leave empty to set later]: " ADMIN_USERS_VALUE
+  fi
+  if [[ -z "$ADMIN_USERS_VALUE" ]]; then
+    warn "ADMIN_USERS is empty — set it in ${ENV_FILE} (or GARDEN_ADMIN_USERS=…) before the service will start in production"
+  fi
 
   cat > "$ENV_FILE" <<EOF
 # AllOne Garden — generated by install.sh

@@ -12,8 +12,19 @@ e2e/test-results/
 
 # Environment files — NEVER commit real secrets
 .env
+.env.local
+.env.*.local
+*.env.local
 packages/backend/.env
 packages/frontend/.env
+packages/*/.env.local
+
+# Keys / credentials (TransIP, Apple, TLS, etc.)
+*.pem
+*.p8
+*.key
+transip.ini
+**/transip.ini
 
 # Logs
 *.log

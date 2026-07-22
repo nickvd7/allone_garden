@@ -7,14 +7,26 @@ set -euo pipefail
 
 INSTALL_DIR="${1:?install-dir}"
 PI_IP="${2:-$(hostname -I 2>/dev/null | awk '{print $1}')}"
-DOMAIN="${GARDEN_DOMAIN:-allone.garden}"
+DOMAIN="${GARDEN_DOMAIN:-}"
+if [[ -z "$DOMAIN" && -f "${INSTALL_DIR}/packages/backend/.env" ]]; then
+  _app="$(grep -E '^APP_URL=' "${INSTALL_DIR}/packages/backend/.env" 2>/dev/null | cut -d= -f2- | tr -d '\r' || true)"
+  if [[ "$_app" =~ ^https?://([^/]+) ]]; then
+    DOMAIN="${BASH_REMATCH[1]}"
+  fi
+fi
+# Fallback server_name when no public domain: default server only
+if [[ -z "$DOMAIN" || "$DOMAIN" == "_" ]]; then
+  DOMAIN="_"
+  CERT_DOMAINS=("_")
+else
+  read -r -a CERT_DOMAINS <<< "${GARDEN_CERT_DOMAINS:-${DOMAIN} www.${DOMAIN} api.${DOMAIN}}"
+fi
 BACKEND_PORT=5000
 
 if [[ -f "${INSTALL_DIR}/packages/backend/.env" ]] && grep -q '^PORT=' "${INSTALL_DIR}/packages/backend/.env"; then
   BACKEND_PORT="$(grep '^PORT=' "${INSTALL_DIR}/packages/backend/.env" | cut -d= -f2-)"
 fi
 
-read -r -a CERT_DOMAINS <<< "${GARDEN_CERT_DOMAINS:-${DOMAIN} www.${DOMAIN} api.${DOMAIN}}"
 SERVER_NAMES="$(IFS=' '; echo "${CERT_DOMAINS[*]}") _ ${PI_IP}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

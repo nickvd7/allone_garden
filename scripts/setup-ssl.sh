@@ -25,7 +25,21 @@ warn()    { echo -e "${YELLOW}[ssl]${RESET}  $*"; }
 
 [[ $EUID -eq 0 ]] || { echo "[ssl] Run met sudo"; exit 1; }
 
-DOMAIN="${GARDEN_DOMAIN:-allone.garden}"
+DOMAIN="${GARDEN_DOMAIN:-}"
+if [[ -z "$DOMAIN" ]]; then
+  for _env in /opt/allone-garden/packages/backend/.env; do
+    [[ -f "$_env" ]] || continue
+    _app="$(grep -E '^APP_URL=' "$_env" 2>/dev/null | cut -d= -f2- | tr -d '\r' || true)"
+    if [[ "$_app" =~ ^https?://([^/]+) ]]; then
+      DOMAIN="${BASH_REMATCH[1]}"
+      break
+    fi
+  done
+fi
+if [[ -z "$DOMAIN" ]]; then
+  warn "Geen GARDEN_DOMAIN / APP_URL — SSL overgeslagen"
+  exit 0
+fi
 EMAIL="${GARDEN_EMAIL:-admin@${DOMAIN}}"
 TRANSIP_INI="${GARDEN_TRANSIP_INI:-/etc/letsencrypt/transip.ini}"
 read -r -a CERT_DOMAINS <<< "${GARDEN_CERT_DOMAINS:-${DOMAIN} www.${DOMAIN} api.${DOMAIN}}"

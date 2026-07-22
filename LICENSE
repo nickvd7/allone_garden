@@ -1,0 +1,16 @@
+AllOne Garden — license notice
+==============================
+
+This monorepo uses different licenses per package:
+
+- packages/backend     — GNU General Public License v3.0 (GPL-3.0)
+                         See packages/backend/LICENSE
+- packages/frontend    — MIT License
+                         See packages/frontend/LICENSE
+- packages/core        — MIT License
+- packages/desktop     — MIT License
+- plugins/community    — MIT License
+
+Unless a subdirectory contains its own LICENSE file, files in that
+subdirectory are licensed under the MIT License (see
+packages/frontend/LICENSE for the full text).

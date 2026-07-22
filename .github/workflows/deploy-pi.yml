@@ -1,0 +1,41 @@
+# Deploy production Raspberry Pi via self-hosted runner.
+# Runner polls GitHub outbound — no inbound SSH / Cloudflare change required.
+name: Deploy Pi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Force JS-based actions onto Node 24 (same as ci.yml).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: deploy-pi
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy with rollback
+    # Register the Pi runner with this label (see INSTALL.md).
+    runs-on: [self-hosted, linux, allone-pi]
+    timeout-minutes: 45
+
+    steps:
+      - name: Deploy (pull + health-check + auto-rollback)
+        # Working copy lives on the Pi next to production; do not use actions/checkout
+        # as the deploy source — deploy.sh pulls this clone and rsyncs to /opt.
+        run: |
+          set -euo pipefail
+          SOURCE_DIR="${GARDEN_SOURCE_DIR:-$HOME/coding/allone_garden}"
+          if [[ ! -f "${SOURCE_DIR}/scripts/deploy-with-rollback.sh" ]]; then
+            echo "Clone niet gevonden op ${SOURCE_DIR}"
+            echo "Zet GARDEN_SOURCE_DIR op de runner, of clone naar ~/coding/allone_garden"
+            exit 1
+          fi
+          cd "$SOURCE_DIR"
+          # Ensure we can see the commit that triggered this workflow before deploy pulls.
+          git fetch origin main
+          sudo --preserve-env=GARDEN_SOURCE_DIR,GARDEN_DEPLOY_DIR,GARDEN_HEALTH_URLS,GARDEN_LAST_GOOD_FILE \
+            bash scripts/deploy-with-rollback.sh

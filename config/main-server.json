@@ -1,6 +1,6 @@
 {
   "name": "AllOne Garden",
-  "url": "",
-  "description": "Community-hosted multiplayer gardening game",
-  "note": "Set 'url' to your Pi's public domain/IP after running install-mainserver-pi.sh"
+  "url": "https://allone.garden",
+  "description": "Official community-hosted multiplayer gardening game",
+  "note": "Canonical upstream main server. Self-hosters keep IS_MAIN_SERVER=false; only the official deploy sets IS_MAIN_SERVER=true."
 }

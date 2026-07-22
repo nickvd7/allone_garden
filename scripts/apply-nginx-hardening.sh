@@ -69,10 +69,12 @@ nginx -t
 systemctl restart nginx
 systemctl restart allone-garden
 
-if [[ -x "${SCRIPT_DIR}/setup-ssl.sh" ]]; then
-  GARDEN_DOMAIN="${GARDEN_DOMAIN:-allone.garden}" \
+if [[ -x "${SCRIPT_DIR}/setup-ssl.sh" && -n "${GARDEN_DOMAIN:-}" ]]; then
+  GARDEN_DOMAIN="$GARDEN_DOMAIN" \
     GARDEN_EMAIL="${GARDEN_EMAIL:-}" \
     bash "${SCRIPT_DIR}/setup-ssl.sh" || echo "[hardening] SSL stap overgeslagen — zie setup-ssl.sh"
+elif [[ -z "${GARDEN_DOMAIN:-}" ]]; then
+  echo "[hardening] Geen GARDEN_DOMAIN — SSL overgeslagen (HTTP/LAN)"
 fi
 
 if [[ -x "${SCRIPT_DIR}/ensure-nginx-ssl-hardening.sh" ]]; then

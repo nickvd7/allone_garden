@@ -141,16 +141,18 @@ bash start-android.sh
 
 Tested on Pi 3B+, Pi 4, Pi 5 running Raspberry Pi OS Bookworm (64-bit).
 
-### Eenmalig: GitHub-toegang op de Pi (privé-repo)
+### Eenmalig: Git-clone op de Pi
 
-De repo is privé, dus `git pull` vraagt anders telkens om inloggegevens. Stel één keer SSH in:
+Publieke repo — HTTPS-clone is genoeg:
 
 ```bash
-cd ~/coding/allone_garden
-bash scripts/setup-git-auth.sh
+mkdir -p ~/coding
+cd ~/coding
+git clone https://github.com/nickvd7/allone_garden.git
+cd allone_garden
 ```
 
-Het script genereert een SSH-key, toont de public key en de GitHub-URL om die als **Deploy Key (read-only)** toe te voegen. Daarna werkt `git pull` zonder wachtwoord. Alternatief met token: `GIT_AUTH=token bash scripts/setup-git-auth.sh`.
+Optioneel (privé-fork of rate limits): `bash scripts/setup-git-auth.sh` voor een SSH deploy key.
 
 ### Pi: twee mappen (structureel)
 
@@ -168,10 +170,27 @@ sudo bash reinstall-pi.sh
 ```
 
 Stappen: `git-pull.sh` → rsync naar `/opt` → `install.sh` (Postgres, `.env`, build, migraties, nginx).  
-Geen `git clone` op `/opt` (omzeilt GitHub-login op de Pi).  
+Geen `git clone` op `/opt`.  
 Backup: `/opt/allone-garden.bak.<datum>`.
 
 **Pad:** `/opt/allone-garden` (streepje `-`), niet `allone_garden`.
+
+Officiële hoofdserver (allone.garden):
+
+```bash
+sudo GARDEN_DOMAIN=allone.garden GARDEN_EMAIL=you@example.com bash install-mainserver-pi.sh
+```
+
+Community self-host (LAN of eigen domein):
+
+```bash
+# LAN / HTTP only
+sudo bash install.sh
+
+# Eigen domein
+sudo GARDEN_DOMAIN=garden.example.com GARDEN_EMAIL=you@example.com \
+  GARDEN_ADMIN_USERS=jouwgebruikersnaam bash install.sh
+```
 
 Na afloop testen:
 
@@ -190,7 +209,43 @@ cd ~/coding/allone_garden
 sudo bash deploy.sh
 ```
 
-Doet: `git pull` → rsync naar `/opt/allone-garden` (behoudt `.env`, node_modules, build) → `update.sh` (npm, frontend build, DB-migraties, herstart, SSL). Eerst eenmalig `bash scripts/setup-git-auth.sh` voor wachtwoordloze pull.
+Of met automatische rollback naar de vorige werkende commit + health-check:
+
+```bash
+cd ~/coding/allone_garden
+sudo bash scripts/deploy-with-rollback.sh
+```
+
+Doet: snapshot `/opt` → `.prev`, `git pull` → rsync → `update.sh`, health-check; bij falen `git reset --hard` naar last-known-good + restore snapshot.
+
+### Auto-deploy vanaf GitHub (self-hosted runner)
+
+Na een `git push` naar `main` vanaf je Mac kan de Pi automatisch deployen via [`.github/workflows/deploy-pi.yml`](.github/workflows/deploy-pi.yml).
+
+**Eenmalig op de Pi:**
+
+1. GitHub → repo → **Settings → Actions → Runners → New self-hosted runner** (Linux ARM64).
+2. Volg de install-instructies in bijv. `~/actions-runner`.
+3. Bij configuratie label toevoegen: `allone-pi` (naast `self-hosted` / `linux`).
+4. Runner als service: `sudo ./svc.sh install && sudo ./svc.sh start`.
+5. Sudoers zodat de runner-user deploy mag (pas `USER` aan):
+
+```bash
+# /etc/sudoers.d/allone-deploy  (visudo!)
+USER ALL=(root) NOPASSWD: /bin/bash /home/USER/coding/allone_garden/scripts/deploy-with-rollback.sh
+```
+
+Of breder (eenvoudiger, iets minder strikt):
+
+```bash
+USER ALL=(root) NOPASSWD: /bin/bash /home/USER/coding/allone_garden/scripts/deploy-with-rollback.sh, /bin/systemctl restart allone-garden, /bin/systemctl reload nginx
+```
+
+6. Zorg dat de clone bestaat: `~/coding/allone_garden` (of zet env `GARDEN_SOURCE_DIR` op de runner-service).
+7. Eerste keer handmatig: `sudo bash scripts/deploy-with-rollback.sh` (schrijft `/var/lib/allone-garden/last-good-commit`).
+8. Test: GitHub → **Actions → Deploy Pi → Run workflow**.
+
+Geen poortforward of Cloudflare-wijziging nodig: de runner maakt alleen **outbound** verbinding naar GitHub.
 
 ### Andere opties
 

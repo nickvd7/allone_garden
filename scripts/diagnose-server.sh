@@ -9,7 +9,7 @@ if [[ -z "$INSTALL_DIR" && -f /etc/systemd/system/allone-garden.service ]]; then
   [[ -n "$_wd" ]] && INSTALL_DIR="$(cd "${_wd}/../.." && pwd)"
 fi
 if [[ -z "$INSTALL_DIR" ]]; then
-  for d in /opt/allone-garden /home/nickvd/coding/allone_garden "$HOME/coding/allone_garden" "$(cd "$(dirname "$0")/.." && pwd)"; do
+  for d in /opt/allone-garden "$HOME/coding/allone_garden" "$(cd "$(dirname "$0")/.." && pwd)"; do
     [[ -f "$d/packages/backend/.env" ]] && INSTALL_DIR="$d" && break
   done
 fi

@@ -2,6 +2,12 @@
   "name": "allone_garden-backend",
   "version": "1.0.0",
   "description": "Backend server for AllOne Garden",
+  "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickvd7/allone_garden.git",
+    "directory": "packages/backend"
+  },
   "main": "src/index.js",
   "scripts": {
     "prestart": "node scripts/security-check.js",

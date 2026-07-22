@@ -5,6 +5,9 @@
 #   cd ~/coding/allone_garden
 #   sudo bash deploy.sh
 #
+# Met automatische rollback bij mislukte health-check:
+#   sudo bash scripts/deploy-with-rollback.sh
+#
 # Doet achter elkaar:
 #   1. git pull in je clone (~/coding) — zonder wachtwoord na setup-git-auth.sh
 #   2. rsync clone → /opt/allone-garden (behoudt .env / node_modules / build)

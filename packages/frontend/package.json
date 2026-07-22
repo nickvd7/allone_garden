@@ -1,7 +1,13 @@
 {
   "name": "allone_garden-frontend",
   "version": "1.0.0",
+  "license": "MIT",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickvd7/allone_garden.git",
+    "directory": "packages/frontend"
+  },
   "dependencies": {
     "@capacitor/android": "^6.2.1",
     "@capacitor/app": "^6.0.0",

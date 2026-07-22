@@ -12,7 +12,7 @@ resolve_install_dir() {
   candidates+=(
     /opt/allone-garden
     /opt/allone_garden
-    /home/nickvd/coding/allone_garden
+    "${HOME}/coding/allone_garden"
     "$(cd "$(dirname "$0")/.." && pwd)"
   )
   local d
@@ -48,8 +48,8 @@ fi
 echo "[fix] Installatie: ${INSTALL_DIR} (user: ${OWNER})"
 
 if ! grep -q '^ADMIN_USERS=.' "$ENV_FILE" 2>/dev/null; then
-  printf '\nADMIN_USERS=admin\n' >> "$ENV_FILE"
-  echo "[fix] ADMIN_USERS=admin toegevoegd"
+  echo "[fix] WAARSCHUWING: ADMIN_USERS ontbreekt in ${ENV_FILE}"
+  echo "  Zet ADMIN_USERS=jouwgebruikersnaam en herstart: sudo systemctl restart allone-garden"
 fi
 
 PI_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
