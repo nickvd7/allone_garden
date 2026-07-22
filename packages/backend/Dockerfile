@@ -1,5 +1,5 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
-FROM node:20.19-alpine AS builder
+FROM node:22.23.1-alpine AS builder
 WORKDIR /app
 # bcrypt / optional native addons may need a toolchain on musl
 RUN apk add --no-cache python3 make g++
@@ -9,7 +9,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 # ── Runtime stage ───────────────────────────────────────────────────────────────
-FROM node:20.19-alpine
+FROM node:22.23.1-alpine
 WORKDIR /app
 
 # Run as non-root for security

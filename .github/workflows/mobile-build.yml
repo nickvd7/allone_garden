@@ -51,7 +51,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           # Repo root lockfile (explicit path avoids cache key issues with job working-directory)
           cache-dependency-path: ${{ github.workspace }}/package-lock.json
@@ -63,7 +63,7 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699  # v4.0.1
 
       # Install from repo root (postinstall patches @capacitor/cli for tar@7 extract API).
       - name: Install workspace dependencies
@@ -131,7 +131,7 @@ jobs:
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
         if: steps.ios-secrets.outputs.ready == 'true'
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: ${{ github.workspace }}/package-lock.json
       - name: Install workspace dependencies

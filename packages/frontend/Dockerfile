@@ -1,5 +1,5 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
-FROM node:20.19-alpine AS builder
+FROM node:22.23.1-alpine AS builder
 WORKDIR /app
 
 ARG REACT_APP_API_URL=http://localhost:5000
@@ -9,6 +9,9 @@ ENV REACT_APP_SERVER_NAME=$REACT_APP_SERVER_NAME
 ENV CI=false
 ENV GENERATE_SOURCEMAP=false
 ENV NODE_OPTIONS=--max-old-space-size=4096
+# Lint runs in the dedicated CI lint job; isolated Docker installs can pull
+# typescript@7 which breaks eslint-plugin-jest / react-app/jest during build.
+ENV DISABLE_ESLINT_PLUGIN=true
 
 # Built from its own context (no workspace root lockfile here), so npm install
 # is used rather than npm ci, which requires a package-lock.json.
