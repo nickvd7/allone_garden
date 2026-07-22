@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/nickvd7/allone_garden/security/policy
+    about: Report security issues privately — do not open a public issue.
+  - name: Play / visit the official server
+    url: https://allone.garden
+    about: The upstream community server hosted by the maintainers.

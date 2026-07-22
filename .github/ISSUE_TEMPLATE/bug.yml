@@ -1,0 +1,80 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill in as much as you can.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - backend
+        - frontend
+        - desktop
+        - pi / deploy / install
+        - docs
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Clear description of the bug.
+      placeholder: When I click X, Y happens instead of Z…
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps help a lot.
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See error …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Tag (e.g. v1.0.0), branch, or short git SHA.
+      placeholder: main @ abc1234
+    validations:
+      required: false
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How are you running it?
+      options:
+        - Local dev (start.sh)
+        - Raspberry Pi / install.sh
+        - Docker Compose
+        - Official server (allone.garden)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste relevant terminal or browser console output.
+      render: shell

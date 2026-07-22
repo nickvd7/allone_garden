@@ -1,0 +1,52 @@
+name: Feature request
+description: Suggest an idea for AllOne Garden
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share your idea. Focus on the problem you want to solve.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - backend
+        - frontend
+        - desktop
+        - pi / deploy / install
+        - docs
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What is hard or missing today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would you like it to work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional — other approaches you thought about.
+
+  - type: checkboxes
+    id: contrib
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to help implement this
