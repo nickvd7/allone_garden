@@ -98,12 +98,17 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
+      - name: Upgrade to npm 11.x (for bulk advisory API)
+        run: npm install -g npm@11
+
       - name: Install workspace (npm ci)
         run: npm ci
 
       - name: Audit workspace (critical only)
         # Production deps only. High/moderate findings are tracked via overrides
         # in the root package.json; this job fails only on critical severity.
+        # npm 11.x uses the new bulk advisory API (the legacy quick/audits endpoints
+        # were retired July 15, 2026).
         run: npm audit --omit=dev --audit-level=critical
 
   # ── Filesystem SAST (Trivy) + SARIF upload ──────────────────────────────────
