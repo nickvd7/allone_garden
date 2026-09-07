@@ -72,7 +72,7 @@ Clear **English + Dutch** instructions for the world map, controls, your garden,
 
 ## Builder quick start (contribute / hack)
 
-Clone, run, and make a first change — **English + Dutch**. No database, Steam, or Discord required. Steam is off by default; use `npm run steam:disable` to turn it off again.
+Clone, run, **MoSCoW** (Must = online↔offline Overvecht), and the student **test workflow** — **English + Dutch**. No database, Steam, or Discord required. Steam is off by default and out of scope for the student project; `npm run steam:disable` if you need to turn it off again.
 
 **[docs/QUICK_START.md](docs/QUICK_START.md)**
 
