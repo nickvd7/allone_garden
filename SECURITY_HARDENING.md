@@ -67,7 +67,7 @@ Short guide for what the backend expects and what you still need to configure ou
 
 | Topic | Recommendation |
 |-------|----------------|
-| **Steam** | `STEAM_APP_ID` or `packages/desktop/steam_appid.txt` — only real App ID in releases. |
+| **Steam** | Optional. `0` / unset = off (`npm run steam:disable`). Only a real App ID in Steam releases. |
 | **Discord** | `DISCORD_APP_ID` for Rich Presence; optional. |
 | **Updates** | `electron-updater` needs a reliable HTTPS `latest.yml` source (e.g. GitHub Releases). |
 

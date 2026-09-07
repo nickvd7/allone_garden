@@ -70,6 +70,14 @@ Clear **English + Dutch** instructions for the world map, controls, your garden,
 
 ---
 
+## Builder quick start (contribute / hack)
+
+Clone, run, and make a first change — **English + Dutch**. No database, Steam, or Discord required. Steam is off by default; use `npm run steam:disable` to turn it off again.
+
+**[docs/QUICK_START.md](docs/QUICK_START.md)**
+
+---
+
 ## Architecture
 
 ```

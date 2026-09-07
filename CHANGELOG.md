@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Docs: bilingual builder quick start (`docs/QUICK_START.md`, English + Dutch); Steam off by default with `npm run steam:disable` / `scripts/disable-steam.sh`
 - i18n: `auth.*`, `videoCall.*`, `worldMap.*` fully translated in `packages/frontend/src/i18n/locales/*.json`
 - `api.patch()` helper in frontend `useApi.js`
 - Gradendex: **fr** / **es** / **pt** bundles in `i18n/config.js`; `gradendex-localize-fr-es-pt.js` writes `gradendex.{fr,es,pt}.json` (UI + entries from `gradendex-entries-overrides/`)

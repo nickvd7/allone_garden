@@ -68,6 +68,8 @@ Enhancement suggestions are tracked as GitHub issues. Include:
 
 ## Development Setup
 
+**Short path (English + Dutch):** [docs/QUICK_START.md](docs/QUICK_START.md) — clone, `bash start.sh`, first edits, tests. Steam is optional and **off by default** (`npm run steam:disable` if you need to turn it off).
+
 ```bash
 # Clone your fork
 git clone https://github.com/YOUR_USERNAME/allone_garden.git

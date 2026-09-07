@@ -4,6 +4,8 @@
 
 This file tracks **manual configuration and ops steps** that require external accounts, signing keys, or infrastructure that cannot be automated. Work through this list before shipping to production.
 
+**Contributors hacking on the web game can skip this file.** Start with [docs/QUICK_START.md](docs/QUICK_START.md). Steam, Discord, and store signing are optional.
+
 For automated checks that mirror most of CI (lint, tests, Gradendex sync, frontend build), run from the repo root:
 
 ```bash
@@ -14,7 +16,9 @@ See [README.md — Local verification](README.md#local-verification-ci-parity) f
 
 ---
 
-## Steam (Steamworks)
+## Steam (Steamworks) — optional
+
+**Skip this entire section** unless you publish a desktop build on Steam. Local `bash start.sh` / the web game never uses Steam. Default App ID is `0` (disabled). To force Steam off: `bash scripts/disable-steam.sh` or `npm run steam:disable`. Details: [docs/QUICK_START.md](docs/QUICK_START.md).
 
 - [ ] **Create a Steamworks app**
   - Go to https://partner.steamgames.com/ and create a new app.

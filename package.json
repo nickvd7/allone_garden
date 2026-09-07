@@ -89,7 +89,8 @@
       "mobile:android": "cd packages/frontend && npm run mobile:android",
       "mobile:ios": "cd packages/frontend && npm run mobile:ios",
       "mobile:setup": "cd packages/frontend && npx cap add android && npx cap add ios",
-      "mobile:sync": "cd packages/frontend && npm run build && npx cap sync"
+      "mobile:sync": "cd packages/frontend && npm run build && npx cap sync",
+      "steam:disable": "bash scripts/disable-steam.sh"
     },
     "devDependencies": {
         "concurrently": "^8.2.2",

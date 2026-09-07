@@ -13,7 +13,7 @@ Use this checklist right before a release. Items are grouped so you can see gaps
 ## 2) Secrets and env
 
 - [ ] Production `.env` filled for backend (`JWT_SECRET`, DB, Redis, SMTP)
-- [ ] `STEAM_APP_ID` set (or `packages/desktop/steam_appid.txt` filled)
+- [ ] Steam: leave `STEAM_APP_ID=0` / `steam_appid.txt` as `0` unless you ship on Steam (`npm run steam:disable`). If you do ship on Steam, set a real App ID (see `SETUP_CHECKLIST.md`)
 - [ ] `DISCORD_APP_ID` set (optional)
 - [ ] GitHub Actions secrets for mobile/iOS reviewed
 

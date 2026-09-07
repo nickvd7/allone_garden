@@ -119,7 +119,7 @@ File: `packages/desktop/.env.example` (copy to `.env` locally or set in release 
 
 | Variable | Role |
 |----------|------|
-| `STEAM_APP_ID` | Steamworks App ID; `0` = Steam off. Alternative: `packages/desktop/steam_appid.txt`. |
+| `STEAM_APP_ID` | Steamworks App ID; `0` = Steam off (default). Alternative: `packages/desktop/steam_appid.txt`. Force off: `npm run steam:disable`. See [docs/QUICK_START.md](docs/QUICK_START.md). |
 | `DISCORD_APP_ID` | Discord Rich Presence; `0` = off. |
 
 Auto-update (`electron-updater`): configure publish in `packages/desktop` (GitHub Releases is common); endpoint must serve `latest.yml` over HTTPS.
@@ -141,8 +141,9 @@ Auto-update (`electron-updater`): configure publish in `packages/desktop` (GitHu
 
 - `GITHUB_TOKEN` is used by workflows where needed (releases/artifacts).
 
-### Steam deploy
+### Steam deploy (optional)
 
+- Only if you publish on Steam. Otherwise skip; `npm run steam:disable` keeps App ID at `0`.
 - Check `steam-deploy.yml` for any SteamCMD or depot secrets you add.
 
 ---
