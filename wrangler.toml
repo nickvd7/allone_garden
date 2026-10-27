@@ -1,5 +1,7 @@
-# Static Cloudflare Pages publish: homepage only.
-# Login and register are under-construction pages. There is no backend here.
-name = "allone"
-pages_build_output_dir = "cloudflare/site"
+# Cloudflare Pages: the real React homepage.
+# Build with: npm run build:cloudflare --prefix packages/frontend
+# Login and register stay on the under-construction screen.
+# /api and Socket.IO return 503 from functions/_middleware.js.
+name = "allone-garden"
+pages_build_output_dir = "packages/frontend/build"
 compatibility_date = "2026-10-27"
