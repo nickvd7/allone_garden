@@ -1,9 +1,0 @@
-# Pages only accepts 200/301/302/303/307/308/404 here.
-# /api and /socket.io return 503 from functions/_middleware.js.
-/login          /login/index.html    200
-/register       /login/index.html    200
-/home           /index.html          200
-/plugins        /index.html          200
-/content-wiki   /index.html          200
-/gradendex      /index.html          200
-/admin          /index.html          200
