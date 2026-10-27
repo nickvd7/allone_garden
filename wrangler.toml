@@ -1,0 +1,5 @@
+# Static Cloudflare Pages publish: homepage only.
+# Login and register are under-construction pages. There is no backend here.
+name = "allone"
+pages_build_output_dir = "cloudflare/site"
+compatibility_date = "2026-10-27"

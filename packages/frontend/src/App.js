@@ -40,7 +40,9 @@ import GradendexPage from './components/GradendexPage';
 import GradendexPanel from './components/GradendexPanel';
 import ContentWikiPage from './components/ContentWikiPage';
 import HomePage from './components/HomePage';
+import UnderConstruction from './components/UnderConstruction';
 import SetupWizard from './components/SetupWizard';
+import { isHomepageOnlySite, publicSitePath } from './siteMode';
 import QRPanel from './components/QRPanel';
 import PlantRecognitionModal from './components/PlantRecognitionModal';
 import GardenConflictModal from './components/GardenConflictModal';
@@ -259,6 +261,11 @@ function App() {
 
   // ── Restore session from localStorage or HttpOnly cookie ───────────────────
   useEffect(() => {
+    // Public homepage does not talk to the paused backend.
+    if (isHomepageOnlySite()) {
+      setAuthChecked(true);
+      return undefined;
+    }
     if (AUTH_HTTPONLY) {
       fetch(`${BACKEND_URL}/api/auth/me`, { credentials: getFetchCredentials() })
         .then((r) => (r.ok ? r.json() : Promise.reject()))
@@ -1019,6 +1026,22 @@ function App() {
   // Electron first-run setup wizard — shown before auth when no config exists
   if (window.__ELECTRON_SETUP__) {
     return <SetupWizard />;
+  }
+
+  // Cloudflare / allone.garden: homepage only. Login and register stay up as
+  // an under-construction notice. The game, wiki and plugins are not published.
+  if (isHomepageOnlySite()) {
+    const kind = publicSitePath(window.location.pathname);
+    if (kind === 'home') {
+      document.title = 'AllOne Garden - Home';
+      return <HomePage />;
+    }
+    if (kind === 'auth') {
+      document.title = 'AllOne Garden — Under construction';
+      return <UnderConstruction />;
+    }
+    window.location.replace('/home');
+    return null;
   }
 
   // Public standalone pages — rendered without login regardless of auth state

@@ -158,6 +158,12 @@
     "btn_send_username": "📧 Send username",
     "reset_hint": "Open the link from your email, or paste the reset code below."
   },
+  "construction": {
+    "title": "Under construction",
+    "body": "Login and registration are temporarily unavailable. The game server is switched off for now.",
+    "login_label": "Login:",
+    "back_home": "Back to homepage"
+  },
   "home": {
     "nav": {
       "features": "Features",

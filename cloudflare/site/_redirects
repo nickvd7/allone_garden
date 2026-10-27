@@ -1,0 +1,9 @@
+/api/*          /maintenance.json    503
+/socket.io/*    /maintenance.json    503
+/login          /login/index.html    200
+/register       /login/index.html    200
+/home           /index.html          200
+/plugins        /index.html          200
+/content-wiki   /index.html          200
+/gradendex      /index.html          200
+/admin          /index.html          200

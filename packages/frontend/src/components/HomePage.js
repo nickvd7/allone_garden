@@ -1,10 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import appLogo from '../assets/allone-garden-logo-transparent.png';
+import { isHomepageOnlySite } from '../siteMode';
 import './HomePage.css';
 
 function HomePage() {
   const { t, i18n } = useTranslation();
+  const homepageOnly = isHomepageOnlySite();
   const currentLang = (i18n.resolvedLanguage || i18n.language || 'en').split('-')[0];
 
   // Build the one-line installer command from whatever host serves this page,
@@ -37,8 +39,8 @@ function HomePage() {
           <li><a href="#game-preview">{t('home.nav.preview', { defaultValue: 'Preview' })}</a></li>
           <li><a href="#federation">{t('home.nav.federation', { defaultValue: 'Federation' })}</a></li>
           <li><a href="#community-tools">{t('home.nav.community', { defaultValue: 'Community' })}</a></li>
-          <li><a href="/content-wiki">{t('home.nav.content_wiki', { defaultValue: 'Content Wiki' })}</a></li>
-          <li><a href="/plugins">{t('home.nav.plugins', { defaultValue: 'Plugins' })}</a></li>
+          <li><a href={homepageOnly ? '#community-tools' : '/content-wiki'}>{t('home.nav.content_wiki', { defaultValue: 'Content Wiki' })}</a></li>
+          <li><a href={homepageOnly ? '#community-tools' : '/plugins'}>{t('home.nav.plugins', { defaultValue: 'Plugins' })}</a></li>
           <li><a href="#setup">{t('home.nav.setup', { defaultValue: 'Setup' })}</a></li>
           <li><a href="#open-source">{t('home.nav.open_source', { defaultValue: 'Open Source' })}</a></li>
         </ul>
@@ -232,11 +234,11 @@ function HomePage() {
           <h2 className="lp-title">{t('home.community.title', { defaultValue: 'Tools outside the in-game HUD' })}</h2>
           <p className="lp-subtitle">{t('home.community.subtitle', { defaultValue: 'Content Wiki and Plugins live on the homepage, not inside the in-game header menu.' })}</p>
           <div className="lp-grid">
-            <a className="lp-card" href="/gradendex">
+            <a className="lp-card" href={homepageOnly ? '#community-tools' : '/gradendex'}>
               <h3>📖 {t('home.community.gradendex_title', { defaultValue: 'Gardendex' })}</h3>
               <p>{t('home.community.gradendex_body', { defaultValue: 'Gardendex bundles reference and wiki-like content in one place.' })}</p>
             </a>
-            <a className="lp-card" href="/plugins">
+            <a className="lp-card" href={homepageOnly ? '#community-tools' : '/plugins'}>
               <h3>🔌 {t('home.community.plugins_title', { defaultValue: 'Plugins' })}</h3>
               <p>{t('home.community.plugins_body', { defaultValue: 'Build the online world together: create tools, plants, and features with drag-and-drop building flows.' })}</p>
             </a>

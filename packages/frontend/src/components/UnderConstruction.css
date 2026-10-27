@@ -1,0 +1,56 @@
+.construction-card {
+  max-width: 440px;
+}
+
+.construction-logo-link {
+  display: inline-block;
+}
+
+.construction-logo {
+  height: 72px;
+  width: auto;
+}
+
+.construction-kicker {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2e7d32;
+}
+
+.construction-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.6rem;
+  color: #1b5e20;
+}
+
+.construction-body {
+  margin: 0 0 1rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.construction-login {
+  margin: 0 0 1.25rem;
+  font-weight: 600;
+}
+
+.construction-login a {
+  color: #1b5e20;
+}
+
+.construction-back {
+  display: inline-block;
+  background: #2e7d32;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.65rem 1.1rem;
+}
+
+.construction-back:hover {
+  background: #1b5e20;
+}
