@@ -167,6 +167,12 @@
     "btn_send_username": "📧 Stuur gebruikersnaam",
     "reset_hint": "Open de link uit je e-mail, of plak de resetcode hieronder."
   },
+  "construction": {
+    "title": "In aanbouw",
+    "body": "Inloggen en registreren zijn tijdelijk niet beschikbaar. De spelserver staat even uit.",
+    "login_label": "Inloggen:",
+    "back_home": "Terug naar de homepage"
+  },
   "home": {
     "nav": {
       "features": "Functies",

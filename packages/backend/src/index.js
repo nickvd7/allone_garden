@@ -64,6 +64,7 @@ const {
   buildCorsOriginValidator,
   parseTrustProxy,
 } = require('./config/networkSecurity');
+const { publicMaintenanceActive, maintenanceBody } = require('./config/publicMaintenance');
 
 const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.FRONTEND_URL);
 const corsOriginValidator = buildCorsOriginValidator(ALLOWED_ORIGINS);
@@ -104,6 +105,14 @@ const healthHandler = (req, res) =>
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
+// Official Cloudflare host: keep the health check, pause the game API.
+app.use('/api', (req, res, next) => {
+  if (!publicMaintenanceActive(req.hostname)) return next();
+  res.set('Retry-After', '86400');
+  res.set('Cache-Control', 'no-store');
+  return res.status(503).json(maintenanceBody());
+});
+
 app.use('/api/auth',         bodyLimitSmall, authRoutes);
 app.use('/api/garden',       bodyLimitLarge, gardenRoutes);
 app.use('/api/trade',        bodyLimitSmall, tradeRoutes);
@@ -143,7 +152,15 @@ if (process.env.ELECTRON_MODE === '1') {
 // ── Socket.IO ─────────────────────────────────────────────────────────────────
 const eventBus = pluginLoader.getEventBus();
 
-// Verify JWT (or allow guest) before the 'connection' event fires
+// Verify JWT (or allow guest) before the 'connection' event fires.
+// The public site does not accept gameplay sockets while maintenance is on.
+io.use((socket, next) => {
+  const host = socket.handshake?.headers?.host || '';
+  if (publicMaintenanceActive(host)) {
+    return next(new Error('Under construction'));
+  }
+  return next();
+});
 io.use(socketAuthMiddleware);
 
 io.on('connection', (socket) => {
@@ -244,6 +261,7 @@ if (require.main === module) {
   });
   server.listen(PORT, () => {
     console.log(`🌱 AllOne Garden server running on port ${PORT}`);
+    console.log('🚧 allone.garden: alleen homepage, API gepauzeerd (login mail@030.dev). PUBLIC_SITE_MAINTENANCE=false zet de API weer aan.');
     console.log(`🔗 Frontend origins: ${ALLOWED_ORIGINS.join(', ')}`);
     console.log(`🔌 P2P federation: ${process.env.P2P_ENABLED === 'true' ? 'enabled' : 'disabled'}`);
     try {
